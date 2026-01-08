@@ -1,0 +1,277 @@
+{
+  "name": "TDX-Gate-Matching-V3",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tdx-gate-v3",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-v3",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        400
+      ],
+      "webhookId": "tdx-gate-v3-001"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/gate_conditions?select=*&tender_id=eq.' + $json.body.tender_id + '&order=condition_number.asc' }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-conditions",
+      "name": "Get Conditions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        420,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/company_financials?select=*&org_id=eq.' + $('Webhook').first().json.body.org_id + '&order=fiscal_year.desc' }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-financials",
+      "name": "Get Financials",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/company_projects?select=*&org_id=eq.' + $('Webhook').first().json.body.org_id }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-projects",
+      "name": "Get Projects",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        860,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/company_certifications?select=*&org_id=eq.' + $('Webhook').first().json.body.org_id }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-certs",
+      "name": "Get Certs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/company_personnel?select=*&org_id=eq.' + $('Webhook').first().json.body.org_id }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-personnel",
+      "name": "Get Personnel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Deduplicate by id since n8n passes items through the chain\nfunction dedup(arr) {\n  const seen = new Set();\n  return arr.filter(item => {\n    if (seen.has(item.id)) return false;\n    seen.add(item.id);\n    return true;\n  });\n}\n\nconst conditions = dedup($('Get Conditions').all().map(i => i.json));\nconst financials = dedup($('Get Financials').all().map(i => i.json));\nconst projects = dedup($('Get Projects').all().map(i => i.json));\nconst certs = dedup($('Get Certs').all().map(i => i.json));\nconst personnel = dedup($('Get Personnel').all().map(i => i.json));\n\nconst results = [];\nfor (const gc of conditions) {\n  const txt = (gc.condition_text || '').toLowerCase();\n  let status = 'UNKNOWN', evidence = null, gap = null, confidence = 0;\n\n  if (txt.includes('מחזור') || txt.includes('הכנסות')) {\n    const reqAmt = parseFloat(gc.required_amount) || 50000000;\n    if (financials.length > 0) {\n      const avg = financials.slice(0, 3).reduce((s, f) => s + (parseFloat(f.annual_revenue) || 0), 0) / Math.min(3, financials.length);\n      if (avg >= reqAmt) { status = 'MEETS'; evidence = 'Avg: ' + (avg/1000000).toFixed(1) + 'M'; confidence = 100; }\n      else { status = 'DOES_NOT_MEET'; gap = (avg/1000000).toFixed(1) + 'M < ' + (reqAmt/1000000).toFixed(1) + 'M'; confidence = 100; }\n    } else { gap = 'No financial data'; }\n  } else if (txt.includes('פרויקט') && (txt.includes('היקף') || txt.includes('מיליון'))) {\n    const reqAmt = parseFloat(gc.required_amount) || 10000000;\n    const maxProj = projects.reduce((max, p) => Math.max(max, parseFloat(p.total_value) || 0), 0);\n    if (maxProj >= reqAmt) { status = 'MEETS'; evidence = 'Max: ' + (maxProj/1000000).toFixed(1) + 'M'; confidence = 100; }\n    else if (projects.length > 0) { status = 'DOES_NOT_MEET'; gap = (maxProj/1000000).toFixed(1) + 'M < ' + (reqAmt/1000000).toFixed(1) + 'M'; confidence = 100; }\n    else { gap = 'No projects'; }\n  } else if (txt.includes('iso') || txt.includes('תקן')) {\n    if (certs.some(c => (c.cert_name || '').toLowerCase().includes('iso'))) { status = 'MEETS'; evidence = 'Has ISO'; confidence = 100; }\n    else { status = 'DOES_NOT_MEET'; gap = 'Missing ISO'; confidence = 100; }\n  } else if (txt.includes('מצלמות') || txt.includes('vms')) {\n    const camProj = projects.filter(p => ((p.quantities || {}).cameras || 0) >= 100);\n    if (camProj.length > 0) { status = 'MEETS'; evidence = camProj.length + ' cam projects'; confidence = 100; }\n    else if (projects.length > 0) { status = 'DOES_NOT_MEET'; gap = 'No camera projects'; confidence = 100; }\n    else { gap = 'No projects'; }\n  } else if (txt.includes('קבלנים') || txt.includes('רשם')) {\n    if (certs.some(c => (c.cert_name || '').includes('קבלנים'))) { status = 'MEETS'; evidence = 'Registered'; confidence = 100; }\n    else { status = 'UNKNOWN'; gap = 'Manual check'; confidence = 50; }\n  } else if (txt.includes('מהנדס') || txt.includes('pmp')) {\n    const qual = personnel.filter(p => (p.professional_certifications || []).some(c => c.toLowerCase().includes('pmp')));\n    if (qual.length > 0) { status = 'MEETS'; evidence = qual[0].full_name; confidence = 100; }\n    else { status = 'UNKNOWN'; gap = 'Check personnel'; confidence = 50; }\n  } else if (txt.includes('ממשלתי') || txt.includes('ציבורי')) {\n    const gov = projects.filter(p => ['GOVERNMENT', 'MUNICIPAL', 'DEFENSE'].includes(p.client_type));\n    if (gov.length >= 3) { status = 'MEETS'; evidence = gov.length + ' gov'; confidence = 100; }\n    else if (gov.length > 0) { status = 'PARTIALLY_MEETS'; gap = gov.length + ' < 3'; confidence = 70; }\n    else { status = 'DOES_NOT_MEET'; gap = 'No gov exp'; confidence = 100; }\n  } else { gap = 'Manual review'; confidence = 0; }\n\n  results.push({ id: gc.id, num: gc.condition_number, text: gc.condition_text, type: gc.condition_type, mandatory: gc.is_mandatory, status, evidence, gap, confidence });\n}\n\nconst meets = results.filter(r => r.status === 'MEETS').length;\nconst fails = results.filter(r => r.status === 'DOES_NOT_MEET').length;\nconst mandFails = results.filter(r => r.mandatory && r.status === 'DOES_NOT_MEET');\nlet eligibility = mandFails.length > 0 ? 'NOT_ELIGIBLE' : (fails > 0 ? 'CONDITIONAL' : 'ELIGIBLE');\n\nreturn [{ json: { success: true, tender_id: conditions[0]?.tender_id, summary: { total: results.length, meets, fails, eligibility }, conditions: results, timestamp: new Date().toISOString() }}];"
+      },
+      "id": "evaluate",
+      "name": "Evaluate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1740,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get Conditions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Conditions": {
+      "main": [
+        [
+          {
+            "node": "Get Financials",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Financials": {
+      "main": [
+        [
+          {
+            "node": "Get Projects",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Projects": {
+      "main": [
+        [
+          {
+            "node": "Get Certs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Certs": {
+      "main": [
+        [
+          {
+            "node": "Get Personnel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Personnel": {
+      "main": [
+        [
+          {
+            "node": "Evaluate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

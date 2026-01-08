@@ -1,0 +1,52 @@
+{
+  "name": "TDX-Step3-GateExtraction-Working",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tdx-extract-gates",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400],
+      "webhookId": "tdx-extract-gates-working"
+    },
+    {
+      "parameters": {
+        "jsCode": "// TDX Step 3: Gate Conditions Extraction\n// Extracts gate conditions from tender text using AI analysis\n\nconst SUPABASE_URL = 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1';\nconst SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34';\nconst ANTHROPIC_KEY = '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';\n\nconst input = $input.first().json.body || $input.first().json;\nconst tender_id = input.tender_id;\nconst tender_text = input.tender_text || '';\n\nconst headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };\n\nif (!tender_id) {\n  return [{ json: { success: false, error: 'tender_id is required' }}];\n}\n\nif (!tender_text) {\n  return [{ json: { success: false, error: 'tender_text is required for extraction' }}];\n}\n\n// Call Claude API to extract gate conditions\nconst systemPrompt = `אתה מומחה לניתוח מכרזים ישראליים. תפקידך לחלץ תנאי סף מטקסט של מכרז.\n\nעבור כל תנאי סף, זהה:\n1. מספר הסעיף\n2. הטקסט המדויק של התנאי\n3. סוג התנאי: GATE (תנאי סף פוסל) או ADVANTAGE (יתרון/ניקוד)\n4. האם חובה (is_mandatory)\n5. סוג הדרישה: CAPABILITY (יכולת) או EXECUTION (ביצוע)\n6. פירוט כמותי אם רלוונטי (סכום, כמות, שנים)\n7. ישות נושאת הדרישה: COMPANY, PROJECT, PERSONNEL, CERTIFICATION\n8. האם ניתן להסתמך על קבלן משנה\n\nהחזר JSON array עם המבנה הבא עבור כל תנאי:\n{\n  \"condition_number\": \"מספר סעיף\",\n  \"condition_text\": \"הטקסט המלא\",\n  \"condition_type\": \"GATE\" או \"ADVANTAGE\",\n  \"is_mandatory\": true/false,\n  \"requirement_type\": \"CAPABILITY\" או \"EXECUTION\",\n  \"entity_type\": \"COMPANY\"/\"PROJECT\"/\"PERSONNEL\"/\"CERTIFICATION\",\n  \"required_amount\": מספר או null,\n  \"required_count\": מספר או null,\n  \"required_years\": מספר או null,\n  \"can_rely_on_subcontractor\": true/false,\n  \"source_section\": \"מספר הסעיף במקור\"\n}`;\n\ntry {\n  const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {\n    method: 'POST',\n    headers: {\n      'Content-Type': 'application/json',\n      'x-api-key': ANTHROPIC_KEY,\n      'anthropic-version': '2023-06-01'\n    },\n    body: JSON.stringify({\n      model: 'claude-sonnet-4-20250514',\n      max_tokens: 4096,\n      system: systemPrompt,\n      messages: [{\n        role: 'user',\n        content: `חלץ את כל תנאי הסף מהטקסט הבא של המכרז. החזר JSON בלבד:\\n\\n${tender_text}`\n      }]\n    })\n  });\n\n  const claudeData = await claudeResponse.json();\n  \n  if (!claudeResponse.ok) {\n    throw new Error('Claude API error: ' + JSON.stringify(claudeData));\n  }\n\n  // Parse Claude's response\n  const responseText = claudeData.content?.[0]?.text || '';\n  \n  // Extract JSON from response (handle markdown code blocks)\n  let jsonText = responseText;\n  const jsonMatch = responseText.match(/```json\\s*([\\s\\S]*?)\\s*```/);\n  if (jsonMatch) {\n    jsonText = jsonMatch[1];\n  } else {\n    // Try to find raw JSON array\n    const arrayMatch = responseText.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/);\n    if (arrayMatch) {\n      jsonText = arrayMatch[0];\n    }\n  }\n\n  let conditions;\n  try {\n    conditions = JSON.parse(jsonText);\n  } catch (e) {\n    return [{ json: { success: false, error: 'Failed to parse Claude response', raw: responseText }}];\n  }\n\n  // Save conditions to database\n  const savedConditions = [];\n  for (const cond of conditions) {\n    const conditionData = {\n      tender_id: tender_id,\n      condition_number: cond.condition_number || String(savedConditions.length + 1),\n      condition_text: cond.condition_text,\n      condition_type: cond.condition_type || 'GATE',\n      is_mandatory: cond.is_mandatory !== false,\n      requirement_type: cond.requirement_type || 'CAPABILITY',\n      entity_type: cond.entity_type || 'COMPANY',\n      required_amount: cond.required_amount || null,\n      required_count: cond.required_count || null,\n      required_years: cond.required_years || null,\n      can_rely_on_subcontractor: cond.can_rely_on_subcontractor || false,\n      source_section: cond.source_section || cond.condition_number,\n      status: 'PENDING'\n    };\n\n    const saveResponse = await fetch(SUPABASE_URL + '/gate_conditions', {\n      method: 'POST',\n      headers,\n      body: JSON.stringify(conditionData)\n    });\n\n    if (saveResponse.ok) {\n      const saved = await saveResponse.json();\n      savedConditions.push(saved[0] || saved);\n    }\n  }\n\n  // Update tender status\n  await fetch(SUPABASE_URL + '/tenders?id=eq.' + tender_id, {\n    method: 'PATCH',\n    headers,\n    body: JSON.stringify({ current_step: 'GATES', status: 'GATES_EXTRACTED' })\n  });\n\n  return [{\n    json: {\n      success: true,\n      tender_id: tender_id,\n      conditions_extracted: savedConditions.length,\n      conditions: savedConditions,\n      next_step: 'GATE_MATCHING',\n      message: `חולצו ${savedConditions.length} תנאי סף. יש להמשיך להתאמה מול פרופיל החברה`,\n      timestamp: new Date().toISOString()\n    }\n  }];\n\n} catch (error) {\n  return [{\n    json: {\n      success: false,\n      error: error.message,\n      timestamp: new Date().toISOString()\n    }\n  }];\n}"
+      },
+      "id": "extract",
+      "name": "Extract Gate Conditions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [640, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Extract Gate Conditions", "type": "main", "index": 0 }]]
+    },
+    "Extract Gate Conditions": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

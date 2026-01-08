@@ -1,0 +1,127 @@
+{
+  "name": "TDX-Step3-GateExtraction-v2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tdx-extract-gates-v2",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400],
+      "webhookId": "tdx-extract-gates-v2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare prompt for Claude\nconst input = $input.first().json.body || $input.first().json;\n\nconst systemPrompt = `אתה מומחה לניתוח מכרזים ישראליים. תפקידך לחלץ תנאי סף מטקסט של מכרז.\n\nעבור כל תנאי סף, זהה:\n1. מספר הסעיף\n2. הטקסט המדויק של התנאי\n3. סוג התנאי: GATE (תנאי סף פוסל) או ADVANTAGE (יתרון/ניקוד)\n4. האם חובה (is_mandatory)\n5. סוג הדרישה: CAPABILITY (יכולת) או EXECUTION (ביצוע)\n6. פירוט כמותי אם רלוונטי (סכום, כמות, שנים)\n7. ישות נושאת הדרישה: COMPANY, PROJECT, PERSONNEL, CERTIFICATION\n8. האם ניתן להסתמך על קבלן משנה\n\nהחזר JSON array בלבד (בלי markdown) עם המבנה הבא עבור כל תנאי:\n{\"condition_number\": \"מספר\", \"condition_text\": \"טקסט\", \"condition_type\": \"GATE\", \"is_mandatory\": true, \"requirement_type\": \"CAPABILITY\", \"entity_type\": \"COMPANY\", \"required_amount\": null, \"required_count\": null, \"required_years\": null, \"can_rely_on_subcontractor\": false, \"source_section\": \"סעיף\"}`;\n\nreturn [{\n  json: {\n    tender_id: input.tender_id,\n    tender_text: input.tender_text,\n    systemPrompt: systemPrompt,\n    userMessage: 'חלץ את כל תנאי הסף מהטקסט הבא של המכרז. החזר JSON array בלבד:\\n\\n' + (input.tender_text || '')\n  }\n}];"
+      },
+      "id": "prepare",
+      "name": "Prepare Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "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" },
+            { "name": "anthropic-version", "value": "2023-06-01" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 4096,\n  \"system\": {{ JSON.stringify($json.systemPrompt) }},\n  \"messages\": [{\"role\": \"user\", \"content\": {{ JSON.stringify($json.userMessage) }}}]\n}",
+        "options": {}
+      },
+      "id": "call-claude",
+      "name": "Call Claude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Claude's response and extract conditions\nconst claudeResponse = $input.first().json;\nconst prepData = $('Prepare Prompt').first().json;\nconst tender_id = prepData.tender_id;\n\nif (!claudeResponse.content || !claudeResponse.content[0]) {\n  return [{ json: { success: false, error: 'No response from Claude', raw: claudeResponse }}];\n}\n\nconst responseText = claudeResponse.content[0].text || '';\n\n// Extract JSON from response\nlet jsonText = responseText;\nconst jsonMatch = responseText.match(/```json\\s*([\\s\\S]*?)\\s*```/);\nif (jsonMatch) {\n  jsonText = jsonMatch[1];\n} else {\n  const arrayMatch = responseText.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/);\n  if (arrayMatch) {\n    jsonText = arrayMatch[0];\n  }\n}\n\nlet conditions;\ntry {\n  conditions = JSON.parse(jsonText);\n} catch (e) {\n  return [{ json: { success: false, error: 'Failed to parse: ' + e.message, raw: responseText.substring(0, 500) }}];\n}\n\n// Prepare conditions for saving\nconst conditionsToSave = conditions.map((cond, idx) => ({\n  tender_id: tender_id,\n  condition_number: cond.condition_number || String(idx + 1),\n  condition_text: cond.condition_text,\n  condition_type: cond.condition_type || 'GATE',\n  is_mandatory: cond.is_mandatory !== false,\n  requirement_type: cond.requirement_type || 'CAPABILITY',\n  entity_type: cond.entity_type || 'COMPANY',\n  required_amount: cond.required_amount || null,\n  required_count: cond.required_count || null,\n  required_years: cond.required_years || null,\n  can_rely_on_subcontractor: cond.can_rely_on_subcontractor || false,\n  source_section: cond.source_section || cond.condition_number,\n  status: 'PENDING'\n}));\n\nreturn [{\n  json: {\n    tender_id: tender_id,\n    conditions: conditionsToSave,\n    count: conditionsToSave.length\n  }\n}];"
+      },
+      "id": "parse",
+      "name": "Parse Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/gate_conditions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Prefer", "value": "return=representation" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.conditions) }}",
+        "options": {}
+      },
+      "id": "save-conditions",
+      "name": "Save Conditions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format final response\nconst saved = $input.first().json;\nconst parseData = $('Parse Response').first().json;\n\nconst savedConditions = Array.isArray(saved) ? saved : [saved];\n\nreturn [{\n  json: {\n    success: true,\n    tender_id: parseData.tender_id,\n    conditions_extracted: savedConditions.length,\n    conditions: savedConditions,\n    next_step: 'GATE_MATCHING',\n    message: `חולצו ${savedConditions.length} תנאי סף. יש להמשיך להתאמה מול פרופיל החברה`,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "format",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1520, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Prepare Prompt", "type": "main", "index": 0 }]]
+    },
+    "Prepare Prompt": {
+      "main": [[{ "node": "Call Claude", "type": "main", "index": 0 }]]
+    },
+    "Call Claude": {
+      "main": [[{ "node": "Parse Response", "type": "main", "index": 0 }]]
+    },
+    "Parse Response": {
+      "main": [[{ "node": "Save Conditions", "type": "main", "index": 0 }]]
+    },
+    "Save Conditions": {
+      "main": [[{ "node": "Format Response", "type": "main", "index": 0 }]]
+    },
+    "Format Response": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

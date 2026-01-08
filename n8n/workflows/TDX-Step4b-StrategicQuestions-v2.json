@@ -1,0 +1,132 @@
+{
+  "name": "TDX-Step4b-StrategicQuestions-v2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tdx-strategic-questions",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400],
+      "webhookId": "tdx-strategic-questions"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/gate_conditions?tender_id=eq.' + $json.body.tender_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-conditions",
+      "name": "Get Conditions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/company_certifications?org_id=eq.' + $json.body.org_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-certs",
+      "name": "Get Company Certs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge conditions and certs data\nconst conditions = $('Get Conditions').first().json || [];\nconst certs = $('Get Company Certs').first().json || [];\nconst webhookData = $('Webhook').first().json.body;\n\nconst conditionsText = Array.isArray(conditions) \n  ? conditions.map(c => `${c.condition_number}: ${c.condition_text}`).join('\\n')\n  : '';\n\nconst certsText = Array.isArray(certs)\n  ? certs.map(c => `${c.cert_type}: ${c.cert_name}`).join('\\n')\n  : '';\n\nconst systemPrompt = `אתה יועץ אסטרטגי למכרזים בישראל. תפקידך ליצור שאלות הבהרה אסטרטגיות שמטרתן לצמצם תחרות - להקשות על מתחרים בלי לפגוע במציע שלנו.\n\n## רקע על החברה שלנו:\nיש לנו את ההסמכות והנציגויות הבאות:\n${certsText}\n\n## כללי יצירת שאלות אסטרטגיות:\n1. זהה דרישות שאנחנו עומדים בהן ומתחרים כנראה לא\n2. הצע שאלות שמחדדות דרישות לטובתנו\n3. נמק למזמין למה זה חשוב (אבטחה, איכות, תאימות)\n4. ודא שהשאלה לא פוגעת בנו!\n\n## סוגי שאלות אסטרטגיות:\n- **NDAA**: דרישה למוצרים תואמי NDAA (פוסל יצרנים סיניים)\n- **EXCLUSIVE**: נציגות בלעדית של יצרן ספציפי\n- **CERTIFICATION**: דרישת הסמכה ספציפית שיש לנו\n- **EXPERIENCE**: דרישת ניסיון ספציפי שיש לנו\n- **SECURITY**: דרישת סיווג ביטחוני\n\nהחזר JSON array:\n{\n  \"question_number\": מספר,\n  \"question_text\": \"נוסח השאלה למזמין\",\n  \"strategic_type\": \"NDAA\"/\"EXCLUSIVE\"/\"CERTIFICATION\"/\"EXPERIENCE\"/\"SECURITY\",\n  \"justification_to_client\": \"נימוק למזמין למה זה חשוב\",\n  \"impact_on_us\": \"חיובי/ניטרלי\",\n  \"estimated_competitors_affected\": \"גבוה/בינוני/נמוך\",\n  \"risk_level\": \"נמוך/בינוני - שהמזמין יסרב\"\n}`;\n\nreturn [{\n  json: {\n    tender_id: webhookData.tender_id,\n    org_id: webhookData.org_id,\n    conditionsText,\n    certsText,\n    systemPrompt,\n    userMessage: `בהתבסס על תנאי הסף של המכרז וההסמכות שלנו, צור שאלות אסטרטגיות שיכולות לצמצם תחרות:\\n\\nתנאי סף:\\n${conditionsText}\\n\\nההסמכות שלנו:\\n${certsText}`\n  }\n}];"
+      },
+      "id": "merge",
+      "name": "Merge Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "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" },
+            { "name": "anthropic-version", "value": "2023-06-01" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 4096,\n  \"system\": {{ JSON.stringify($json.systemPrompt) }},\n  \"messages\": [{\"role\": \"user\", \"content\": {{ JSON.stringify($json.userMessage) }}}]\n}",
+        "options": {}
+      },
+      "id": "call-claude",
+      "name": "Call Claude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse strategic questions\nconst claudeResponse = $input.first().json;\nconst prepData = $('Merge Data').first().json;\n\nif (!claudeResponse.content?.[0]) {\n  return [{ json: { success: false, error: 'No response' }}];\n}\n\nconst responseText = claudeResponse.content[0].text || '';\nlet jsonText = responseText;\nconst jsonMatch = responseText.match(/```json\\s*([\\s\\S]*?)\\s*```/);\nif (jsonMatch) jsonText = jsonMatch[1];\nelse {\n  const arrayMatch = responseText.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/);\n  if (arrayMatch) jsonText = arrayMatch[0];\n}\n\nlet questions;\ntry {\n  questions = JSON.parse(jsonText);\n} catch (e) {\n  return [{ json: { success: false, error: 'Parse error', raw: responseText.substring(0, 500) }}];\n}\n\n// Categorize by type\nconst byType = {};\nfor (const q of questions) {\n  const type = q.strategic_type || 'OTHER';\n  if (!byType[type]) byType[type] = [];\n  byType[type].push(q);\n}\n\n// Filter safe questions (those that don't hurt us)\nconst safeQuestions = questions.filter(q => \n  q.impact_on_us === 'חיובי' || q.impact_on_us === 'ניטרלי'\n);\n\nreturn [{\n  json: {\n    success: true,\n    tender_id: prepData.tender_id,\n    total_questions: questions.length,\n    safe_questions: safeQuestions.length,\n    by_type: byType,\n    questions: questions,\n    recommended: safeQuestions,\n    warning: questions.length !== safeQuestions.length \n      ? `⚠️ ${questions.length - safeQuestions.length} שאלות עלולות לפגוע בנו - לא מומלצות`\n      : null,\n    next_step: 'REVIEW_WITH_BD_TEAM',\n    message: `נוצרו ${safeQuestions.length} שאלות אסטרטגיות בטוחות מתוך ${questions.length}`,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "parse",
+      "name": "Parse & Filter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1300, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Get Conditions", "type": "main", "index": 0 }, { "node": "Get Company Certs", "type": "main", "index": 0 }]]
+    },
+    "Get Conditions": {
+      "main": [[{ "node": "Merge Data", "type": "main", "index": 0 }]]
+    },
+    "Get Company Certs": {
+      "main": [[{ "node": "Merge Data", "type": "main", "index": 0 }]]
+    },
+    "Merge Data": {
+      "main": [[{ "node": "Call Claude", "type": "main", "index": 0 }]]
+    },
+    "Call Claude": {
+      "main": [[{ "node": "Parse & Filter", "type": "main", "index": 0 }]]
+    },
+    "Parse & Filter": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

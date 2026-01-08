@@ -1,0 +1,545 @@
+{
+  "name": "TDX-P2-Gate-Matching",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gate-matching",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "gate-matching-webhook"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/gate_conditions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "*,tenders(tender_name,tender_number,org_id)"
+            },
+            {
+              "name": "tender_id",
+              "value": "eq.{{ $json.body.tender_id }}"
+            },
+            {
+              "name": "order",
+              "value": "condition_number.asc"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $vars.SUPABASE_ANON_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-gate-conditions",
+      "name": "Get Gate Conditions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 160],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "supabase-auth",
+          "name": "Supabase Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/company_financials",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "*"
+            },
+            {
+              "name": "org_id",
+              "value": "eq.{{ $json.body.org_id }}"
+            },
+            {
+              "name": "order",
+              "value": "fiscal_year.desc"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $vars.SUPABASE_ANON_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-financials",
+      "name": "Get Financials",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 320],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "supabase-auth",
+          "name": "Supabase Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/company_projects",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "*"
+            },
+            {
+              "name": "org_id",
+              "value": "eq.{{ $json.body.org_id }}"
+            },
+            {
+              "name": "order",
+              "value": "end_date.desc.nullslast"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $vars.SUPABASE_ANON_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-projects",
+      "name": "Get Projects",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 480],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "supabase-auth",
+          "name": "Supabase Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/company_certifications",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "*"
+            },
+            {
+              "name": "org_id",
+              "value": "eq.{{ $json.body.org_id }}"
+            },
+            {
+              "name": "or",
+              "value": "(expiry_date.is.null,expiry_date.gt.now())"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $vars.SUPABASE_ANON_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-certifications",
+      "name": "Get Certifications",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 640],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "supabase-auth",
+          "name": "Supabase Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/company_personnel",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "*"
+            },
+            {
+              "name": "org_id",
+              "value": "eq.{{ $json.body.org_id }}"
+            },
+            {
+              "name": "is_active",
+              "value": "eq.true"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $vars.SUPABASE_ANON_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-personnel",
+      "name": "Get Personnel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 800],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "supabase-auth",
+          "name": "Supabase Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "id": "merge-all-data",
+      "name": "Merge All Data",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [740, 480]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all input data from previous nodes\nconst allInputs = $input.all();\n\n// The data comes merged - we need to identify each type\n// Based on the order: conditions, financials, projects, certifications, personnel\nconst gateConditions = $('Get Gate Conditions').first().json;\nconst financials = $('Get Financials').first().json;\nconst projects = $('Get Projects').first().json;\nconst certifications = $('Get Certifications').first().json;\nconst personnel = $('Get Personnel').first().json;\n\n// Ensure arrays\nconst conditions = Array.isArray(gateConditions) ? gateConditions : [];\nconst finData = Array.isArray(financials) ? financials : [];\nconst projData = Array.isArray(projects) ? projects : [];\nconst certData = Array.isArray(certifications) ? certifications : [];\nconst persData = Array.isArray(personnel) ? personnel : [];\n\n// Helper functions\nfunction calculateAverageRevenue(financials, years) {\n  const recent = financials.slice(0, years);\n  if (recent.length === 0) return 0;\n  const sum = recent.reduce((acc, f) => acc + (parseFloat(f.annual_revenue) || 0), 0);\n  return sum / recent.length;\n}\n\nfunction findMaxProjectValue(projects) {\n  if (projects.length === 0) return { value: 0, project: null };\n  let maxVal = 0;\n  let maxProj = null;\n  for (const p of projects) {\n    const val = parseFloat(p.contract_value) || 0;\n    if (val > maxVal) {\n      maxVal = val;\n      maxProj = p;\n    }\n  }\n  return { value: maxVal, project: maxProj };\n}\n\nfunction countProjectsByClientType(projects, clientTypes) {\n  if (!clientTypes || clientTypes.length === 0) return projects.length;\n  return projects.filter(p => clientTypes.includes(p.client_type)).length;\n}\n\nfunction getProjectsWithCameras(projects, minCount) {\n  return projects.filter(p => {\n    const tech = p.technologies || {};\n    return (tech.camera_count || 0) >= minCount;\n  });\n}\n\nfunction findCertification(certs, searchTerms) {\n  const terms = Array.isArray(searchTerms) ? searchTerms : [searchTerms];\n  for (const cert of certs) {\n    for (const term of terms) {\n      if (cert.cert_type?.toLowerCase().includes(term.toLowerCase()) ||\n          cert.cert_name?.toLowerCase().includes(term.toLowerCase())) {\n        return cert;\n      }\n    }\n  }\n  return null;\n}\n\nfunction findPersonnelWithCert(personnel, certKeywords) {\n  const keywords = Array.isArray(certKeywords) ? certKeywords : [certKeywords];\n  return personnel.filter(p => {\n    const certs = p.certifications || [];\n    return certs.some(c => \n      keywords.some(kw => c.toLowerCase().includes(kw.toLowerCase()))\n    );\n  });\n}\n\nfunction findPersonnelByRole(personnel, roleKeywords) {\n  const keywords = Array.isArray(roleKeywords) ? roleKeywords : [roleKeywords];\n  return personnel.filter(p => \n    keywords.some(kw => p.role?.toLowerCase().includes(kw.toLowerCase()))\n  );\n}\n\n// Process each gate condition\nconst results = [];\n\nfor (const gc of conditions) {\n  let status = 'UNKNOWN';\n  let evidence = null;\n  let confidence = 0;\n  let gap = null;\n  let remediation = null;\n\n  const reqType = (gc.requirement_type || '').toUpperCase();\n  const condType = (gc.condition_type || '').toUpperCase();\n\n  // FINANCIAL CONDITIONS\n  if (condType === 'FINANCIAL' || reqType.includes('REVENUE')) {\n    const years = gc.required_years || 3;\n    const avgRevenue = calculateAverageRevenue(finData, years);\n    const required = parseFloat(gc.required_amount) || 0;\n    \n    if (avgRevenue >= required) {\n      status = 'MEETS';\n      const recentYears = finData.slice(0, years);\n      const details = recentYears.map(f => `${f.fiscal_year}: ₪${(f.annual_revenue/1000000).toFixed(0)}M`).join(', ');\n      evidence = `מחזור ממוצע ${years} שנים: ₪${(avgRevenue/1000000).toFixed(2)}M (${details})`;\n      confidence = 100;\n    } else if (finData.length === 0) {\n      status = 'UNKNOWN';\n      gap = 'אין נתונים פיננסיים בפרופיל החברה';\n      remediation = 'להזין נתוני מחזור שנתי';\n      confidence = 0;\n    } else {\n      status = 'DOES_NOT_MEET';\n      gap = `מחזור ממוצע ₪${(avgRevenue/1000000).toFixed(2)}M, נדרש ₪${(required/1000000).toFixed(2)}M`;\n      remediation = 'לבחון אפשרות שותפות או קונסורציום';\n      confidence = 100;\n    }\n  }\n  \n  // PROJECT CONDITIONS - Single Value\n  else if (condType === 'PROJECT' && reqType.includes('SINGLE')) {\n    const { value: maxValue, project: bestProject } = findMaxProjectValue(projData);\n    const required = parseFloat(gc.required_amount) || 0;\n    \n    if (maxValue >= required && bestProject) {\n      status = 'MEETS';\n      evidence = `${bestProject.project_name}: ₪${(maxValue/1000000).toFixed(0)}M (${bestProject.client_name})`;\n      confidence = 100;\n    } else if (projData.length === 0) {\n      status = 'UNKNOWN';\n      gap = 'אין פרויקטים בפרופיל החברה';\n      remediation = 'להזין פרויקטים רלוונטיים';\n      confidence = 0;\n    } else {\n      status = 'DOES_NOT_MEET';\n      gap = `פרויקט מקסימלי ₪${(maxValue/1000000).toFixed(2)}M, נדרש ₪${(required/1000000).toFixed(2)}M`;\n      remediation = 'לבחון הסתמכות על קבלן משנה או שותפות';\n      confidence = 100;\n    }\n  }\n  \n  // PROJECT CONDITIONS - Count\n  else if (condType === 'PROJECT' && reqType.includes('COUNT')) {\n    const clientTypes = ['GOVERNMENT', 'MUNICIPAL', 'DEFENSE'];\n    const count = countProjectsByClientType(projData, clientTypes);\n    const required = gc.required_count || 3;\n    \n    if (count >= required) {\n      status = 'MEETS';\n      const relevantProjects = projData.filter(p => clientTypes.includes(p.client_type));\n      evidence = `${count} פרויקטים: ${relevantProjects.slice(0, 3).map(p => p.client_name).join(', ')}`;\n      confidence = 100;\n    } else {\n      status = 'DOES_NOT_MEET';\n      gap = `${count} פרויקטים ממשלתיים/עירוניים, נדרש ${required}`;\n      confidence = 100;\n    }\n  }\n  \n  // PROJECT CONDITIONS - Cameras\n  else if (condType === 'PROJECT' && (reqType.includes('CAMERA') || reqType.includes('MUNICIPAL'))) {\n    const required = gc.required_count || 100;\n    const cameraProjects = getProjectsWithCameras(projData, required);\n    \n    if (cameraProjects.length > 0) {\n      const best = cameraProjects.reduce((a, b) => \n        (a.technologies?.camera_count || 0) > (b.technologies?.camera_count || 0) ? a : b\n      );\n      status = 'MEETS';\n      evidence = `${best.project_name}: ${best.technologies?.camera_count} מצלמות (${best.client_name})`;\n      confidence = 100;\n    } else {\n      const maxCameras = Math.max(...projData.map(p => p.technologies?.camera_count || 0), 0);\n      status = 'DOES_NOT_MEET';\n      gap = `פרויקט מקסימלי ${maxCameras} מצלמות, נדרש ${required}`;\n      confidence = 100;\n    }\n  }\n  \n  // PROJECT CONDITIONS - VMS Integration\n  else if (condType === 'PROJECT' && reqType.includes('VMS')) {\n    const vmsProjects = projData.filter(p => {\n      const tech = p.technologies || {};\n      const vms = (tech.vms_system || '').toLowerCase();\n      return vms.includes('milestone') || vms.includes('genetec');\n    });\n    \n    if (vmsProjects.length > 0) {\n      const best = vmsProjects[0];\n      status = 'MEETS';\n      evidence = `${best.project_name}: ${best.technologies?.vms_system} (${best.client_name})`;\n      confidence = 100;\n    } else {\n      status = 'DOES_NOT_MEET';\n      gap = 'אין פרויקטים עם אינטגרציית Milestone/Genetec';\n      confidence = 100;\n    }\n  }\n  \n  // PROJECT CONDITIONS - Maintenance\n  else if (condType === 'PROJECT' && reqType.includes('MAINTENANCE')) {\n    const required = gc.required_count || 500;\n    const maintenanceProjects = projData.filter(p => \n      p.project_type === 'MAINTENANCE' || p.project_type === 'HYBRID'\n    );\n    const totalCameras = maintenanceProjects.reduce((sum, p) => \n      sum + (p.technologies?.camera_count || 0), 0\n    );\n    \n    if (totalCameras >= required) {\n      const best = maintenanceProjects.reduce((a, b) => \n        (a.technologies?.camera_count || 0) > (b.technologies?.camera_count || 0) ? a : b\n      , { technologies: { camera_count: 0 } });\n      status = 'MEETS';\n      evidence = `אחזקת ${best.project_name}: ${best.technologies?.camera_count} מצלמות`;\n      confidence = 100;\n    } else {\n      status = 'DOES_NOT_MEET';\n      gap = `אחזקת ${totalCameras} מצלמות, נדרש ${required}`;\n      confidence = 100;\n    }\n  }\n  \n  // CERTIFICATION CONDITIONS\n  else if (condType === 'CERTIFICATION') {\n    let searchTerms = [reqType];\n    if (reqType.includes('9001')) searchTerms = ['9001', 'ISO 9001'];\n    if (reqType.includes('27001')) searchTerms = ['27001', 'ISO 27001'];\n    if (reqType.includes('CONTRACTOR') || reqType.includes('200')) searchTerms = ['קבלנים', 'ענף 200', 'רישום קבלנים'];\n    if (reqType.includes('TAX') || reqType.includes('ניכוי')) searchTerms = ['ניכוי מס', 'ניהול ספרים', 'מס הכנסה'];\n    if (reqType.includes('SECURITY') || reqType.includes('ביטחון')) searchTerms = ['ביטחוני', 'מלמ\"ב', 'סיווג'];\n    \n    const cert = findCertification(certData, searchTerms);\n    \n    if (cert) {\n      status = 'MEETS';\n      const expiry = cert.expiry_date ? cert.expiry_date.split('T')[0] : 'ללא תפוגה';\n      evidence = `${cert.cert_name} - ${cert.issuing_body}, תקף עד ${expiry}`;\n      if (cert.cert_number) evidence += ` (מס' ${cert.cert_number})`;\n      confidence = 100;\n    } else {\n      status = 'DOES_NOT_MEET';\n      gap = `חסר: ${gc.condition_text?.substring(0, 50)}...`;\n      remediation = 'להשיג תעודה מתאימה';\n      confidence = 100;\n    }\n  }\n  \n  // PERSONNEL CONDITIONS\n  else if (condType === 'PERSONNEL') {\n    let found = [];\n    \n    if (reqType.includes('PMP') || reqType.includes('PROJECT_MANAGER')) {\n      found = findPersonnelWithCert(persData, ['PMP', 'מנהל פרויקטים']);\n      if (found.length === 0) {\n        found = findPersonnelByRole(persData, ['מנהל פרויקט', 'Project Manager']);\n      }\n    } else if (reqType.includes('VMS') || reqType.includes('CERTIFIED')) {\n      found = findPersonnelWithCert(persData, ['Milestone', 'Genetec', 'VMS', 'PSIM']);\n    } else {\n      // Generic search\n      found = persData.filter(p => p.certifications && p.certifications.length > 0);\n    }\n    \n    if (found.length > 0) {\n      status = 'MEETS';\n      evidence = found.map(p => {\n        const certs = (p.certifications || []).slice(0, 2).join(', ');\n        return `${p.full_name} - ${p.role}${certs ? ', ' + certs : ''}`;\n      }).join('; ');\n      confidence = 100;\n    } else {\n      status = 'DOES_NOT_MEET';\n      gap = 'אין עובדים עם הסמכות מתאימות';\n      remediation = 'להכשיר עובד קיים או לגייס בעל הסמכה';\n      confidence = 100;\n    }\n  }\n  \n  // DOCUMENT CONDITIONS (Insurance, Bank Guarantee) - Usually can't auto-verify\n  else if (condType === 'DOCUMENT' || reqType.includes('INSURANCE') || reqType.includes('GUARANTEE') || reqType.includes('ערבות') || reqType.includes('ביטוח')) {\n    status = 'UNKNOWN';\n    gap = 'מסמך זה נדרש בשלב ההגשה - לא ניתן לאמת אוטומטית';\n    remediation = 'להכין מסמך לפני מועד ההגשה';\n    confidence = 0;\n  }\n  \n  // Unknown condition type\n  else {\n    status = 'UNKNOWN';\n    gap = `סוג תנאי לא מזוהה: ${condType}/${reqType}`;\n    confidence = 0;\n  }\n\n  results.push({\n    id: gc.id,\n    tender_id: gc.tender_id,\n    condition_number: gc.condition_number,\n    condition_text: gc.condition_text,\n    condition_type: gc.condition_type,\n    requirement_type: gc.requirement_type,\n    is_mandatory: gc.is_mandatory,\n    status: status,\n    company_evidence: evidence,\n    gap_description: gap,\n    remediation_suggestion: remediation,\n    confidence_score: confidence\n  });\n}\n\nreturn results;"
+      },
+      "id": "evaluate-conditions",
+      "name": "Evaluate Conditions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 480]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get evaluation results\nconst results = $input.all();\n\nif (results.length === 0) {\n  return [{ error: 'No conditions to process' }];\n}\n\n// Calculate summary\nconst summary = {\n  tender_id: results[0].json.tender_id,\n  total: results.length,\n  meets: results.filter(r => r.json.status === 'MEETS').length,\n  partially_meets: results.filter(r => r.json.status === 'PARTIALLY_MEETS').length,\n  does_not_meet: results.filter(r => r.json.status === 'DOES_NOT_MEET').length,\n  unknown: results.filter(r => r.json.status === 'UNKNOWN').length\n};\n\n// Determine eligibility\nconst mandatoryFails = results.filter(r => \n  r.json.is_mandatory && r.json.status === 'DOES_NOT_MEET'\n);\n\nif (mandatoryFails.length > 0) {\n  summary.eligibility = 'NOT_ELIGIBLE';\n} else if (summary.does_not_meet > 0) {\n  summary.eligibility = 'CONDITIONAL';\n} else if (summary.unknown > 2) {\n  summary.eligibility = 'CONDITIONAL';\n} else {\n  summary.eligibility = 'ELIGIBLE';\n}\n\n// Blocking conditions\nsummary.blocking = mandatoryFails.map(r => ({\n  number: r.json.condition_number,\n  text: r.json.condition_text?.substring(0, 100)\n}));\n\n// Recommendations\nconst recs = [];\nif (summary.meets === summary.total) {\n  recs.push('החברה עומדת בכל תנאי הסף - המלצה: GO');\n} else {\n  recs.push(`עומד ב-${summary.meets} מתוך ${summary.total} תנאים`);\n  if (mandatoryFails.length > 0) {\n    recs.push(`חסימה: ${mandatoryFails.length} תנאי סף חובה לא מתקיימים`);\n    recs.push('המלצה: NO-GO או בדיקת אפשרות שותפות/קב.משנה');\n  }\n  if (summary.unknown > 0) {\n    recs.push(`${summary.unknown} תנאים דורשים השלמת מידע או בדיקה ידנית`);\n  }\n}\nsummary.recommendations = recs;\n\n// Return both results and summary for next steps\nreturn {\n  conditions: results.map(r => r.json),\n  summary: summary\n};"
+      },
+      "id": "prepare-updates",
+      "name": "Prepare Updates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 480]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get conditions to update\nconst data = $input.first().json;\nconst conditions = data.conditions || [];\n\n// Return each condition as separate item for batch update\nreturn conditions.map(c => ({ json: c }));"
+      },
+      "id": "split-for-update",
+      "name": "Split for Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1400, 380]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/gate_conditions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "eq.{{ $json.id }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $vars.SUPABASE_ANON_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"{{ $json.status }}\",\n  \"company_evidence\": {{ $json.company_evidence ? JSON.stringify($json.company_evidence) : 'null' }},\n  \"gap_description\": {{ $json.gap_description ? JSON.stringify($json.gap_description) : 'null' }},\n  \"remediation_suggestion\": {{ $json.remediation_suggestion ? JSON.stringify($json.remediation_suggestion) : 'null' }},\n  \"confidence_score\": {{ $json.confidence_score }},\n  \"updated_at\": \"{{ new Date().toISOString() }}\"\n}",
+        "options": {}
+      },
+      "id": "update-condition",
+      "name": "Update Condition",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1620, 380],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "supabase-auth",
+          "name": "Supabase Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get summary from Prepare Updates node\nconst data = $('Prepare Updates').first().json;\nconst summary = data.summary;\n\nreturn [{ json: summary }];"
+      },
+      "id": "get-summary",
+      "name": "Get Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1400, 580]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/gate_conditions_summary",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $vars.SUPABASE_ANON_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"tender_id\": \"{{ $json.tender_id }}\",\n  \"meets_count\": {{ $json.meets }},\n  \"partially_meets_count\": {{ $json.partially_meets }},\n  \"does_not_meet_count\": {{ $json.does_not_meet }},\n  \"unknown_count\": {{ $json.unknown }},\n  \"overall_eligibility\": \"{{ $json.eligibility }}\",\n  \"blocking_conditions\": {{ JSON.stringify($json.blocking) }},\n  \"recommendations\": {{ JSON.stringify($json.recommendations) }},\n  \"updated_at\": \"{{ new Date().toISOString() }}\"\n}",
+        "options": {}
+      },
+      "id": "upsert-summary",
+      "name": "Upsert Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1620, 580],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "supabase-auth",
+          "name": "Supabase Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "id": "wait-for-updates",
+      "name": "Wait for Updates",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1840, 480]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the summary for response\nconst summaryData = $('Prepare Updates').first().json.summary;\n\nreturn [{\n  json: {\n    success: true,\n    tender_id: summaryData.tender_id,\n    summary: {\n      total: summaryData.total,\n      meets: summaryData.meets,\n      partially_meets: summaryData.partially_meets,\n      does_not_meet: summaryData.does_not_meet,\n      unknown: summaryData.unknown,\n      eligibility: summaryData.eligibility\n    },\n    blocking_conditions: summaryData.blocking,\n    recommendations: summaryData.recommendations,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "prepare-response",
+      "name": "Prepare Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2060, 480]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2280, 480]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          { "node": "Get Gate Conditions", "type": "main", "index": 0 },
+          { "node": "Get Financials", "type": "main", "index": 0 },
+          { "node": "Get Projects", "type": "main", "index": 0 },
+          { "node": "Get Certifications", "type": "main", "index": 0 },
+          { "node": "Get Personnel", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get Gate Conditions": {
+      "main": [
+        [
+          { "node": "Merge All Data", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get Financials": {
+      "main": [
+        [
+          { "node": "Merge All Data", "type": "main", "index": 1 }
+        ]
+      ]
+    },
+    "Get Projects": {
+      "main": [
+        [
+          { "node": "Merge All Data", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get Certifications": {
+      "main": [
+        [
+          { "node": "Merge All Data", "type": "main", "index": 1 }
+        ]
+      ]
+    },
+    "Get Personnel": {
+      "main": [
+        [
+          { "node": "Merge All Data", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Merge All Data": {
+      "main": [
+        [
+          { "node": "Evaluate Conditions", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Evaluate Conditions": {
+      "main": [
+        [
+          { "node": "Prepare Updates", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Updates": {
+      "main": [
+        [
+          { "node": "Split for Update", "type": "main", "index": 0 },
+          { "node": "Get Summary", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Split for Update": {
+      "main": [
+        [
+          { "node": "Update Condition", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Update Condition": {
+      "main": [
+        [
+          { "node": "Wait for Updates", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get Summary": {
+      "main": [
+        [
+          { "node": "Upsert Summary", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Upsert Summary": {
+      "main": [
+        [
+          { "node": "Wait for Updates", "type": "main", "index": 1 }
+        ]
+      ]
+    },
+    "Wait for Updates": {
+      "main": [
+        [
+          { "node": "Prepare Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Response": {
+      "main": [
+        [
+          { "node": "Respond to Webhook", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "Tenderix" },
+    { "name": "P2-Gate-Conditions" }
+  ],
+  "pinData": {}
+}

@@ -1,0 +1,111 @@
+{
+  "name": "TDX-Step4-Clarifications-v3",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tdx-clarifications-v3",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400],
+      "webhookId": "tdx-clarifications-v3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get tender_id from webhook\nconst input = $input.first().json.body || $input.first().json;\nreturn [{ json: { tender_id: input.tender_id, org_id: input.org_id }}];"
+      },
+      "id": "extract-ids",
+      "name": "Extract IDs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/gate_conditions?tender_id=eq.' + $json.tender_id + '&order=condition_number' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-conditions",
+      "name": "Get Conditions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [620, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare data for Claude\nconst conditions = $input.first().json;\nconst ids = $('Extract IDs').first().json;\n\nif (!Array.isArray(conditions) || conditions.length === 0) {\n  return [{ json: { error: 'No conditions found', tender_id: ids.tender_id }}];\n}\n\nconst conditionsText = conditions.map(c => \n  `סעיף ${c.condition_number}: ${c.condition_text}\\nסטטוס: ${c.status || 'PENDING'}\\nפער: ${c.gap_description || 'אין'}`\n).join('\\n\\n');\n\nconst systemPrompt = `אתה יועץ מכרזים מומחה. צור שאלות הבהרה למזמין המכרז.\n\nכללים:\n1. שאלות מנוסחות כ\"בקשה\" - \"נבקש להבהיר...\"\n2. סווג לפי עדיפות: P1 (משנה GO/NO-GO), P2 (משנה סיכון), P3 (מחזק טיעון)\n3. ציין מטרה ותוצאה רצויה\n\nהחזר JSON array בלבד (ללא markdown):\n[{\"question_number\": 1, \"related_condition\": \"סעיף\", \"question_text\": \"נוסח\", \"priority\": \"P1\", \"purpose\": \"מטרה\", \"desired_outcome\": \"תוצאה\"}]`;\n\nreturn [{\n  json: {\n    tender_id: ids.tender_id,\n    org_id: ids.org_id,\n    conditions_count: conditions.length,\n    systemPrompt,\n    userMessage: `צור שאלות הבהרה עבור תנאי הסף הבאים:\\n\\n${conditionsText}`\n  }\n}];"
+      },
+      "id": "prepare",
+      "name": "Prepare Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [840, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "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" },
+            { "name": "anthropic-version", "value": "2023-06-01" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 4096,\n  \"system\": {{ JSON.stringify($json.systemPrompt) }},\n  \"messages\": [{\"role\": \"user\", \"content\": {{ JSON.stringify($json.userMessage) }}}]\n}",
+        "options": {}
+      },
+      "id": "call-claude",
+      "name": "Call Claude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1060, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Claude response\nconst claudeResponse = $input.first().json;\nconst prepData = $('Prepare Prompt').first().json;\n\nif (prepData.error) {\n  return [{ json: { success: false, error: prepData.error, tender_id: prepData.tender_id }}];\n}\n\nif (!claudeResponse.content?.[0]) {\n  return [{ json: { success: false, error: 'No Claude response' }}];\n}\n\nconst responseText = claudeResponse.content[0].text || '';\n\n// Extract JSON\nlet jsonText = responseText;\nconst jsonMatch = responseText.match(/```json\\s*([\\s\\S]*?)\\s*```/);\nif (jsonMatch) jsonText = jsonMatch[1];\nelse {\n  const arrayMatch = responseText.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/);\n  if (arrayMatch) jsonText = arrayMatch[0];\n}\n\nlet questions = [];\ntry {\n  questions = JSON.parse(jsonText);\n} catch (e) {\n  return [{ json: { success: false, error: 'Parse error: ' + e.message, raw: responseText.substring(0, 300) }}];\n}\n\nconst p1 = questions.filter(q => q.priority === 'P1');\nconst p2 = questions.filter(q => q.priority === 'P2');\nconst p3 = questions.filter(q => q.priority === 'P3');\n\nreturn [{\n  json: {\n    success: true,\n    tender_id: prepData.tender_id,\n    total_questions: questions.length,\n    summary: { p1_critical: p1.length, p2_important: p2.length, p3_nice_to_have: p3.length },\n    questions: questions,\n    by_priority: { P1: p1, P2: p2, P3: p3 },\n    message: `נוצרו ${questions.length} שאלות הבהרה. ${p1.length} קריטיות`,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "parse",
+      "name": "Parse Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1280, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1500, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Extract IDs", "type": "main", "index": 0 }]] },
+    "Extract IDs": { "main": [[{ "node": "Get Conditions", "type": "main", "index": 0 }]] },
+    "Get Conditions": { "main": [[{ "node": "Prepare Prompt", "type": "main", "index": 0 }]] },
+    "Prepare Prompt": { "main": [[{ "node": "Call Claude", "type": "main", "index": 0 }]] },
+    "Call Claude": { "main": [[{ "node": "Parse Response", "type": "main", "index": 0 }]] },
+    "Parse Response": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

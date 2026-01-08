@@ -1,0 +1,103 @@
+{
+  "name": "TDX-Step4-Clarifications-Simple",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tdx-clarify-simple",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400],
+      "webhookId": "tdx-clarify-simple"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/gate_conditions?tender_id=eq.' + $json.body.tender_id + '&limit=5' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-conditions",
+      "name": "Get Conditions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const conditions = $input.all().map(i => i.json);\nconst tender_id = $('Webhook').first().json.body.tender_id;\n\nconst conditionsText = conditions.flat().slice(0, 5).map(c => \n  `${c.condition_number}: ${c.condition_text}`\n).join('\\n');\n\nreturn [{\n  json: {\n    tender_id,\n    conditions_count: conditions.flat().length,\n    sample: conditionsText.substring(0, 500),\n    userMessage: `צור שאלות הבהרה למכרז.\\n\\nתנאי סף:\\n${conditionsText}\\n\\nהחזר JSON array בפורמט הבא בלבד, ללא טקסט נוסף:\\n[{\\\"num\\\": 1, \\\"question\\\": \\\"נבקש להבהיר...\\\", \\\"priority\\\": \\\"P1\\\", \\\"condition\\\": \\\"1\\\"}]\\n\\nJSON בלבד:`\n  }\n}];"
+      },
+      "id": "prepare",
+      "name": "Prepare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "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" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 1024,\n  \"messages\": [{\"role\": \"user\", \"content\": {{ JSON.stringify($json.userMessage) }}}]\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "call-claude",
+      "name": "Call Claude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const claude = $input.first().json;\nconst prep = $('Prepare').first().json;\n\nif (!claude.content) {\n  return [{ json: { success: false, error: 'No Claude response', data: claude }}];\n}\n\nconst text = claude.content[0]?.text || '';\nlet questions = [];\nlet parseError = null;\n\ntry {\n  const match = text.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/s);\n  if (match) questions = JSON.parse(match[0]);\n  else parseError = 'No JSON array found';\n} catch (e) {\n  parseError = e.message;\n}\n\nreturn [{\n  json: {\n    success: questions.length > 0,\n    tender_id: prep.tender_id,\n    questions_count: questions.length,\n    questions,\n    raw_response: text.substring(0, 500),\n    parse_error: parseError,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "parse",
+      "name": "Parse",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1300, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Get Conditions", "type": "main", "index": 0 }]] },
+    "Get Conditions": { "main": [[{ "node": "Prepare", "type": "main", "index": 0 }]] },
+    "Prepare": { "main": [[{ "node": "Call Claude", "type": "main", "index": 0 }]] },
+    "Call Claude": { "main": [[{ "node": "Parse", "type": "main", "index": 0 }]] },
+    "Parse": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

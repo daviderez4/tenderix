@@ -1,0 +1,177 @@
+{
+  "name": "TDX-P2-Gate-Matching-FINAL",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tdx-gate-matching",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400],
+      "webhookId": "tdx-gate-match-001"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/gate_conditions?select=*&tender_id=eq.' + $json.body.tender_id + '&order=condition_number.asc' }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-conditions",
+      "name": "Get Conditions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/company_financials?select=*&org_id=eq.' + $('Webhook').first().json.body.org_id + '&order=fiscal_year.desc' }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-financials",
+      "name": "Get Financials",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/company_projects?select=*&org_id=eq.' + $('Webhook').first().json.body.org_id }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-projects",
+      "name": "Get Projects",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/company_certifications?select=*&org_id=eq.' + $('Webhook').first().json.body.org_id }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-certs",
+      "name": "Get Certs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/company_personnel?select=*&org_id=eq.' + $('Webhook').first().json.body.org_id }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-personnel",
+      "name": "Get Personnel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1300, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all data from previous nodes (they run sequentially)\nconst conditions = $('Get Conditions').first().json;\nconst financials = $('Get Financials').first().json;\nconst projects = $('Get Projects').first().json;\nconst certifications = $('Get Certs').first().json;\nconst personnel = $('Get Personnel').first().json;\n\n// Helper functions\nfunction calcAvg(fin, years) {\n  const r = (fin || []).slice(0, years);\n  if (!r.length) return 0;\n  return r.reduce((s, f) => s + (parseFloat(f.annual_revenue) || 0), 0) / r.length;\n}\n\nfunction maxProj(proj) {\n  if (!(proj || []).length) return { value: 0, project: null };\n  let max = 0, best = null;\n  for (const p of proj) { const v = parseFloat(p.total_value) || 0; if (v > max) { max = v; best = p; } }\n  return { value: max, project: best };\n}\n\nfunction findCert(certs, terms) {\n  const t = Array.isArray(terms) ? terms : [terms];\n  const now = new Date();\n  for (const c of (certs || [])) {\n    if (c.valid_until && new Date(c.valid_until) < now) continue;\n    for (const term of t) {\n      const tl = term.toLowerCase();\n      if ((c.cert_type || '').toLowerCase().includes(tl) || (c.cert_name || '').toLowerCase().includes(tl)) return c;\n    }\n  }\n  return null;\n}\n\nfunction findPers(pers, kw) {\n  const k = Array.isArray(kw) ? kw : [kw];\n  return (pers || []).filter(p => (p.professional_certifications || []).some(c => k.some(x => c.toLowerCase().includes(x.toLowerCase()))));\n}\n\nfunction fmt(n) { return String.fromCharCode(8362) + (n / 1000000).toFixed(2) + 'M'; }\n\n// Process conditions\nconst results = [];\nfor (const gc of (conditions || [])) {\n  let status = 'UNKNOWN', evidence = null, confidence = 0, gap = null;\n  const txt = (gc.condition_text || '').toLowerCase();\n  const reqAmt = parseFloat(gc.required_amount) || 0;\n  const reqCnt = parseInt(gc.required_count) || 1;\n  const reqYrs = parseInt(gc.required_years) || 5;\n\n  try {\n    if (txt.includes('\\u05de\\u05d7\\u05d6\\u05d5\\u05e8') || txt.includes('\\u05d4\\u05db\\u05e0\\u05e1\\u05d5\\u05ea')) {\n      const avg = calcAvg(financials, reqYrs || 3);\n      if (!(financials || []).length) { status = 'UNKNOWN'; gap = 'No financial data'; }\n      else if (avg >= reqAmt) { status = 'MEETS'; evidence = 'Avg: ' + fmt(avg); confidence = 100; }\n      else { status = 'DOES_NOT_MEET'; gap = fmt(avg) + ' < ' + fmt(reqAmt); confidence = 100; }\n    }\n    else if (txt.includes('\\u05e4\\u05e8\\u05d5\\u05d9\\u05e7\\u05d8') && (txt.includes('\\u05d4\\u05d9\\u05e7\\u05e3') || txt.includes('\\u05de\\u05d9\\u05dc\\u05d9\\u05d5\\u05df'))) {\n      const { value, project } = maxProj(projects);\n      if (!(projects || []).length) { status = 'UNKNOWN'; gap = 'No projects'; }\n      else if (value >= reqAmt && project) { status = 'MEETS'; evidence = project.project_name + ': ' + fmt(value); confidence = 100; }\n      else { status = 'DOES_NOT_MEET'; gap = fmt(value) + ' < ' + fmt(reqAmt); confidence = 100; }\n    }\n    else if (txt.includes('\\u05de\\u05e6\\u05dc\\u05de\\u05d5\\u05ea') || txt.includes('cameras')) {\n      const min = reqCnt || 100;\n      const m = (projects || []).filter(p => ((p.quantities || {}).cameras || 0) >= min);\n      if (!(projects || []).length) { status = 'UNKNOWN'; gap = 'No projects'; }\n      else if (m.length > 0) { status = 'MEETS'; evidence = m.length + ' projects w/ ' + min + '+ cameras'; confidence = 100; }\n      else { status = 'DOES_NOT_MEET'; gap = 'No projects w/ ' + min + '+ cameras'; confidence = 100; }\n    }\n    else if (txt.includes('vms') || txt.includes('milestone') || txt.includes('genetec')) {\n      const vms = (projects || []).filter(p => { const v = ((p.technologies || {}).vms || '').toLowerCase(); return v.includes('milestone') || v.includes('genetec'); });\n      if (vms.length > 0) { status = 'MEETS'; evidence = vms[0].project_name + ' - ' + (vms[0].technologies || {}).vms; confidence = 100; }\n      else { status = 'DOES_NOT_MEET'; gap = 'No VMS projects'; confidence = 100; }\n    }\n    else if (txt.includes('iso') || txt.includes('\\u05ea\\u05e7\\u05df')) {\n      let s = ['ISO']; if (txt.includes('9001')) s = ['9001']; else if (txt.includes('27001')) s = ['27001'];\n      const c = findCert(certifications, s);\n      if (c) { status = 'MEETS'; evidence = c.cert_name; confidence = 100; }\n      else { status = 'DOES_NOT_MEET'; gap = 'Missing ' + s[0]; confidence = 100; }\n    }\n    else if (txt.includes('\\u05e7\\u05d1\\u05dc\\u05e0\\u05d9\\u05dd') || txt.includes('\\u05e8\\u05e9\\u05dd') || txt.includes('\\u05e2\\u05e0\\u05e3')) {\n      const c = findCert(certifications, ['\\u05e7\\u05d1\\u05dc\\u05e0\\u05d9\\u05dd', '\\u05e8\\u05e9\\u05dd', '\\u05e2\\u05e0\\u05e3']);\n      if (c) { status = 'MEETS'; evidence = c.cert_name; confidence = 100; }\n      else { status = 'DOES_NOT_MEET'; gap = 'Missing contractor reg'; confidence = 100; }\n    }\n    else if (txt.includes('pmp') || txt.includes('\\u05de\\u05e0\\u05d4\\u05dc \\u05e4\\u05e8\\u05d5\\u05d9\\u05e7\\u05d8')) {\n      const p = findPers(personnel, ['PMP', 'PRINCE2']);\n      if (p.length > 0) { status = 'MEETS'; evidence = p[0].full_name; confidence = 100; }\n      else { status = 'DOES_NOT_MEET'; gap = 'No PMP PM'; confidence = 100; }\n    }\n    else if (txt.includes('\\u05de\\u05d4\\u05e0\\u05d3\\u05e1') && (txt.includes('vms') || txt.includes('milestone') || txt.includes('genetec'))) {\n      const e = findPers(personnel, ['Milestone', 'Genetec']);\n      if (e.length > 0) { status = 'MEETS'; evidence = e[0].full_name; confidence = 100; }\n      else { status = 'DOES_NOT_MEET'; gap = 'No VMS engineer'; confidence = 100; }\n    }\n    else if (txt.includes('\\u05e0\\u05d9\\u05d4\\u05d5\\u05dc \\u05e1\\u05e4\\u05e8\\u05d9\\u05dd') || txt.includes('\\u05e0\\u05d9\\u05db\\u05d5\\u05d9 \\u05de\\u05e1')) {\n      const c = findCert(certifications, ['\\u05e0\\u05d9\\u05d4\\u05d5\\u05dc \\u05e1\\u05e4\\u05e8\\u05d9\\u05dd', '\\u05e0\\u05d9\\u05db\\u05d5\\u05d9 \\u05de\\u05e1']);\n      if (c) { status = 'MEETS'; evidence = c.cert_name; confidence = 100; }\n      else { status = 'UNKNOWN'; gap = 'Manual check needed'; confidence = 50; }\n    }\n    else if (txt.includes('\\u05ea\\u05d7\\u05d6\\u05d5\\u05e7\\u05d4') || txt.includes('maintenance')) {\n      const min = reqCnt || 500;\n      const maint = (projects || []).filter(p => p.project_type === 'MAINTENANCE' || p.project_type === 'COMBINED' || (p.maintenance_months || 0) > 0);\n      let total = 0; for (const p of maint) total += ((p.quantities || {}).cameras || 0);\n      if (total >= min) { status = 'MEETS'; evidence = total + ' cameras in maint'; confidence = 100; }\n      else if (total > 0) { status = 'PARTIALLY_MEETS'; gap = total + ' < ' + min; confidence = 70; }\n      else { status = 'DOES_NOT_MEET'; gap = 'No maint exp'; confidence = 100; }\n    }\n    else if (txt.includes('\\u05de\\u05de\\u05e9\\u05dc\\u05ea\\u05d9') || txt.includes('\\u05e6\\u05d9\\u05d1\\u05d5\\u05e8\\u05d9') || txt.includes('\\u05e8\\u05e9\\u05d5\\u05ea')) {\n      const gov = (projects || []).filter(p => ['GOVERNMENT', 'MUNICIPAL', 'DEFENSE'].includes(p.client_type));\n      const req = reqCnt || 3;\n      if (gov.length >= req) { status = 'MEETS'; evidence = gov.length + ' gov projects'; confidence = 100; }\n      else if (gov.length > 0) { status = 'PARTIALLY_MEETS'; gap = gov.length + ' < ' + req; confidence = 70; }\n      else { status = 'DOES_NOT_MEET'; gap = 'No gov projects'; confidence = 100; }\n    }\n    else if (txt.includes('\\u05d1\\u05d9\\u05d8\\u05d5\\u05d7')) { status = 'UNKNOWN'; gap = 'Insurance - manual'; confidence = 0; }\n    else if (txt.includes('\\u05e2\\u05e8\\u05d1\\u05d5\\u05ea')) { status = 'UNKNOWN'; gap = 'Guarantee - prep needed'; confidence = 0; }\n    else if (txt.includes('\\u05e1\\u05d9\\u05d5\\u05d5\\u05d2') || txt.includes('\\u05d1\\u05d9\\u05d8\\u05d7\\u05d5\\u05e0\\u05d9')) {\n      const cl = (personnel || []).filter(p => p.security_clearance);\n      if (cl.length > 0) { status = 'MEETS'; evidence = cl.length + ' cleared'; confidence = 100; }\n      else { status = 'UNKNOWN'; gap = 'Manual check'; confidence = 30; }\n    }\n    else { status = 'UNKNOWN'; gap = 'Cannot auto-detect'; confidence = 0; }\n  } catch (e) { status = 'UNKNOWN'; gap = 'Error: ' + e.message; confidence = 0; }\n\n  results.push({ id: gc.id, tender_id: gc.tender_id, condition_number: gc.condition_number, condition_text: gc.condition_text, condition_type: gc.condition_type, entity_type: gc.entity_type, is_mandatory: gc.is_mandatory, status, company_evidence: evidence, gap_description: gap, confidence_score: confidence });\n}\n\n// Calculate summary\nconst summary = {\n  tender_id: (conditions && conditions[0]) ? conditions[0].tender_id : null,\n  total: results.length,\n  meets: results.filter(r => r.status === 'MEETS').length,\n  partially_meets: results.filter(r => r.status === 'PARTIALLY_MEETS').length,\n  does_not_meet: results.filter(r => r.status === 'DOES_NOT_MEET').length,\n  unknown: results.filter(r => r.status === 'UNKNOWN').length\n};\n\nconst mandatoryFails = results.filter(r => r.is_mandatory && r.status === 'DOES_NOT_MEET');\nif (mandatoryFails.length > 0) summary.eligibility = 'NOT_ELIGIBLE';\nelse if (summary.does_not_meet > 0 || summary.unknown > 3) summary.eligibility = 'CONDITIONAL';\nelse summary.eligibility = 'ELIGIBLE';\n\nsummary.blocking = mandatoryFails.map(r => ({ num: r.condition_number, gap: r.gap_description }));\nconst recs = [];\nif (summary.eligibility === 'ELIGIBLE') { recs.push('Meets ' + summary.meets + '/' + summary.total); recs.push('Recommendation: GO'); }\nelse if (summary.eligibility === 'CONDITIONAL') { recs.push('Meets ' + summary.meets + '/' + summary.total); recs.push('Check partnership'); }\nelse { recs.push(mandatoryFails.length + ' mandatory fails'); recs.push('Recommendation: NO-GO'); }\nsummary.recommendations = recs;\n\nreturn [{ json: { success: true, tender_id: summary.tender_id, summary, conditions: results, timestamp: new Date().toISOString() } }];"
+      },
+      "id": "evaluate",
+      "name": "Evaluate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1520, 400]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/gate_conditions?id=eq.' + $json.conditions[0].id }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=minimal" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: 'PROCESSED', evaluated_at: new Date().toISOString() }) }}",
+        "options": {}
+      },
+      "id": "save-flag",
+      "name": "Save Flag",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1740, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $('Evaluate').first().json }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1960, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Get Conditions", "type": "main", "index": 0 }]] },
+    "Get Conditions": { "main": [[{ "node": "Get Financials", "type": "main", "index": 0 }]] },
+    "Get Financials": { "main": [[{ "node": "Get Projects", "type": "main", "index": 0 }]] },
+    "Get Projects": { "main": [[{ "node": "Get Certs", "type": "main", "index": 0 }]] },
+    "Get Certs": { "main": [[{ "node": "Get Personnel", "type": "main", "index": 0 }]] },
+    "Get Personnel": { "main": [[{ "node": "Evaluate", "type": "main", "index": 0 }]] },
+    "Evaluate": { "main": [[{ "node": "Save Flag", "type": "main", "index": 0 }]] },
+    "Save Flag": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

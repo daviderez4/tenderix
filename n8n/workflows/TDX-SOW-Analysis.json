@@ -1,0 +1,101 @@
+{
+  "name": "TDX-SOW-Analysis",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tdx-sow-analysis",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400],
+      "webhookId": "tdx-sow-analysis"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/tenders?id=eq.' + $json.body.tender_id + '&select=*' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-tender",
+      "name": "Get Tender",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const tenders = $input.all().map(i => i.json).flat();\nconst tender = tenders[0] || {};\nconst tender_id = $('Webhook').first().json.body.tender_id;\nconst sow_text = $('Webhook').first().json.body.sow_text || '';\n\nif (!sow_text && !tender.raw_data?.sow_text) {\n  return [{ json: { tender_id, mode: 'NO_DATA', error: 'No SOW text available. Provide sow_text in request.' }}];\n}\n\nconst text = sow_text || tender.raw_data?.sow_text || '';\n\nreturn [{\n  json: {\n    tender_id,\n    tender_name: tender.tender_name || 'Unknown',\n    mode: 'ANALYZE',\n    userMessage: `נתח את היקף העבודה (SOW) של המכרז וזהה חריגים, סיכונים ונקודות להבהרה.\\n\\nהיקף העבודה:\\n${text.substring(0, 4000)}\\n\\nנתח את הטקסט וזהה:\\n1. תחומי עבודה עיקריים\\n2. לוחות זמנים\\n3. סיכונים (עומס עבודה, דרישות מיוחדות, תלות בגורמים חיצוניים)\\n4. דרישות חריגות\\n5. נקודות להבהרה\\n\\nהחזר JSON:\\n{\\n  \\\"work_areas\\\": [{\\\"area\\\": \\\"תחום\\\", \\\"description\\\": \\\"תיאור\\\", \\\"complexity\\\": \\\"LOW/MEDIUM/HIGH\\\"}],\\n  \\\"timeline\\\": {\\\"total_months\\\": 0, \\\"milestones\\\": [{\\\"name\\\": \\\"שם\\\", \\\"deadline\\\": \\\"זמן\\\"}]},\\n  \\\"risks\\\": [{\\\"risk\\\": \\\"תיאור\\\", \\\"level\\\": \\\"HIGH\\\", \\\"mitigation\\\": \\\"פתרון מוצע\\\"}],\\n  \\\"exceptions\\\": [{\\\"item\\\": \\\"פריט\\\", \\\"issue\\\": \\\"הבעיה\\\", \\\"recommendation\\\": \\\"המלצה\\\"}],\\n  \\\"clarifications_needed\\\": [\\\"שאלה 1\\\", \\\"שאלה 2\\\"],\\n  \\\"overall_complexity\\\": \\\"LOW/MEDIUM/HIGH\\\",\\n  \\\"summary\\\": \\\"סיכום קצר\\\"\\n}\\n\\nJSON בלבד:`\n  }\n}];"
+      },
+      "id": "prepare",
+      "name": "Prepare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "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" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 3000,\n  \"messages\": [{\"role\": \"user\", \"content\": {{ JSON.stringify($json.userMessage) }}}]\n}",
+        "options": { "timeout": 60000 }
+      },
+      "id": "call-claude",
+      "name": "Call Claude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const claude = $input.first().json;\nconst prep = $('Prepare').first().json;\n\nif (prep.mode === 'NO_DATA') {\n  return [{ json: prep }];\n}\n\nif (!claude.content) {\n  return [{ json: { success: false, error: 'No Claude response', data: claude }}];\n}\n\nconst text = claude.content[0]?.text || '';\nlet result = null;\nlet parseError = null;\n\ntry {\n  const match = text.match(/\\{[\\s\\S]*\\}/s);\n  if (match) result = JSON.parse(match[0]);\n  else parseError = 'No JSON found';\n} catch (e) {\n  parseError = e.message;\n}\n\nreturn [{\n  json: {\n    success: result !== null,\n    tender_id: prep.tender_id,\n    tender_name: prep.tender_name,\n    work_areas: result?.work_areas || [],\n    timeline: result?.timeline || {},\n    risks: result?.risks || [],\n    risks_count: result?.risks?.length || 0,\n    high_risks: (result?.risks || []).filter(r => r.level === 'HIGH').length,\n    exceptions: result?.exceptions || [],\n    clarifications_needed: result?.clarifications_needed || [],\n    overall_complexity: result?.overall_complexity || 'UNKNOWN',\n    summary: result?.summary || '',\n    recommendation: result?.risks?.filter(r => r.level === 'HIGH').length > 2 \n      ? 'REVIEW_CAREFULLY' \n      : 'PROCEED',\n    raw_response: text.substring(0, 400),\n    parse_error: parseError,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "parse",
+      "name": "Parse",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1300, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Get Tender", "type": "main", "index": 0 }]] },
+    "Get Tender": { "main": [[{ "node": "Prepare", "type": "main", "index": 0 }]] },
+    "Prepare": { "main": [[{ "node": "Call Claude", "type": "main", "index": 0 }]] },
+    "Call Claude": { "main": [[{ "node": "Parse", "type": "main", "index": 0 }]] },
+    "Parse": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

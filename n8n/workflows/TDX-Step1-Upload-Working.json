@@ -1,0 +1,52 @@
+{
+  "name": "TDX-Step1-Upload-Working",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tdx-upload",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400],
+      "webhookId": "tdx-upload-working"
+    },
+    {
+      "parameters": {
+        "jsCode": "// TDX Step 1-2: Document Reception & Structure Extraction\nconst SUPABASE_URL = 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1';\nconst SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34';\n\nconst input = $input.first().json.body || $input.first().json;\nconst headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };\n\n// Create new tender record\nconst tenderData = {\n  org_id: input.org_id,\n  tender_name: input.tender_name || 'מכרז חדש',\n  tender_number: input.tender_number || 'TDR-' + Date.now(),\n  issuing_body: input.issuing_body || '',\n  issuing_body_type: input.issuing_body_type || 'GOVERNMENT',\n  submission_deadline: input.submission_deadline || null,\n  clarification_deadline: input.clarification_deadline || null,\n  estimated_value: input.estimated_value || null,\n  guarantee_amount: input.guarantee_amount || null,\n  category: input.category || 'VIDEO',\n  status: 'INTAKE',\n  current_step: 'UPLOAD',\n  raw_data: input.documents || {}\n};\n\ntry {\n  // Insert tender\n  const response = await fetch(SUPABASE_URL + '/tenders', {\n    method: 'POST',\n    headers,\n    body: JSON.stringify(tenderData)\n  });\n  \n  const tender = await response.json();\n  \n  if (!response.ok) {\n    throw new Error(JSON.stringify(tender));\n  }\n  \n  // Process documents if provided\n  const documents = input.documents || [];\n  const processedDocs = [];\n  \n  for (const doc of documents) {\n    // Classify document type\n    let docType = 'OTHER';\n    const name = (doc.name || '').toLowerCase();\n    \n    if (name.includes('מכרז') || name.includes('הזמנה')) docType = 'TENDER_INVITATION';\n    else if (name.includes('מפרט') || name.includes('טכני')) docType = 'TECHNICAL_SPEC';\n    else if (name.includes('כמויות') || name.includes('boq')) docType = 'BOQ';\n    else if (name.includes('חוזה') || name.includes('הסכם')) docType = 'CONTRACT';\n    else if (name.includes('הבהרות') || name.includes('תשובות')) docType = 'CLARIFICATIONS';\n    else if (name.includes('טופס')) docType = 'FORM';\n    \n    processedDocs.push({\n      name: doc.name,\n      type: docType,\n      url: doc.url || null,\n      pages: doc.pages || null\n    });\n  }\n  \n  return [{\n    json: {\n      success: true,\n      tender_id: tender[0]?.id || tender.id,\n      tender_number: tender[0]?.tender_number || tender.tender_number,\n      status: 'INTAKE',\n      current_step: 'UPLOAD',\n      documents_processed: processedDocs.length,\n      documents: processedDocs,\n      next_step: 'OCR_EXTRACTION',\n      message: 'מכרז נקלט בהצלחה. יש להעביר מסמכים ל-OCR',\n      timestamp: new Date().toISOString()\n    }\n  }];\n  \n} catch (error) {\n  return [{\n    json: {\n      success: false,\n      error: error.message,\n      timestamp: new Date().toISOString()\n    }\n  }];\n}"
+      },
+      "id": "process",
+      "name": "Process Upload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [640, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Process Upload", "type": "main", "index": 0 }]]
+    },
+    "Process Upload": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

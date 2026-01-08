@@ -1,0 +1,89 @@
+{
+  "name": "TDX-Step1-Upload-v2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tdx-upload-v2",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400],
+      "webhookId": "tdx-upload-v2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// TDX Step 1-2: Document Reception & Structure Extraction\n// Using n8n's built-in HTTP helper\n\nconst input = $input.first().json.body || $input.first().json;\n\n// Classify documents\nconst documents = input.documents || [];\nconst processedDocs = [];\n\nfor (const doc of documents) {\n  let docType = 'OTHER';\n  const name = (doc.name || '').toLowerCase();\n  \n  if (name.includes('מכרז') || name.includes('הזמנה')) docType = 'TENDER_INVITATION';\n  else if (name.includes('מפרט') || name.includes('טכני')) docType = 'TECHNICAL_SPEC';\n  else if (name.includes('כמויות') || name.includes('boq')) docType = 'BOQ';\n  else if (name.includes('חוזה') || name.includes('הסכם')) docType = 'CONTRACT';\n  else if (name.includes('הבהרות') || name.includes('תשובות')) docType = 'CLARIFICATIONS';\n  else if (name.includes('טופס')) docType = 'FORM';\n  \n  processedDocs.push({\n    name: doc.name,\n    type: docType,\n    url: doc.url || null,\n    pages: doc.pages || null\n  });\n}\n\n// Prepare tender data for next node\nreturn [{\n  json: {\n    tenderData: {\n      org_id: input.org_id,\n      tender_name: input.tender_name || 'מכרז חדש',\n      tender_number: input.tender_number || 'TDR-' + Date.now(),\n      issuing_body: input.issuing_body || '',\n      issuing_body_type: input.issuing_body_type || 'GOVERNMENT',\n      submission_deadline: input.submission_deadline || null,\n      clarification_deadline: input.clarification_deadline || null,\n      estimated_value: input.estimated_value || null,\n      guarantee_amount: input.guarantee_amount || null,\n      category: input.category || 'VIDEO',\n      status: 'INTAKE',\n      current_step: 'UPLOAD',\n      raw_data: { documents: processedDocs }\n    },\n    processedDocs: processedDocs\n  }\n}];"
+      },
+      "id": "prepare",
+      "name": "Prepare Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/tenders",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Prefer", "value": "return=representation" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.tenderData) }}",
+        "options": {}
+      },
+      "id": "create-tender",
+      "name": "Create Tender",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format response\nconst tender = $input.first().json;\nconst prepData = $('Prepare Data').first().json;\n\nreturn [{\n  json: {\n    success: true,\n    tender_id: Array.isArray(tender) ? tender[0]?.id : tender.id,\n    tender_number: Array.isArray(tender) ? tender[0]?.tender_number : tender.tender_number,\n    status: 'INTAKE',\n    current_step: 'UPLOAD',\n    documents_processed: prepData.processedDocs?.length || 0,\n    documents: prepData.processedDocs || [],\n    next_step: 'OCR_EXTRACTION',\n    message: 'מכרז נקלט בהצלחה. יש להעביר מסמכים ל-OCR',\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "format",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1080, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Prepare Data", "type": "main", "index": 0 }]]
+    },
+    "Prepare Data": {
+      "main": [[{ "node": "Create Tender", "type": "main", "index": 0 }]]
+    },
+    "Create Tender": {
+      "main": [[{ "node": "Format Response", "type": "main", "index": 0 }]]
+    },
+    "Format Response": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

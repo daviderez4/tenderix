@@ -1,0 +1,77 @@
+{
+  "name": "TDX-Gate-SingleCode",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tdx-gate-single",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        400
+      ],
+      "webhookId": "tdx-gate-single-001"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch all data and evaluate conditions in one Code node\nconst SUPABASE_URL = 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1';\nconst SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34';\n\nconst tender_id = $input.first().json.body.tender_id;\nconst org_id = $input.first().json.body.org_id;\n\nconst headers = {\n  'apikey': SUPABASE_KEY,\n  'Authorization': 'Bearer ' + SUPABASE_KEY\n};\n\nasync function fetchData(table, filter) {\n  const url = SUPABASE_URL + '/' + table + '?' + filter;\n  const res = await fetch(url, { headers });\n  return await res.json();\n}\n\n// Fetch all data in parallel\nconst [conditions, financials, projects, certs, personnel] = await Promise.all([\n  fetchData('gate_conditions', 'select=*&tender_id=eq.' + tender_id + '&order=condition_number.asc'),\n  fetchData('company_financials', 'select=*&org_id=eq.' + org_id + '&order=fiscal_year.desc'),\n  fetchData('company_projects', 'select=*&org_id=eq.' + org_id),\n  fetchData('company_certifications', 'select=*&org_id=eq.' + org_id),\n  fetchData('company_personnel', 'select=*&org_id=eq.' + org_id)\n]);\n\n// Evaluate conditions\nconst results = [];\nfor (const gc of conditions) {\n  const txt = (gc.condition_text || '').toLowerCase();\n  let status = 'UNKNOWN', evidence = null, gap = null, confidence = 0;\n\n  if (txt.includes('מחזור') || txt.includes('הכנסות')) {\n    const reqAmt = parseFloat(gc.required_amount) || 50000000;\n    if (financials.length > 0) {\n      const avg = financials.slice(0, 3).reduce((s, f) => s + (parseFloat(f.annual_revenue) || 0), 0) / Math.min(3, financials.length);\n      if (avg >= reqAmt) { status = 'MEETS'; evidence = 'Avg: ' + (avg/1000000).toFixed(1) + 'M'; confidence = 100; }\n      else { status = 'DOES_NOT_MEET'; gap = (avg/1000000).toFixed(1) + 'M < ' + (reqAmt/1000000).toFixed(1) + 'M'; confidence = 100; }\n    } else { gap = 'No financial data'; }\n  } else if (txt.includes('פרויקט') && (txt.includes('היקף') || txt.includes('מיליון'))) {\n    const reqAmt = parseFloat(gc.required_amount) || 10000000;\n    const maxProj = projects.reduce((max, p) => Math.max(max, parseFloat(p.total_value) || 0), 0);\n    if (maxProj >= reqAmt) { status = 'MEETS'; evidence = 'Max: ' + (maxProj/1000000).toFixed(1) + 'M'; confidence = 100; }\n    else if (projects.length > 0) { status = 'DOES_NOT_MEET'; gap = (maxProj/1000000).toFixed(1) + 'M < ' + (reqAmt/1000000).toFixed(1) + 'M'; confidence = 100; }\n    else { gap = 'No projects'; }\n  } else if (txt.includes('iso') || txt.includes('תקן')) {\n    if (certs.some(c => (c.cert_name || '').toLowerCase().includes('iso'))) { status = 'MEETS'; evidence = 'Has ISO'; confidence = 100; }\n    else { status = 'DOES_NOT_MEET'; gap = 'Missing ISO'; confidence = 100; }\n  } else if (txt.includes('מצלמות') || txt.includes('vms')) {\n    const camProj = projects.filter(p => ((p.quantities || {}).cameras || 0) >= 100);\n    if (camProj.length > 0) { status = 'MEETS'; evidence = camProj.length + ' cam projects'; confidence = 100; }\n    else if (projects.length > 0) { status = 'DOES_NOT_MEET'; gap = 'No camera projects'; confidence = 100; }\n    else { gap = 'No projects'; }\n  } else if (txt.includes('קבלנים') || txt.includes('רשם')) {\n    if (certs.some(c => (c.cert_name || '').includes('קבלנים'))) { status = 'MEETS'; evidence = 'Registered'; confidence = 100; }\n    else { status = 'UNKNOWN'; gap = 'Manual check'; confidence = 50; }\n  } else if (txt.includes('מהנדס') || txt.includes('pmp')) {\n    const qual = personnel.filter(p => (p.professional_certifications || []).some(c => c.toLowerCase().includes('pmp')));\n    if (qual.length > 0) { status = 'MEETS'; evidence = qual[0].full_name; confidence = 100; }\n    else { status = 'UNKNOWN'; gap = 'Check personnel'; confidence = 50; }\n  } else if (txt.includes('ממשלתי') || txt.includes('ציבורי')) {\n    const gov = projects.filter(p => ['GOVERNMENT', 'MUNICIPAL', 'DEFENSE'].includes(p.client_type));\n    if (gov.length >= 3) { status = 'MEETS'; evidence = gov.length + ' gov'; confidence = 100; }\n    else if (gov.length > 0) { status = 'PARTIALLY_MEETS'; gap = gov.length + ' < 3'; confidence = 70; }\n    else { status = 'DOES_NOT_MEET'; gap = 'No gov exp'; confidence = 100; }\n  } else { gap = 'Manual review'; confidence = 0; }\n\n  results.push({ id: gc.id, num: gc.condition_number, text: gc.condition_text, type: gc.condition_type, mandatory: gc.is_mandatory, status, evidence, gap, confidence });\n}\n\n// Summary\nconst meets = results.filter(r => r.status === 'MEETS').length;\nconst fails = results.filter(r => r.status === 'DOES_NOT_MEET').length;\nconst mandFails = results.filter(r => r.mandatory && r.status === 'DOES_NOT_MEET');\nlet eligibility = mandFails.length > 0 ? 'NOT_ELIGIBLE' : (fails > 0 ? 'CONDITIONAL' : 'ELIGIBLE');\n\nreturn [{ json: { success: true, tender_id, summary: { total: results.length, meets, fails, eligibility }, conditions: results, timestamp: new Date().toISOString() }}];"
+      },
+      "id": "process",
+      "name": "Process",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        640,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

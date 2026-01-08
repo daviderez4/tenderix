@@ -1,0 +1,101 @@
+{
+  "name": "TDX-BOQ-Analysis",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tdx-boq-analysis",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400],
+      "webhookId": "tdx-boq-analysis"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/boq_items?tender_id=eq.' + $json.body.tender_id + '&order=item_number' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-boq",
+      "name": "Get BOQ Items",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().map(i => i.json).flat();\nconst tender_id = $('Webhook').first().json.body.tender_id;\nconst boq_text = $('Webhook').first().json.body.boq_text || '';\n\n// If no BOQ items in DB, use provided text\nif (items.length === 0 && boq_text) {\n  return [{\n    json: {\n      tender_id,\n      mode: 'EXTRACT',\n      userMessage: `נתח את כתב הכמויות (BOQ) הבא וחלץ ממנו את הפריטים העיקריים.\\n\\nטקסט:\\n${boq_text.substring(0, 3000)}\\n\\nהחזר JSON array בפורמט:\\n[{\\\"item_num\\\": \\\"1.1\\\", \\\"description\\\": \\\"תיאור\\\", \\\"unit\\\": \\\"יח'\\\", \\\"qty\\\": 100, \\\"category\\\": \\\"EQUIPMENT/LABOR/INFRASTRUCTURE\\\", \\\"risk_level\\\": \\\"LOW/MEDIUM/HIGH\\\", \\\"notes\\\": \\\"הערות\\\"}]\\n\\nJSON בלבד:`\n    }\n  }];\n}\n\nif (items.length === 0) {\n  return [{ json: { tender_id, mode: 'NO_DATA', error: 'No BOQ data available. Provide boq_text in request.' }}];\n}\n\n// Analyze existing items\nconst itemsText = items.slice(0, 50).map(i => \n  `${i.item_number || i.item_num}: ${i.description} | כמות: ${i.quantity || i.qty} ${i.unit || ''} | מחיר: ${i.unit_price || 'לא צוין'}`\n).join('\\n');\n\nreturn [{\n  json: {\n    tender_id,\n    mode: 'ANALYZE',\n    items_count: items.length,\n    userMessage: `נתח את כתב הכמויות למכרז וזהה סיכוני תמחור.\\n\\nפריטים:\\n${itemsText}\\n\\nעבור כל פריט בעייתי, זהה:\\n1. סוג הסיכון: QUANTITY (כמות לא ברורה), SPEC (מפרט חסר), PRICE (מחיר לא ריאלי), SCOPE (היקף לא מוגדר)\\n2. רמת סיכון: LOW/MEDIUM/HIGH\\n3. המלצה\\n\\nהחזר JSON:\\n{\\\"total_value_estimate\\\": מספר, \\\"risk_items\\\": [{\\\"item\\\": \\\"מספר\\\", \\\"risk_type\\\": \\\"QUANTITY\\\", \\\"risk_level\\\": \\\"HIGH\\\", \\\"issue\\\": \\\"הבעיה\\\", \\\"recommendation\\\": \\\"המלצה\\\"}], \\\"summary\\\": {\\\"high_risk_count\\\": 0, \\\"medium_risk_count\\\": 0}}\\n\\nJSON בלבד:`\n  }\n}];"
+      },
+      "id": "prepare",
+      "name": "Prepare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "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" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 3000,\n  \"messages\": [{\"role\": \"user\", \"content\": {{ JSON.stringify($json.userMessage) }}}]\n}",
+        "options": { "timeout": 60000 }
+      },
+      "id": "call-claude",
+      "name": "Call Claude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const claude = $input.first().json;\nconst prep = $('Prepare').first().json;\n\nif (prep.mode === 'NO_DATA') {\n  return [{ json: prep }];\n}\n\nif (!claude.content) {\n  return [{ json: { success: false, error: 'No Claude response', data: claude }}];\n}\n\nconst text = claude.content[0]?.text || '';\nlet result = null;\nlet parseError = null;\n\ntry {\n  // Try to extract JSON object or array\n  const objMatch = text.match(/\\{[\\s\\S]*\\}/s);\n  const arrMatch = text.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/s);\n  \n  if (objMatch) result = JSON.parse(objMatch[0]);\n  else if (arrMatch) result = { items: JSON.parse(arrMatch[0]) };\n  else parseError = 'No JSON found';\n} catch (e) {\n  parseError = e.message;\n}\n\nif (prep.mode === 'EXTRACT') {\n  return [{\n    json: {\n      success: result !== null,\n      tender_id: prep.tender_id,\n      mode: 'EXTRACT',\n      items_extracted: Array.isArray(result) ? result.length : (result?.items?.length || 0),\n      items: Array.isArray(result) ? result : (result?.items || []),\n      raw_response: text.substring(0, 400),\n      parse_error: parseError,\n      timestamp: new Date().toISOString()\n    }\n  }];\n}\n\n// ANALYZE mode\nreturn [{\n  json: {\n    success: result !== null,\n    tender_id: prep.tender_id,\n    mode: 'ANALYZE',\n    items_analyzed: prep.items_count,\n    total_value_estimate: result?.total_value_estimate || null,\n    risk_summary: result?.summary || {},\n    risk_items: result?.risk_items || [],\n    recommendation: result?.risk_items?.length > 0 \n      ? `נמצאו ${result.risk_items.length} פריטים בסיכון. בדוק לפני הגשה.`\n      : 'לא זוהו סיכונים משמעותיים',\n    raw_response: text.substring(0, 400),\n    parse_error: parseError,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "parse",
+      "name": "Parse",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1300, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Get BOQ Items", "type": "main", "index": 0 }]] },
+    "Get BOQ Items": { "main": [[{ "node": "Prepare", "type": "main", "index": 0 }]] },
+    "Prepare": { "main": [[{ "node": "Call Claude", "type": "main", "index": 0 }]] },
+    "Call Claude": { "main": [[{ "node": "Parse", "type": "main", "index": 0 }]] },
+    "Parse": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

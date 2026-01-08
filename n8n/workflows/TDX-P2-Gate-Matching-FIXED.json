@@ -1,0 +1,487 @@
+{
+  "name": "TDX-P2-Gate-Matching",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gate-matching",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "d0a1b2c3-0001-0000-0000-000000000001",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 400],
+      "webhookId": "gate-matching-webhook"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/gate_conditions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "*"
+            },
+            {
+              "name": "tender_id",
+              "value": "eq.{{ $json.body.tender_id }}"
+            },
+            {
+              "name": "order",
+              "value": "condition_number.asc"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $vars.SUPABASE_ANON_KEY }}"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d0a1b2c3-0002-0000-0000-000000000001",
+      "name": "Get Gate Conditions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "supabase-auth",
+          "name": "Supabase Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/company_financials",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "*"
+            },
+            {
+              "name": "org_id",
+              "value": "eq.{{ $json.body.org_id }}"
+            },
+            {
+              "name": "order",
+              "value": "fiscal_year.desc"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $vars.SUPABASE_ANON_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d0a1b2c3-0003-0000-0000-000000000001",
+      "name": "Get Financials",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 340],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "supabase-auth",
+          "name": "Supabase Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/company_projects",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "*"
+            },
+            {
+              "name": "org_id",
+              "value": "eq.{{ $json.body.org_id }}"
+            },
+            {
+              "name": "order",
+              "value": "end_date.desc.nullslast"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $vars.SUPABASE_ANON_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d0a1b2c3-0004-0000-0000-000000000001",
+      "name": "Get Projects",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 480],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "supabase-auth",
+          "name": "Supabase Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/company_certifications",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "*"
+            },
+            {
+              "name": "org_id",
+              "value": "eq.{{ $json.body.org_id }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $vars.SUPABASE_ANON_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d0a1b2c3-0005-0000-0000-000000000001",
+      "name": "Get Certifications",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 620],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "supabase-auth",
+          "name": "Supabase Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/company_personnel",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "*"
+            },
+            {
+              "name": "org_id",
+              "value": "eq.{{ $json.body.org_id }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $vars.SUPABASE_ANON_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d0a1b2c3-0006-0000-0000-000000000001",
+      "name": "Get Personnel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 760],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "supabase-auth",
+          "name": "Supabase Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// GATE CONDITION EVALUATION ENGINE\n// ============================================\n\n// Get data from all HTTP nodes\nconst conditionsData = $('Get Gate Conditions').first().json;\nconst financialsData = $('Get Financials').first().json;\nconst projectsData = $('Get Projects').first().json;\nconst certificationsData = $('Get Certifications').first().json;\nconst personnelData = $('Get Personnel').first().json;\n\n// Ensure arrays\nconst conditions = Array.isArray(conditionsData) ? conditionsData : [];\nconst financials = Array.isArray(financialsData) ? financialsData : [];\nconst projects = Array.isArray(projectsData) ? projectsData : [];\nconst certifications = Array.isArray(certificationsData) ? certificationsData : [];\nconst personnel = Array.isArray(personnelData) ? personnelData : [];\n\nconsole.log('Data loaded:', {\n  conditions: conditions.length,\n  financials: financials.length,\n  projects: projects.length,\n  certifications: certifications.length,\n  personnel: personnel.length\n});\n\n// ============================================\n// HELPER FUNCTIONS\n// ============================================\n\nfunction calculateAverageRevenue(financials, years) {\n  const recent = financials.slice(0, years);\n  if (recent.length === 0) return 0;\n  const sum = recent.reduce((acc, f) => acc + (parseFloat(f.annual_revenue) || 0), 0);\n  return sum / recent.length;\n}\n\nfunction findMaxProjectValue(projects) {\n  if (projects.length === 0) return { value: 0, project: null };\n  let maxVal = 0;\n  let maxProj = null;\n  for (const p of projects) {\n    const val = parseFloat(p.total_value) || 0;\n    if (val > maxVal) {\n      maxVal = val;\n      maxProj = p;\n    }\n  }\n  return { value: maxVal, project: maxProj };\n}\n\nfunction countProjectsByClientType(projects, clientTypes) {\n  if (!clientTypes || clientTypes.length === 0) return projects.length;\n  return projects.filter(p => clientTypes.includes(p.client_type)).length;\n}\n\nfunction getProjectsWithCameras(projects, minCount) {\n  return projects.filter(p => {\n    const tech = p.technologies || {};\n    return (tech.camera_count || 0) >= minCount;\n  });\n}\n\nfunction findCertification(certs, searchTerms) {\n  const terms = Array.isArray(searchTerms) ? searchTerms : [searchTerms];\n  const now = new Date();\n  \n  for (const cert of certs) {\n    // Check if valid (valid_until is NULL or in future)\n    if (cert.valid_until) {\n      const validUntil = new Date(cert.valid_until);\n      if (validUntil < now) continue; // Skip expired\n    }\n    \n    for (const term of terms) {\n      const termLower = term.toLowerCase();\n      if (cert.cert_type?.toLowerCase().includes(termLower) ||\n          cert.cert_name?.toLowerCase().includes(termLower) ||\n          cert.cert_number?.toLowerCase().includes(termLower)) {\n        return cert;\n      }\n    }\n  }\n  return null;\n}\n\nfunction findPersonnelWithCert(personnel, certKeywords) {\n  const keywords = Array.isArray(certKeywords) ? certKeywords : [certKeywords];\n  return personnel.filter(p => {\n    // Use professional_certifications (correct column name)\n    const certs = p.professional_certifications || [];\n    return certs.some(c => \n      keywords.some(kw => c.toLowerCase().includes(kw.toLowerCase()))\n    );\n  });\n}\n\nfunction findPersonnelByRole(personnel, roleKeywords) {\n  const keywords = Array.isArray(roleKeywords) ? roleKeywords : [roleKeywords];\n  return personnel.filter(p => \n    keywords.some(kw => p.role?.toLowerCase().includes(kw.toLowerCase()))\n  );\n}\n\nfunction formatMoney(amount) {\n  return '₪' + (amount / 1000000).toFixed(2) + 'M';\n}\n\n// ============================================\n// PROCESS EACH GATE CONDITION\n// ============================================\n\nconst results = [];\n\nfor (const gc of conditions) {\n  let status = 'UNKNOWN';\n  let evidence = null;\n  let confidence = 0;\n  let gap = null;\n  let remediation = null;\n\n  const reqType = (gc.requirement_type || '').toUpperCase();\n  const condType = (gc.condition_type || '').toUpperCase();\n  const condText = (gc.condition_text || '').toLowerCase();\n\n  try {\n    // ========== FINANCIAL CONDITIONS ==========\n    if (condType === 'FINANCIAL' || condText.includes('מחזור') || condText.includes('revenue')) {\n      const years = gc.required_years || 3;\n      const avgRevenue = calculateAverageRevenue(financials, years);\n      const required = parseFloat(gc.required_amount) || 0;\n      \n      if (financials.length === 0) {\n        status = 'UNKNOWN';\n        gap = 'אין נתונים פיננסיים בפרופיל החברה';\n        remediation = 'להזין נתוני מחזור שנתי';\n        confidence = 0;\n      } else if (avgRevenue >= required) {\n        status = 'MEETS';\n        const recentYears = financials.slice(0, years);\n        const details = recentYears.map(f => `${f.fiscal_year}: ${formatMoney(f.annual_revenue)}`).join(', ');\n        evidence = `מחזור ממוצע ${years} שנים: ${formatMoney(avgRevenue)} (${details})`;\n        confidence = 100;\n      } else {\n        status = 'DOES_NOT_MEET';\n        gap = `מחזור ממוצע ${formatMoney(avgRevenue)}, נדרש ${formatMoney(required)}`;\n        remediation = 'לבחון אפשרות שותפות או קונסורציום';\n        confidence = 100;\n      }\n    }\n    \n    // ========== PROJECT - SINGLE VALUE ==========\n    else if (condType === 'PROJECT' && (reqType.includes('SINGLE') || condText.includes('פרויקט בודד') || condText.includes('single'))) {\n      const { value: maxValue, project: bestProject } = findMaxProjectValue(projects);\n      const required = parseFloat(gc.required_amount) || 0;\n      \n      if (projects.length === 0) {\n        status = 'UNKNOWN';\n        gap = 'אין פרויקטים בפרופיל החברה';\n        remediation = 'להזין פרויקטים רלוונטיים';\n        confidence = 0;\n      } else if (maxValue >= required && bestProject) {\n        status = 'MEETS';\n        evidence = `${bestProject.project_name}: ${formatMoney(maxValue)} (${bestProject.client_name})`;\n        confidence = 100;\n      } else {\n        status = 'DOES_NOT_MEET';\n        gap = `פרויקט מקסימלי ${formatMoney(maxValue)}, נדרש ${formatMoney(required)}`;\n        remediation = 'לבחון הסתמכות על קבלן משנה או שותפות';\n        confidence = 100;\n      }\n    }\n    \n    // ========== PROJECT - GOVERNMENT COUNT ==========\n    else if (condType === 'PROJECT' && (reqType.includes('COUNT') || condText.includes('פרויקטים') || condText.includes('ממשלתי'))) {\n      const clientTypes = ['GOVERNMENT', 'MUNICIPAL', 'DEFENSE'];\n      const count = countProjectsByClientType(projects, clientTypes);\n      const required = gc.required_count || 3;\n      \n      if (count >= required) {\n        status = 'MEETS';\n        const relevantProjects = projects.filter(p => clientTypes.includes(p.client_type));\n        evidence = `${count} פרויקטים ציבוריים: ${relevantProjects.slice(0, 4).map(p => p.client_name).join(', ')}`;\n        confidence = 100;\n      } else {\n        status = 'DOES_NOT_MEET';\n        gap = `${count} פרויקטים ציבוריים, נדרש ${required}`;\n        confidence = 100;\n      }\n    }\n    \n    // ========== PROJECT - CAMERAS (MUNICIPAL) ==========\n    else if (condType === 'PROJECT' && (condText.includes('מצלמ') || condText.includes('camera'))) {\n      const required = gc.required_count || 100;\n      const cameraProjects = getProjectsWithCameras(projects, required);\n      \n      if (cameraProjects.length > 0) {\n        const best = cameraProjects.reduce((a, b) => \n          (a.technologies?.camera_count || 0) > (b.technologies?.camera_count || 0) ? a : b\n        );\n        status = 'MEETS';\n        evidence = `${best.project_name}: ${best.technologies?.camera_count} מצלמות (${best.client_name})`;\n        confidence = 100;\n      } else {\n        const maxCameras = Math.max(...projects.map(p => p.technologies?.camera_count || 0), 0);\n        if (projects.length === 0) {\n          status = 'UNKNOWN';\n          gap = 'אין פרויקטים בפרופיל';\n        } else {\n          status = 'DOES_NOT_MEET';\n          gap = `פרויקט מקסימלי ${maxCameras} מצלמות, נדרש ${required}`;\n        }\n        confidence = 100;\n      }\n    }\n    \n    // ========== PROJECT - VMS INTEGRATION ==========\n    else if (condType === 'PROJECT' && (condText.includes('vms') || condText.includes('milestone') || condText.includes('genetec'))) {\n      const vmsProjects = projects.filter(p => {\n        const tech = p.technologies || {};\n        const vms = (tech.vms_system || '').toLowerCase();\n        return vms.includes('milestone') || vms.includes('genetec');\n      });\n      \n      if (vmsProjects.length > 0) {\n        const best = vmsProjects[0];\n        status = 'MEETS';\n        evidence = `${best.project_name}: ${best.technologies?.vms_system} (${best.client_name})`;\n        confidence = 100;\n      } else {\n        status = 'DOES_NOT_MEET';\n        gap = 'אין פרויקטים עם אינטגרציית Milestone/Genetec';\n        confidence = 100;\n      }\n    }\n    \n    // ========== PROJECT - MAINTENANCE ==========\n    else if (condType === 'PROJECT' && (condText.includes('אחזקה') || condText.includes('maintenance'))) {\n      const required = gc.required_count || 500;\n      const maintenanceProjects = projects.filter(p => \n        p.project_type === 'MAINTENANCE' || p.project_type === 'COMBINED'\n      );\n      const maxCameras = Math.max(...maintenanceProjects.map(p => p.technologies?.camera_count || 0), 0);\n      \n      if (maxCameras >= required) {\n        const best = maintenanceProjects.find(p => (p.technologies?.camera_count || 0) >= required);\n        status = 'MEETS';\n        evidence = `אחזקת ${best?.project_name}: ${best?.technologies?.camera_count} מצלמות`;\n        confidence = 100;\n      } else if (maintenanceProjects.length === 0) {\n        status = 'DOES_NOT_MEET';\n        gap = 'אין פרויקטי אחזקה בפרופיל';\n        confidence = 100;\n      } else {\n        status = 'DOES_NOT_MEET';\n        gap = `אחזקת מקסימום ${maxCameras} מצלמות, נדרש ${required}`;\n        confidence = 100;\n      }\n    }\n    \n    // ========== CERTIFICATION CONDITIONS ==========\n    else if (condType === 'CERTIFICATION' || condText.includes('iso') || condText.includes('תעודה') || condText.includes('רישיון') || condText.includes('אישור')) {\n      let searchTerms = [];\n      \n      // Determine what to search for based on condition text\n      if (condText.includes('9001')) searchTerms = ['9001', 'ISO 9001'];\n      else if (condText.includes('27001')) searchTerms = ['27001', 'ISO 27001'];\n      else if (condText.includes('45001')) searchTerms = ['45001', 'ISO 45001'];\n      else if (condText.includes('קבלנים') || condText.includes('ענף 200') || condText.includes('200')) searchTerms = ['קבלנים', 'ענף 200', 'CONTRACTOR'];\n      else if (condText.includes('ניכוי מס') || condText.includes('מס במקור')) searchTerms = ['ניכוי מס', 'מס במקור', 'TAX'];\n      else if (condText.includes('ניהול ספרים')) searchTerms = ['ניהול ספרים', 'TAX'];\n      else if (condText.includes('ביטחון') || condText.includes('סיווג') || condText.includes('מלמ')) searchTerms = ['ביטחוני', 'מלמ', 'SECURITY'];\n      else searchTerms = [reqType, condText.substring(0, 30)];\n      \n      const cert = findCertification(certifications, searchTerms);\n      \n      if (cert) {\n        status = 'MEETS';\n        const validUntil = cert.valid_until ? cert.valid_until.split('T')[0] : 'ללא תפוגה';\n        evidence = `${cert.cert_name} - ${cert.issuing_body}, תקף עד ${validUntil}`;\n        if (cert.cert_number) evidence += ` (מס' ${cert.cert_number})`;\n        confidence = 100;\n      } else {\n        status = 'DOES_NOT_MEET';\n        gap = `חסר: ${gc.condition_text?.substring(0, 60)}...`;\n        remediation = 'להשיג תעודה/אישור מתאים';\n        confidence = 100;\n      }\n    }\n    \n    // ========== PERSONNEL CONDITIONS ==========\n    else if (condType === 'PERSONNEL' || condText.includes('מנהל פרויקט') || condText.includes('מהנדס') || condText.includes('עובד')) {\n      let found = [];\n      \n      if (condText.includes('pmp') || condText.includes('מנהל פרויקט')) {\n        found = findPersonnelWithCert(personnel, ['PMP']);\n        if (found.length === 0) {\n          found = findPersonnelByRole(personnel, ['מנהל פרויקט', 'Project Manager']);\n        }\n      } else if (condText.includes('milestone') || condText.includes('genetec') || condText.includes('vms')) {\n        found = findPersonnelWithCert(personnel, ['Milestone', 'Genetec', 'VMS', 'CCTV']);\n      } else {\n        // Generic - find anyone with certifications\n        found = personnel.filter(p => p.professional_certifications && p.professional_certifications.length > 0);\n      }\n      \n      if (found.length > 0) {\n        status = 'MEETS';\n        evidence = found.slice(0, 2).map(p => {\n          const certs = (p.professional_certifications || []).slice(0, 2).join(', ');\n          return `${p.full_name} - ${p.role}${certs ? ' (' + certs + ')' : ''}`;\n        }).join('; ');\n        confidence = 100;\n      } else {\n        status = 'DOES_NOT_MEET';\n        gap = 'אין עובדים עם הסמכות מתאימות';\n        remediation = 'להכשיר עובד קיים או לגייס בעל הסמכה';\n        confidence = 100;\n      }\n    }\n    \n    // ========== DOCUMENT CONDITIONS (Insurance, Guarantee) ==========\n    else if (condText.includes('ביטוח') || condText.includes('ערבות') || condText.includes('insurance') || condText.includes('guarantee')) {\n      status = 'UNKNOWN';\n      gap = 'מסמך נדרש בשלב ההגשה - לא ניתן לאמת אוטומטית';\n      remediation = 'להכין מסמך לפני מועד ההגשה';\n      confidence = 0;\n    }\n    \n    // ========== UNKNOWN TYPE ==========\n    else {\n      status = 'UNKNOWN';\n      gap = `סוג תנאי לא מזוהה: ${condType}/${reqType}`;\n      confidence = 0;\n    }\n    \n  } catch (error) {\n    status = 'UNKNOWN';\n    gap = `שגיאה בעיבוד: ${error.message}`;\n    confidence = 0;\n  }\n\n  results.push({\n    id: gc.id,\n    tender_id: gc.tender_id,\n    condition_number: gc.condition_number,\n    condition_text: gc.condition_text,\n    condition_type: gc.condition_type,\n    requirement_type: gc.requirement_type,\n    is_mandatory: gc.is_mandatory,\n    status: status,\n    company_evidence: evidence,\n    gap_description: gap,\n    remediation_suggestion: remediation,\n    confidence_score: confidence\n  });\n}\n\n// Return all results\nreturn results;"
+      },
+      "id": "d0a1b2c3-0007-0000-0000-000000000001",
+      "name": "Evaluate Conditions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate summary from evaluation results\nconst results = $input.all();\n\nif (results.length === 0) {\n  return [{\n    json: {\n      error: 'No conditions found',\n      conditions: [],\n      summary: null\n    }\n  }];\n}\n\n// Calculate counts\nconst summary = {\n  tender_id: results[0].json.tender_id,\n  total: results.length,\n  meets: results.filter(r => r.json.status === 'MEETS').length,\n  partially_meets: results.filter(r => r.json.status === 'PARTIALLY_MEETS').length,\n  does_not_meet: results.filter(r => r.json.status === 'DOES_NOT_MEET').length,\n  unknown: results.filter(r => r.json.status === 'UNKNOWN').length\n};\n\n// Find blocking conditions (mandatory that don't meet)\nconst mandatoryFails = results.filter(r => \n  r.json.is_mandatory && r.json.status === 'DOES_NOT_MEET'\n);\n\n// Determine eligibility\nif (mandatoryFails.length > 0) {\n  summary.eligibility = 'NOT_ELIGIBLE';\n} else if (summary.does_not_meet > 0) {\n  summary.eligibility = 'CONDITIONAL';\n} else if (summary.unknown > 2) {\n  summary.eligibility = 'CONDITIONAL';\n} else {\n  summary.eligibility = 'ELIGIBLE';\n}\n\n// Blocking conditions list\nsummary.blocking = mandatoryFails.map(r => r.json.condition_number);\n\n// Generate recommendations\nconst recs = [];\nif (summary.meets === summary.total) {\n  recs.push('החברה עומדת בכל תנאי הסף');\n  recs.push('המלצה: GO - להמשיך בהכנת ההצעה');\n} else {\n  recs.push(`עומד ב-${summary.meets} מתוך ${summary.total} תנאים`);\n  if (mandatoryFails.length > 0) {\n    recs.push(`חסימה: ${mandatoryFails.length} תנאי סף חובה לא מתקיימים`);\n    recs.push('המלצה: NO-GO או בדיקת אפשרות שותפות/קב.משנה');\n  } else if (summary.does_not_meet > 0) {\n    recs.push(`${summary.does_not_meet} תנאים לא מתקיימים (לא חובה)`);\n  }\n  if (summary.unknown > 0) {\n    recs.push(`${summary.unknown} תנאים דורשים השלמת מידע`);\n  }\n}\nsummary.recommendations = recs;\n\n// Return combined data\nreturn [{\n  json: {\n    conditions: results.map(r => r.json),\n    summary: summary\n  }\n}];"
+      },
+      "id": "d0a1b2c3-0008-0000-0000-000000000001",
+      "name": "Calculate Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Split conditions for individual updates\nconst data = $input.first().json;\nconst conditions = data.conditions || [];\n\n// Return each condition as separate item\nreturn conditions.map(c => ({ json: c }));"
+      },
+      "id": "d0a1b2c3-0009-0000-0000-000000000001",
+      "name": "Split Conditions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1220, 300]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/gate_conditions?id=eq.{{ $json.id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $vars.SUPABASE_ANON_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": {{ JSON.stringify($json.status) }},\n  \"company_evidence\": {{ $json.company_evidence ? JSON.stringify($json.company_evidence) : 'null' }},\n  \"gap_description\": {{ $json.gap_description ? JSON.stringify($json.gap_description) : 'null' }},\n  \"remediation_suggestion\": {{ $json.remediation_suggestion ? JSON.stringify($json.remediation_suggestion) : 'null' }},\n  \"confidence_score\": {{ $json.confidence_score }}\n}",
+        "options": {}
+      },
+      "id": "d0a1b2c3-0010-0000-0000-000000000001",
+      "name": "Update Condition",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1440, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "supabase-auth",
+          "name": "Supabase Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get summary for upsert\nconst data = $('Calculate Summary').first().json;\nconst summary = data.summary;\n\nreturn [{ json: summary }];"
+      },
+      "id": "d0a1b2c3-0011-0000-0000-000000000001",
+      "name": "Get Summary Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1220, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/gate_conditions_summary",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $vars.SUPABASE_ANON_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"tender_id\": {{ JSON.stringify($json.tender_id) }},\n  \"total_conditions\": {{ $json.total }},\n  \"meets_count\": {{ $json.meets }},\n  \"partially_meets_count\": {{ $json.partially_meets }},\n  \"does_not_meet_count\": {{ $json.does_not_meet }},\n  \"unknown_count\": {{ $json.unknown }},\n  \"overall_eligibility\": {{ JSON.stringify($json.eligibility) }},\n  \"blocking_conditions\": {{ JSON.stringify($json.blocking) }},\n  \"recommendations\": {{ JSON.stringify($json.recommendations) }}\n}",
+        "options": {}
+      },
+      "id": "d0a1b2c3-0012-0000-0000-000000000001",
+      "name": "Upsert Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1440, 500],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "supabase-auth",
+          "name": "Supabase Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare final response\nconst summaryData = $('Calculate Summary').first().json.summary;\n\nreturn [{\n  json: {\n    success: true,\n    tender_id: summaryData.tender_id,\n    summary: {\n      total: summaryData.total,\n      meets: summaryData.meets,\n      partially_meets: summaryData.partially_meets,\n      does_not_meet: summaryData.does_not_meet,\n      unknown: summaryData.unknown,\n      eligibility: summaryData.eligibility\n    },\n    blocking_conditions: summaryData.blocking,\n    recommendations: summaryData.recommendations,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "d0a1b2c3-0013-0000-0000-000000000001",
+      "name": "Prepare Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1660, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "d0a1b2c3-0014-0000-0000-000000000001",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1880, 400]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          { "node": "Get Gate Conditions", "type": "main", "index": 0 },
+          { "node": "Get Financials", "type": "main", "index": 0 },
+          { "node": "Get Projects", "type": "main", "index": 0 },
+          { "node": "Get Certifications", "type": "main", "index": 0 },
+          { "node": "Get Personnel", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get Gate Conditions": {
+      "main": [
+        [
+          { "node": "Evaluate Conditions", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get Financials": {
+      "main": [
+        [
+          { "node": "Evaluate Conditions", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get Projects": {
+      "main": [
+        [
+          { "node": "Evaluate Conditions", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get Certifications": {
+      "main": [
+        [
+          { "node": "Evaluate Conditions", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get Personnel": {
+      "main": [
+        [
+          { "node": "Evaluate Conditions", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Evaluate Conditions": {
+      "main": [
+        [
+          { "node": "Calculate Summary", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Calculate Summary": {
+      "main": [
+        [
+          { "node": "Split Conditions", "type": "main", "index": 0 },
+          { "node": "Get Summary Data", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Split Conditions": {
+      "main": [
+        [
+          { "node": "Update Condition", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Update Condition": {
+      "main": [
+        [
+          { "node": "Prepare Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get Summary Data": {
+      "main": [
+        [
+          { "node": "Upsert Summary", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Upsert Summary": {
+      "main": [
+        [
+          { "node": "Prepare Response", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "Tenderix" },
+    { "name": "P2-Gate-Conditions" }
+  ],
+  "pinData": {}
+}

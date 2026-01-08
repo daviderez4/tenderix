@@ -1,0 +1,141 @@
+{
+  "name": "TDX-Pricing-Intelligence",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tdx-pricing-intel",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400],
+      "webhookId": "tdx-pricing-intel"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/tenders?id=eq.' + $json.body.tender_id + '&select=*' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-tender",
+      "name": "Get Tender",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/competitor_bids?select=*,competitors(name,typical_margin_range)' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-bids",
+      "name": "Get Historical Bids",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/market_pricing?select=*",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-pricing",
+      "name": "Get Market Pricing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const tenders = $('Get Tender').all().map(i => i.json).flat();\nconst bids = $('Get Historical Bids').all().map(i => i.json).flat();\nconst pricing = $input.all().map(i => i.json).flat();\nconst tender = tenders[0] || {};\nconst tender_id = $('Webhook').first().json.body.tender_id;\nconst org_id = $('Webhook').first().json.body.org_id;\n\n// Format historical bids\nconst bidsText = bids.map(b => {\n  const pricePerUnit = typeof b.price_per_unit === 'string' ? JSON.parse(b.price_per_unit) : (b.price_per_unit || {});\n  const unitPrices = Object.entries(pricePerUnit).map(([k,v]) => `${k}: ${v}`).join(', ');\n  return `- ${b.tender_name} (${b.tender_year})\n  מציע: ${b.competitors?.name || 'לא ידוע'}\n  סכום: ${b.bid_amount?.toLocaleString()} ש\"ח\n  זכה: ${b.won ? 'כן' : 'לא'}\n  מחירי יחידה: ${unitPrices || 'לא ידוע'}\n  מרווח משוער: ${b.margin_estimate || 'לא ידוע'}%`;\n}).join('\\n\\n');\n\n// Format market pricing\nconst pricingText = pricing.map(p => \n  `- ${p.item_description} (${p.item_type})\n  טווח: ${p.low_price}-${p.high_price} ש\"ח/${p.unit}\n  מחיר טיפוסי: ${p.typical_price} ש\"ח\n  מבוסס על: ${p.based_on_bids} הצעות`\n).join('\\n');\n\nconst userMessage = `נתח מודיעין תמחור למכרז הבא וספק המלצות לאסטרטגיית תמחור.\n\nפרטי המכרז:\n- שם: ${tender.tender_name || 'לא ידוע'}\n- גוף מזמין: ${tender.issuing_body || 'לא ידוע'}\n- שווי משוער: ${tender.estimated_value || 'לא צוין'}\n- תחום: ${tender.tender_type || 'VIDEO'}\n\nהצעות היסטוריות של מתחרים:\n${bidsText || 'אין נתונים'}\n\nמחירי שוק ממוצעים:\n${pricingText || 'אין נתונים'}\n\nצור ניתוח תמחור עם המבנה הבא (JSON):\n{\n  \"pricing_analysis\": {\n    \"estimated_market_range\": {\n      \"low\": 0,\n      \"typical\": 0,\n      \"high\": 0\n    },\n    \"competitor_pricing_patterns\": [\n      {\n        \"competitor\": \"שם\",\n        \"typical_strategy\": \"תיאור\",\n        \"expected_bid_range\": \"טווח צפוי\"\n      }\n    ],\n    \"key_cost_drivers\": [\"גורם עלות 1\"]\n  },\n  \"pricing_recommendation\": {\n    \"recommended_bid_range\": {\n      \"aggressive\": 0,\n      \"balanced\": 0,\n      \"conservative\": 0\n    },\n    \"recommended_strategy\": \"AGGRESSIVE/BALANCED/CONSERVATIVE\",\n    \"strategy_rationale\": \"נימוק\",\n    \"margin_target\": \"15-20%\",\n    \"risk_factors\": [\"סיכון 1\"]\n  },\n  \"tactical_recommendations\": [\n    {\n      \"recommendation\": \"המלצה\",\n      \"impact\": \"HIGH/MEDIUM/LOW\",\n      \"implementation\": \"איך ליישם\"\n    }\n  ]\n}\n\nJSON בלבד:`;\n\nreturn [{\n  json: {\n    tender_id,\n    org_id,\n    tender_name: tender.tender_name,\n    historical_bids_count: bids.length,\n    market_prices_count: pricing.length,\n    userMessage\n  }\n}];"
+      },
+      "id": "prepare",
+      "name": "Prepare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "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" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 2500,\n  \"messages\": [{\"role\": \"user\", \"content\": {{ JSON.stringify($json.userMessage) }}}]\n}",
+        "options": { "timeout": 90000 }
+      },
+      "id": "call-claude",
+      "name": "Call Claude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1300, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const claude = $input.first().json;\nconst prep = $('Prepare').first().json;\n\nif (!claude.content) {\n  return [{ json: { success: false, error: 'No Claude response', data: claude }}];\n}\n\nconst text = claude.content[0]?.text || '';\nlet result = null;\nlet parseError = null;\n\ntry {\n  const match = text.match(/\\{[\\s\\S]*\\}/s);\n  if (match) result = JSON.parse(match[0]);\n  else parseError = 'No JSON found';\n} catch (e) {\n  parseError = e.message;\n}\n\nreturn [{\n  json: {\n    success: result !== null,\n    tender_id: prep.tender_id,\n    tender_name: prep.tender_name,\n    historical_bids_analyzed: prep.historical_bids_count,\n    market_prices_analyzed: prep.market_prices_count,\n    pricing_analysis: result?.pricing_analysis || {},\n    pricing_recommendation: result?.pricing_recommendation || {},\n    tactical_recommendations: result?.tactical_recommendations || [],\n    raw_response: text.substring(0, 500),\n    parse_error: parseError,\n    generated_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "parse",
+      "name": "Parse",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1520, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1740, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Get Tender", "type": "main", "index": 0 }]] },
+    "Get Tender": { "main": [[{ "node": "Get Historical Bids", "type": "main", "index": 0 }]] },
+    "Get Historical Bids": { "main": [[{ "node": "Get Market Pricing", "type": "main", "index": 0 }]] },
+    "Get Market Pricing": { "main": [[{ "node": "Prepare", "type": "main", "index": 0 }]] },
+    "Prepare": { "main": [[{ "node": "Call Claude", "type": "main", "index": 0 }]] },
+    "Call Claude": { "main": [[{ "node": "Parse", "type": "main", "index": 0 }]] },
+    "Parse": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

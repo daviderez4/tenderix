@@ -1,0 +1,117 @@
+{
+  "name": "TDX-Gate-Matching-Final",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tdx-gate-match",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        400
+      ],
+      "webhookId": "tdx-gate-match-final"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/gate_conditions?select=*&tender_id=eq.' + $json.body.tender_id + '&order=condition_number.asc' }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-conditions",
+      "name": "Get Conditions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        420,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get conditions from previous node and fetch other data\nconst SUPABASE_URL = 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1';\nconst SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34';\n\n// Get conditions from input (already fetched)\nconst conditions = $input.all().map(i => i.json);\nconst tender_id = conditions[0]?.tender_id;\nconst org_id = $('Webhook').first().json.body.org_id;\n\nconst headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY };\n\nasync function fetchData(table, filter) {\n  const res = await fetch(SUPABASE_URL + '/' + table + '?' + filter, { headers });\n  return await res.json();\n}\n\n// Fetch company data in parallel\nconst [financials, projects, certs, personnel] = await Promise.all([\n  fetchData('company_financials', 'select=*&org_id=eq.' + org_id + '&order=fiscal_year.desc'),\n  fetchData('company_projects', 'select=*&org_id=eq.' + org_id),\n  fetchData('company_certifications', 'select=*&org_id=eq.' + org_id),\n  fetchData('company_personnel', 'select=*&org_id=eq.' + org_id)\n]);\n\n// Evaluate each condition\nconst results = [];\nfor (const gc of conditions) {\n  const txt = (gc.condition_text || '').toLowerCase();\n  let status = 'UNKNOWN', evidence = null, gap = null, confidence = 0;\n\n  if (txt.includes('מחזור') || txt.includes('הכנסות')) {\n    const reqAmt = parseFloat(gc.required_amount) || 50000000;\n    if (financials.length > 0) {\n      const avg = financials.slice(0, 3).reduce((s, f) => s + (parseFloat(f.annual_revenue) || 0), 0) / Math.min(3, financials.length);\n      if (avg >= reqAmt) { status = 'MEETS'; evidence = 'Avg: ' + (avg/1000000).toFixed(1) + 'M'; confidence = 100; }\n      else { status = 'DOES_NOT_MEET'; gap = (avg/1000000).toFixed(1) + 'M < ' + (reqAmt/1000000).toFixed(1) + 'M'; confidence = 100; }\n    } else { gap = 'No financial data'; }\n  } else if (txt.includes('פרויקט') && (txt.includes('היקף') || txt.includes('מיליון'))) {\n    const reqAmt = parseFloat(gc.required_amount) || 10000000;\n    const maxProj = projects.reduce((max, p) => Math.max(max, parseFloat(p.total_value) || 0), 0);\n    if (maxProj >= reqAmt) { status = 'MEETS'; evidence = 'Max: ' + (maxProj/1000000).toFixed(1) + 'M'; confidence = 100; }\n    else if (projects.length > 0) { status = 'DOES_NOT_MEET'; gap = (maxProj/1000000).toFixed(1) + 'M < ' + (reqAmt/1000000).toFixed(1) + 'M'; confidence = 100; }\n    else { gap = 'No projects'; }\n  } else if (txt.includes('iso') || txt.includes('תקן')) {\n    if (certs.some(c => (c.cert_name || '').toLowerCase().includes('iso'))) { status = 'MEETS'; evidence = 'Has ISO'; confidence = 100; }\n    else { status = 'DOES_NOT_MEET'; gap = 'Missing ISO'; confidence = 100; }\n  } else if (txt.includes('מצלמות') || txt.includes('vms') || txt.includes('cameras')) {\n    const camProj = projects.filter(p => ((p.quantities || {}).cameras || 0) >= 100);\n    if (camProj.length > 0) { status = 'MEETS'; evidence = camProj.length + ' projects with 100+ cameras'; confidence = 100; }\n    else if (projects.length > 0) { status = 'DOES_NOT_MEET'; gap = 'No camera projects'; confidence = 100; }\n    else { gap = 'No projects'; }\n  } else if (txt.includes('קבלנים') || txt.includes('רשם')) {\n    if (certs.some(c => (c.cert_name || '').includes('קבלנים') || (c.cert_type || '').includes('קבלנים'))) { status = 'MEETS'; evidence = 'Registered contractor'; confidence = 100; }\n    else { status = 'UNKNOWN'; gap = 'Manual check required'; confidence = 50; }\n  } else if (txt.includes('מהנדס') || txt.includes('pmp') || txt.includes('מנהל פרויקט')) {\n    const qual = personnel.filter(p => (p.professional_certifications || []).some(c => c.toLowerCase().includes('pmp') || c.toLowerCase().includes('engineer')));\n    if (qual.length > 0) { status = 'MEETS'; evidence = qual[0].full_name; confidence = 100; }\n    else { status = 'UNKNOWN'; gap = 'Check personnel records'; confidence = 50; }\n  } else if (txt.includes('ממשלתי') || txt.includes('ציבורי') || txt.includes('רשות')) {\n    const gov = projects.filter(p => ['GOVERNMENT', 'MUNICIPAL', 'DEFENSE'].includes(p.client_type));\n    const req = parseInt(gc.required_count) || 3;\n    if (gov.length >= req) { status = 'MEETS'; evidence = gov.length + ' government projects'; confidence = 100; }\n    else if (gov.length > 0) { status = 'PARTIALLY_MEETS'; gap = gov.length + ' projects (need ' + req + ')'; confidence = 70; }\n    else { status = 'DOES_NOT_MEET'; gap = 'No government experience'; confidence = 100; }\n  } else if (txt.includes('milestone') || txt.includes('genetec')) {\n    const vmsProj = projects.filter(p => { const v = ((p.technologies || {}).vms || '').toLowerCase(); return v.includes('milestone') || v.includes('genetec'); });\n    if (vmsProj.length > 0) { status = 'MEETS'; evidence = vmsProj[0].project_name + ' - ' + (vmsProj[0].technologies || {}).vms; confidence = 100; }\n    else { status = 'DOES_NOT_MEET'; gap = 'No VMS projects found'; confidence = 100; }\n  } else if (txt.includes('תחזוקה') || txt.includes('maintenance')) {\n    const maint = projects.filter(p => p.project_type === 'MAINTENANCE' || p.project_type === 'COMBINED' || (p.maintenance_months || 0) > 0);\n    if (maint.length > 0) { status = 'MEETS'; evidence = maint.length + ' maintenance projects'; confidence = 100; }\n    else { status = 'DOES_NOT_MEET'; gap = 'No maintenance experience'; confidence = 100; }\n  } else if (txt.includes('ביטוח')) { status = 'UNKNOWN'; gap = 'Insurance - requires manual verification'; confidence = 0; }\n  else if (txt.includes('ערבות') || txt.includes('בנקאית')) { status = 'UNKNOWN'; gap = 'Bank guarantee - preparation needed'; confidence = 0; }\n  else if (txt.includes('סיווג') || txt.includes('ביטחוני')) {\n    const cleared = personnel.filter(p => p.security_clearance);\n    if (cleared.length > 0) { status = 'MEETS'; evidence = cleared.length + ' cleared personnel'; confidence = 100; }\n    else { status = 'UNKNOWN'; gap = 'Security clearance - manual check'; confidence = 30; }\n  } else { gap = 'Requires manual review'; confidence = 0; }\n\n  results.push({ id: gc.id, condition_number: gc.condition_number, condition_text: gc.condition_text, condition_type: gc.condition_type, is_mandatory: gc.is_mandatory, status, evidence, gap, confidence });\n}\n\n// Calculate summary\nconst meets = results.filter(r => r.status === 'MEETS').length;\nconst partial = results.filter(r => r.status === 'PARTIALLY_MEETS').length;\nconst fails = results.filter(r => r.status === 'DOES_NOT_MEET').length;\nconst unknown = results.filter(r => r.status === 'UNKNOWN').length;\nconst mandatoryFails = results.filter(r => r.is_mandatory && r.status === 'DOES_NOT_MEET');\n\nlet eligibility = 'ELIGIBLE';\nlet recommendation = 'GO';\nif (mandatoryFails.length > 0) { eligibility = 'NOT_ELIGIBLE'; recommendation = 'NO-GO'; }\nelse if (fails > 0 || unknown > 3) { eligibility = 'CONDITIONAL'; recommendation = 'REVIEW'; }\n\nreturn [{ json: {\n  success: true,\n  tender_id,\n  org_id,\n  summary: { total: results.length, meets, partially_meets: partial, does_not_meet: fails, unknown, eligibility, recommendation },\n  blocking_issues: mandatoryFails.map(r => ({ condition: r.condition_number, gap: r.gap })),\n  conditions: results,\n  data_counts: { conditions: conditions.length, financials: financials.length, projects: projects.length, certifications: certs.length, personnel: personnel.length },\n  timestamp: new Date().toISOString()\n}}];"
+      },
+      "id": "evaluate",
+      "name": "Evaluate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        860,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get Conditions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Conditions": {
+      "main": [
+        [
+          {
+            "node": "Evaluate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

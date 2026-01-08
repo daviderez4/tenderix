@@ -1,0 +1,110 @@
+{
+  "name": "TDX-Step4-ClarificationQuestions-v2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tdx-clarifications-v2",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400],
+      "webhookId": "tdx-clarifications-v2"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/gate_conditions?tender_id=eq.' + $json.body.tender_id + '&order=condition_number' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-conditions",
+      "name": "Get Conditions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare data for Claude to generate clarification questions\nconst conditions = $input.first().json;\nconst webhookData = $('Webhook').first().json.body;\nconst tender_id = webhookData.tender_id;\nconst org_id = webhookData.org_id;\n\n// Filter conditions that need clarification (UNKNOWN, DOES_NOT_MEET, or gaps)\nconst conditionsNeedingClarification = conditions.filter(c => \n  c.status === 'UNKNOWN' || \n  c.status === 'DOES_NOT_MEET' || \n  c.status === 'PARTIALLY_MEETS' ||\n  c.gap_description\n);\n\nconst conditionsText = conditions.map(c => \n  `סעיף ${c.condition_number}: ${c.condition_text}\\nסטטוס: ${c.status || 'PENDING'}\\nפער: ${c.gap_description || 'אין'}`\n).join('\\n\\n');\n\nconst systemPrompt = `אתה יועץ מכרזים מומחה בישראל. תפקידך ליצור שאלות הבהרה למזמין המכרז.\n\nכללים:\n1. שאלות הבהרה מנוסחות כ\"בקשה\" - \"נבקש להבהיר...\"\n2. כל שאלה חייבת להתייחס לסעיף ספציפי במכרז\n3. סווג כל שאלה לפי עדיפות:\n   - P1: משנה GO/NO-GO\n   - P2: משנה רמת סיכון\n   - P3: מחזק טיעון\n4. ציין את המטרה של כל שאלה (מה אנחנו מנסים להשיג)\n5. הצע ניסוח שאלה שמיטיב עם המציע\n\nהחזר JSON array עם המבנה:\n{\n  \"question_number\": מספר,\n  \"related_condition\": \"מספר סעיף\",\n  \"question_text\": \"נוסח השאלה\",\n  \"priority\": \"P1\"/\"P2\"/\"P3\",\n  \"purpose\": \"מטרת השאלה\",\n  \"desired_outcome\": \"התוצאה הרצויה\",\n  \"question_type\": \"CLARIFICATION\"/\"EXPANSION\"/\"RELAXATION\"\n}`;\n\nreturn [{\n  json: {\n    tender_id,\n    org_id,\n    conditions: conditions,\n    conditionsText,\n    systemPrompt,\n    userMessage: `נתח את תנאי הסף הבאים וצור שאלות הבהרה למזמין. התמקד בתנאים שלא עומדים בהם או שיש בהם אי-בהירות:\\n\\n${conditionsText}`\n  }\n}];"
+      },
+      "id": "prepare",
+      "name": "Prepare for Claude",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "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" },
+            { "name": "anthropic-version", "value": "2023-06-01" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 4096,\n  \"system\": {{ JSON.stringify($json.systemPrompt) }},\n  \"messages\": [{\"role\": \"user\", \"content\": {{ JSON.stringify($json.userMessage) }}}]\n}",
+        "options": {}
+      },
+      "id": "call-claude",
+      "name": "Call Claude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Claude's response\nconst claudeResponse = $input.first().json;\nconst prepData = $('Prepare for Claude').first().json;\n\nif (!claudeResponse.content || !claudeResponse.content[0]) {\n  return [{ json: { success: false, error: 'No response from Claude' }}];\n}\n\nconst responseText = claudeResponse.content[0].text || '';\n\n// Extract JSON\nlet jsonText = responseText;\nconst jsonMatch = responseText.match(/```json\\s*([\\s\\S]*?)\\s*```/);\nif (jsonMatch) jsonText = jsonMatch[1];\nelse {\n  const arrayMatch = responseText.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/);\n  if (arrayMatch) jsonText = arrayMatch[0];\n}\n\nlet questions;\ntry {\n  questions = JSON.parse(jsonText);\n} catch (e) {\n  return [{ json: { success: false, error: 'Parse error', raw: responseText.substring(0, 500) }}];\n}\n\n// Categorize questions\nconst p1Questions = questions.filter(q => q.priority === 'P1');\nconst p2Questions = questions.filter(q => q.priority === 'P2');\nconst p3Questions = questions.filter(q => q.priority === 'P3');\n\nreturn [{\n  json: {\n    success: true,\n    tender_id: prepData.tender_id,\n    total_questions: questions.length,\n    summary: {\n      p1_critical: p1Questions.length,\n      p2_important: p2Questions.length,\n      p3_nice_to_have: p3Questions.length\n    },\n    questions: questions,\n    by_priority: {\n      P1: p1Questions,\n      P2: p2Questions,\n      P3: p3Questions\n    },\n    next_step: 'REVIEW_AND_SUBMIT',\n    message: `נוצרו ${questions.length} שאלות הבהרה. ${p1Questions.length} קריטיות (P1)`,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "parse",
+      "name": "Parse & Categorize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1300, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Get Conditions", "type": "main", "index": 0 }]]
+    },
+    "Get Conditions": {
+      "main": [[{ "node": "Prepare for Claude", "type": "main", "index": 0 }]]
+    },
+    "Prepare for Claude": {
+      "main": [[{ "node": "Call Claude", "type": "main", "index": 0 }]]
+    },
+    "Call Claude": {
+      "main": [[{ "node": "Parse & Categorize", "type": "main", "index": 0 }]]
+    },
+    "Parse & Categorize": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}
