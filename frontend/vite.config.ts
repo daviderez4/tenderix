@@ -4,5 +4,21 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/tenderix/', // GitHub Pages base path
+  base: '/',
+  server: {
+    port: 5174,
+    allowedHosts: ['localhost', '.trycloudflare.com'],
+  },
+  optimizeDeps: {
+    include: ['pdfjs-dist'],
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          pdfjs: ['pdfjs-dist'],
+        },
+      },
+    },
+  },
 })

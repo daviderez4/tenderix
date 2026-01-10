@@ -2,7 +2,10 @@
 export const API_CONFIG = {
   WEBHOOK_BASE: 'https://daviderez.app.n8n.cloud/webhook',
   SUPABASE_URL: 'https://rerfjgjwjqodevkvhkxu.supabase.co',
-  SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0OTQzMDcsImV4cCI6MjA4MTA3MDMwN30.Kzh5gi5LZ1sDOqAzKqVnmhT5RKzOiQwM96LUbYpQAqM',
+  // Using service_role key for full access (same as n8n workflows)
+  SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34',
+  // OCR.space API - free tier (500 requests/day, 5MB max)
+  OCR_SPACE_API_KEY: 'K87574009788957',
 };
 
 // Default test IDs (used when no tender is selected)
@@ -27,4 +30,19 @@ export function setCurrentTender(id: string, name: string): void {
   localStorage.setItem('currentTenderName', name);
   // Trigger a storage event so other components can react
   window.dispatchEvent(new Event('storage'));
+}
+
+// Store extracted text for current tender (for Gates analysis)
+export function setTenderExtractedText(tenderId: string, text: string): void {
+  localStorage.setItem(`tender_${tenderId}_text`, text);
+}
+
+// Get extracted text for a tender
+export function getTenderExtractedText(tenderId: string): string | null {
+  return localStorage.getItem(`tender_${tenderId}_text`);
+}
+
+// Clear extracted text for a tender
+export function clearTenderExtractedText(tenderId: string): void {
+  localStorage.removeItem(`tender_${tenderId}_text`);
 }

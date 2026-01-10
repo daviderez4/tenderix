@@ -1,53 +1,100 @@
 import { useState, useEffect } from 'react';
-import { CheckSquare, RefreshCw, FileQuestion, Lightbulb, FileCheck } from 'lucide-react';
+import { CheckSquare, RefreshCw, FileQuestion, Lightbulb, FileCheck, AlertCircle, FileText, Zap } from 'lucide-react';
 import { api } from '../api/tenderix';
-import type { GateCondition } from '../api/tenderix';
-import { TEST_IDS } from '../api/config';
+import type { GateCondition, Tender } from '../api/tenderix';
+import { getCurrentTenderId, getCurrentOrgId, getTenderExtractedText } from '../api/config';
 import { Loading } from '../components/Loading';
 import { StatusBadge } from '../components/StatusBadge';
 
 type TabType = 'conditions' | 'clarifications' | 'strategic' | 'documents';
 
 export function GatesPage() {
+  const [tender, setTender] = useState<Tender | null>(null);
   const [gates, setGates] = useState<GateCondition[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('conditions');
   const [runningWorkflow, setRunningWorkflow] = useState<string | null>(null);
   const [workflowResults, setWorkflowResults] = useState<Record<string, unknown>>({});
+  const [hasExtractedText, setHasExtractedText] = useState(false);
+  const [extractingGates, setExtractingGates] = useState(false);
 
   useEffect(() => {
-    loadGates();
+    loadData();
+
+    // Listen for tender changes
+    const handleStorage = () => loadData();
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  async function loadGates() {
+  async function loadData() {
     setLoading(true);
     try {
-      const data = await api.getGateConditions(TEST_IDS.TENDER_ID);
-      setGates(data);
+      const tenderId = getCurrentTenderId();
+      const [tenderData, gatesData] = await Promise.all([
+        api.tenders.get(tenderId),
+        api.getGateConditions(tenderId),
+      ]);
+      setTender(tenderData);
+      setGates(gatesData);
+
+      // Check if we have extracted text for this tender
+      const extractedText = getTenderExtractedText(tenderId);
+      setHasExtractedText(!!extractedText && extractedText.length > 100);
     } catch (error) {
-      console.error('Error loading gates:', error);
+      console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
   }
 
+  // Extract gates from stored tender text
+  async function extractGatesFromText() {
+    const tenderId = getCurrentTenderId();
+    const extractedText = getTenderExtractedText(tenderId);
+
+    if (!extractedText) {
+      console.error('No extracted text found for tender');
+      return;
+    }
+
+    setExtractingGates(true);
+    try {
+      console.log(`Extracting gates from ${extractedText.length} chars of text`);
+      const result = await api.workflows.extractGates(tenderId, extractedText);
+      console.log('Extract gates result:', result);
+
+      if (result.success && result.conditions) {
+        // Reload gates from database
+        await loadData();
+      }
+    } catch (error) {
+      console.error('Error extracting gates:', error);
+    } finally {
+      setExtractingGates(false);
+    }
+  }
+
   async function runWorkflow(type: 'match' | 'clarifications' | 'strategic' | 'documents') {
+    const tenderId = getCurrentTenderId();
+    const orgId = getCurrentOrgId();
+
     setRunningWorkflow(type);
     try {
       let result;
       switch (type) {
         case 'match':
-          result = await api.workflows.matchGates(TEST_IDS.TENDER_ID, TEST_IDS.ORG_ID);
-          await loadGates();
+          result = await api.workflows.matchGates(tenderId, orgId);
+          await loadData();
           break;
         case 'clarifications':
-          result = await api.workflows.getClarifications(TEST_IDS.TENDER_ID, TEST_IDS.ORG_ID);
+          result = await api.workflows.getClarifications(tenderId, orgId);
           break;
         case 'strategic':
-          result = await api.workflows.getStrategicQuestions(TEST_IDS.TENDER_ID, TEST_IDS.ORG_ID);
+          result = await api.workflows.getStrategicQuestions(tenderId, orgId);
           break;
         case 'documents':
-          result = await api.workflows.getRequiredDocs(TEST_IDS.TENDER_ID, TEST_IDS.ORG_ID);
+          result = await api.workflows.getRequiredDocs(tenderId, orgId);
           break;
       }
       setWorkflowResults(prev => ({ ...prev, [type]: result }));
@@ -59,6 +106,22 @@ export function GatesPage() {
   }
 
   if (loading) return <Loading />;
+
+  // Show message if no tender is selected
+  if (!tender) {
+    return (
+      <div className="page">
+        <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
+          <AlertCircle size={48} style={{ color: 'var(--warning)', marginBottom: '1rem' }} />
+          <h2>לא נבחר מכרז</h2>
+          <p style={{ color: 'var(--gray-500)', marginBottom: '1.5rem' }}>
+            יש לבחור מכרז מהדשבורד או להעלות מכרז חדש
+          </p>
+          <a href="/" className="btn btn-primary">חזור לדשבורד</a>
+        </div>
+      </div>
+    );
+  }
 
   const gateStats = {
     total: gates.length,
@@ -75,8 +138,35 @@ export function GatesPage() {
           <CheckSquare size={28} style={{ marginLeft: '0.5rem', verticalAlign: 'middle' }} />
           תנאי סף
         </h1>
-        <p className="page-subtitle">ניהול וניתוח תנאי סף למכרז</p>
+        <p className="page-subtitle">
+          {tender.tender_name}
+          {tender.tender_number && ` | מכרז ${tender.tender_number}`}
+        </p>
       </div>
+
+      {/* Extract Gates from Document - show when text is available but no gates extracted */}
+      {hasExtractedText && gates.length === 0 && (
+        <div className="card" style={{ marginBottom: '1.5rem', background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(0, 212, 255, 0.1))', borderRight: '4px solid #7c3aed' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <FileText size={32} style={{ color: '#7c3aed' }} />
+            <div style={{ flex: 1 }}>
+              <h3 style={{ margin: 0, color: '#7c3aed' }}>מסמך מכרז זמין לניתוח</h3>
+              <p style={{ margin: '0.25rem 0 0', color: 'var(--gray-400)', fontSize: '0.9rem' }}>
+                לחץ לחילוץ תנאי הסף אוטומטית מהמסמך שהועלה
+              </p>
+            </div>
+            <button
+              className="btn btn-primary"
+              onClick={extractGatesFromText}
+              disabled={extractingGates}
+              style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)' }}
+            >
+              {extractingGates ? <div className="spinner" /> : <Zap size={18} />}
+              חלץ תנאי סף
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-4" style={{ marginBottom: '1.5rem' }}>
@@ -102,10 +192,22 @@ export function GatesPage() {
       <div className="card">
         <h3 className="card-title" style={{ marginBottom: '1rem' }}>פעולות AI</h3>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {/* Extract gates button - always show if text is available */}
+          {hasExtractedText && (
+            <button
+              className="btn btn-secondary"
+              onClick={extractGatesFromText}
+              disabled={extractingGates || runningWorkflow !== null}
+              style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', color: 'white', border: 'none' }}
+            >
+              {extractingGates ? <div className="spinner" /> : <Zap size={18} />}
+              חלץ תנאי סף מהמסמך
+            </button>
+          )}
           <button
             className="btn btn-primary"
             onClick={() => runWorkflow('match')}
-            disabled={runningWorkflow !== null}
+            disabled={runningWorkflow !== null || extractingGates}
           >
             {runningWorkflow === 'match' ? <div className="spinner" /> : <RefreshCw size={18} />}
             התאמה לפרופיל
@@ -113,7 +215,7 @@ export function GatesPage() {
           <button
             className="btn btn-secondary"
             onClick={() => { runWorkflow('clarifications'); setActiveTab('clarifications'); }}
-            disabled={runningWorkflow !== null}
+            disabled={runningWorkflow !== null || extractingGates}
           >
             {runningWorkflow === 'clarifications' ? <div className="spinner" /> : <FileQuestion size={18} />}
             שאלות הבהרה
@@ -121,7 +223,7 @@ export function GatesPage() {
           <button
             className="btn btn-secondary"
             onClick={() => { runWorkflow('strategic'); setActiveTab('strategic'); }}
-            disabled={runningWorkflow !== null}
+            disabled={runningWorkflow !== null || extractingGates}
           >
             {runningWorkflow === 'strategic' ? <div className="spinner" /> : <Lightbulb size={18} />}
             שאלות אסטרטגיות
@@ -129,7 +231,7 @@ export function GatesPage() {
           <button
             className="btn btn-secondary"
             onClick={() => { runWorkflow('documents'); setActiveTab('documents'); }}
-            disabled={runningWorkflow !== null}
+            disabled={runningWorkflow !== null || extractingGates}
           >
             {runningWorkflow === 'documents' ? <div className="spinner" /> : <FileCheck size={18} />}
             מסמכים נדרשים
@@ -218,21 +320,32 @@ function WorkflowResult({ data, type }: { data: any; type: string }) {
     return <p style={{ color: 'var(--danger)' }}>שגיאה בהרצת התהליך</p>;
   }
 
-  if (type === 'clarifications' && data.clarifications) {
+  // Handle clarifications - API returns "questions" array
+  if (type === 'clarifications' && (data.clarifications || data.questions)) {
+    const questions = data.clarifications || data.questions || [];
     return (
       <div>
-        <h4 style={{ marginBottom: '1rem' }}>שאלות הבהרה ({data.clarifications.length})</h4>
-        {data.clarifications.map((q: { question: string; reason: string; expected_impact: string }, i: number) => (
+        <h4 style={{ marginBottom: '1rem' }}>שאלות הבהרה ({questions.length})</h4>
+        {questions.map((q: { question: string; reason?: string; rationale?: string; expected_impact?: string; priority?: string; condition?: string }, i: number) => (
           <div key={i} className="gate-item">
-            <div className="gate-number">{i + 1}</div>
+            <div className="gate-number">{q.condition || (i + 1)}</div>
             <div className="gate-content">
               <div className="gate-text" style={{ fontWeight: 500 }}>{q.question}</div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--gray-600)', marginTop: '0.5rem' }}>
-                <strong>סיבה:</strong> {q.reason}
-              </div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--gray-600)' }}>
-                <strong>השפעה צפויה:</strong> {q.expected_impact}
-              </div>
+              {q.priority && (
+                <div className="gate-meta">
+                  <span className={`badge ${q.priority === 'P1' ? 'badge-danger' : 'badge-warning'}`}>{q.priority}</span>
+                </div>
+              )}
+              {(q.reason || q.rationale) && (
+                <div style={{ fontSize: '0.875rem', color: 'var(--gray-600)', marginTop: '0.5rem' }}>
+                  <strong>סיבה:</strong> {q.reason || q.rationale}
+                </div>
+              )}
+              {q.expected_impact && (
+                <div style={{ fontSize: '0.875rem', color: 'var(--gray-600)' }}>
+                  <strong>השפעה צפויה:</strong> {q.expected_impact}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -240,24 +353,76 @@ function WorkflowResult({ data, type }: { data: any; type: string }) {
     );
   }
 
-  if (type === 'strategic' && data.strategic_questions) {
+  // Handle strategic questions - API returns "safe_questions" and "by_type" arrays
+  if (type === 'strategic' && (data.strategic_questions || data.safe_questions || data.by_type)) {
+    const safeQuestions = data.safe_questions || [];
+    const byType = data.by_type || [];
+    const allQuestions = data.strategic_questions || [...safeQuestions, ...byType];
+    const totalCount = data.total_questions || allQuestions.length;
+
     return (
       <div>
-        <h4 style={{ marginBottom: '1rem' }}>שאלות אסטרטגיות ({data.strategic_questions.length})</h4>
-        {data.strategic_questions.map((q: { question: string; category: string; strategic_goal: string }, i: number) => (
-          <div key={i} className="gate-item">
-            <div className="gate-number">{i + 1}</div>
-            <div className="gate-content">
-              <div className="gate-text" style={{ fontWeight: 500 }}>{q.question}</div>
-              <div className="gate-meta">
-                <span className="badge badge-gray">{q.category}</span>
+        <h4 style={{ marginBottom: '1rem' }}>שאלות אסטרטגיות ({totalCount})</h4>
+
+        {safeQuestions.length > 0 && (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <h5 style={{ color: 'var(--success)', marginBottom: '0.75rem' }}>שאלות בטוחות ({safeQuestions.length})</h5>
+            {safeQuestions.map((q: { question: string; type?: string; justification?: string; impact?: string; risk?: string; num?: number }, i: number) => (
+              <div key={i} className="gate-item">
+                <div className="gate-number">{q.num || (i + 1)}</div>
+                <div className="gate-content">
+                  <div className="gate-text" style={{ fontWeight: 500 }}>{q.question}</div>
+                  {q.type && (
+                    <div className="gate-meta">
+                      <span className="badge badge-gray">{q.type}</span>
+                      {q.risk && <span className={`badge ${q.risk === 'גבוה' ? 'badge-danger' : 'badge-warning'}`}>{q.risk}</span>}
+                    </div>
+                  )}
+                  {q.justification && (
+                    <div style={{ fontSize: '0.875rem', color: 'var(--gray-600)', marginTop: '0.5rem' }}>
+                      <strong>נימוק:</strong> {q.justification}
+                    </div>
+                  )}
+                  {q.impact && (
+                    <div style={{ fontSize: '0.875rem', color: 'var(--gray-600)' }}>
+                      <strong>השפעה:</strong> {q.impact}
+                    </div>
+                  )}
+                </div>
               </div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--gray-600)', marginTop: '0.5rem' }}>
-                <strong>מטרה:</strong> {q.strategic_goal}
-              </div>
-            </div>
+            ))}
           </div>
-        ))}
+        )}
+
+        {byType.length > 0 && (
+          <div>
+            <h5 style={{ color: 'var(--warning)', marginBottom: '0.75rem' }}>שאלות אסטרטגיות לפי סוג ({byType.length})</h5>
+            {byType.map((q: { question: string; type?: string; justification?: string; impact?: string; risk?: string; num?: number }, i: number) => (
+              <div key={i} className="gate-item" style={{ borderRight: '3px solid var(--warning)' }}>
+                <div className="gate-number">{q.num || (i + 1)}</div>
+                <div className="gate-content">
+                  <div className="gate-text" style={{ fontWeight: 500 }}>{q.question}</div>
+                  {q.type && (
+                    <div className="gate-meta">
+                      <span className="badge badge-warning">{q.type}</span>
+                      {q.risk && <span className={`badge ${q.risk === 'גבוה' ? 'badge-danger' : 'badge-gray'}`}>סיכון: {q.risk}</span>}
+                    </div>
+                  )}
+                  {q.justification && (
+                    <div style={{ fontSize: '0.875rem', color: 'var(--gray-600)', marginTop: '0.5rem' }}>
+                      <strong>נימוק:</strong> {q.justification}
+                    </div>
+                  )}
+                  {q.impact && (
+                    <div style={{ fontSize: '0.875rem', color: 'var(--gray-600)' }}>
+                      <strong>השפעה:</strong> {q.impact}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }

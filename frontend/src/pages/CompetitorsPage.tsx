@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Users, DollarSign, Target } from 'lucide-react';
+import { Users, DollarSign, Target, AlertCircle } from 'lucide-react';
 import { api } from '../api/tenderix';
-import type { Competitor } from '../api/tenderix';
-import { TEST_IDS } from '../api/config';
+import type { Competitor, Tender } from '../api/tenderix';
+import { getCurrentTenderId, getCurrentOrgId } from '../api/config';
 import { Loading } from '../components/Loading';
 import { StatusBadge } from '../components/StatusBadge';
 
 type TabType = 'list' | 'mapping' | 'pricing' | 'intel';
 
 export function CompetitorsPage() {
+  const [tender, setTender] = useState<Tender | null>(null);
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('list');
@@ -16,34 +17,48 @@ export function CompetitorsPage() {
   const [workflowResults, setWorkflowResults] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
-    loadCompetitors();
+    loadData();
+
+    // Listen for tender changes
+    const handleStorage = () => loadData();
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  async function loadCompetitors() {
+  async function loadData() {
     setLoading(true);
     try {
-      const data = await api.getCompetitors(TEST_IDS.ORG_ID);
-      setCompetitors(data);
+      const tenderId = getCurrentTenderId();
+      const orgId = getCurrentOrgId();
+      const [tenderData, competitorsData] = await Promise.all([
+        api.tenders.get(tenderId),
+        api.getCompetitors(orgId),
+      ]);
+      setTender(tenderData);
+      setCompetitors(competitorsData);
     } catch (error) {
-      console.error('Error loading competitors:', error);
+      console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
   }
 
   async function runWorkflow(type: 'mapping' | 'pricing' | 'intel') {
+    const tenderId = getCurrentTenderId();
+    const orgId = getCurrentOrgId();
+
     setRunningWorkflow(type);
     try {
       let result;
       switch (type) {
         case 'mapping':
-          result = await api.workflows.mapCompetitors(TEST_IDS.TENDER_ID, TEST_IDS.ORG_ID);
+          result = await api.workflows.mapCompetitors(tenderId, orgId);
           break;
         case 'pricing':
-          result = await api.workflows.getPricingIntel(TEST_IDS.TENDER_ID, TEST_IDS.ORG_ID);
+          result = await api.workflows.getPricingIntel(tenderId, orgId);
           break;
         case 'intel':
-          result = await api.workflows.getCompetitiveIntel(TEST_IDS.TENDER_ID, TEST_IDS.ORG_ID);
+          result = await api.workflows.getCompetitiveIntel(tenderId, orgId);
           break;
       }
       setWorkflowResults(prev => ({ ...prev, [type]: result }));
@@ -57,6 +72,22 @@ export function CompetitorsPage() {
 
   if (loading) return <Loading />;
 
+  // Show message if no tender is selected
+  if (!tender) {
+    return (
+      <div className="page">
+        <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
+          <AlertCircle size={48} style={{ color: 'var(--warning)', marginBottom: '1rem' }} />
+          <h2>לא נבחר מכרז</h2>
+          <p style={{ color: 'var(--gray-500)', marginBottom: '1.5rem' }}>
+            יש לבחור מכרז מהדשבורד או להעלות מכרז חדש
+          </p>
+          <a href="/" className="btn btn-primary">חזור לדשבורד</a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="page-header">
@@ -64,7 +95,10 @@ export function CompetitorsPage() {
           <Users size={28} style={{ marginLeft: '0.5rem', verticalAlign: 'middle' }} />
           מתחרים
         </h1>
-        <p className="page-subtitle">מאגר מתחרים ומודיעין תחרותי</p>
+        <p className="page-subtitle">
+          {tender.tender_name}
+          {tender.tender_number && ` | מכרז ${tender.tender_number}`}
+        </p>
       </div>
 
       {/* Actions */}

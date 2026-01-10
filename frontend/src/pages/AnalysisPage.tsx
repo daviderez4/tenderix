@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
-import { BarChart3, FileText, Loader2, CheckCircle } from 'lucide-react';
-import { API_CONFIG } from '../api/config';
+import { BarChart3, FileText, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { API_CONFIG, getCurrentTenderId } from '../api/config';
+import { api } from '../api/tenderix';
+import type { Tender } from '../api/tenderix';
+import { Loading } from '../components/Loading';
 
 export function AnalysisPage() {
-  const [tenderId, setTenderId] = useState<string>('');
-  const [tenderName, setTenderName] = useState<string>('');
+  const [tender, setTender] = useState<Tender | null>(null);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'boq' | 'sow'>('boq');
   const [boqText, setBoqText] = useState('');
   const [sowText, setSowText] = useState('');
@@ -15,35 +18,35 @@ export function AnalysisPage() {
   const [sowResult, setSowResult] = useState<any>(null);
 
   useEffect(() => {
-    // Get current tender from localStorage or use test ID
-    const storedId = localStorage.getItem('currentTenderId') || 'e1e1e1e1-0000-0000-0000-000000000001';
-    setTenderId(storedId);
-    loadTenderName(storedId);
+    loadTender();
+
+    // Listen for tender changes
+    const handleStorage = () => loadTender();
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  async function loadTenderName(id: string) {
+  async function loadTender() {
+    setInitialLoading(true);
     try {
-      const res = await fetch(`${API_CONFIG.SUPABASE_URL}/rest/v1/tenders?id=eq.${id}&select=tender_name`, {
-        headers: {
-          'apikey': API_CONFIG.SUPABASE_KEY,
-          'Authorization': `Bearer ${API_CONFIG.SUPABASE_KEY}`,
-        },
-      });
-      const [tender] = await res.json();
-      if (tender) setTenderName(tender.tender_name);
+      const tenderId = getCurrentTenderId();
+      const tenderData = await api.tenders.get(tenderId);
+      setTender(tenderData);
     } catch (error) {
       console.error('Error loading tender:', error);
+    } finally {
+      setInitialLoading(false);
     }
   }
 
   async function analyzeBOQ() {
-    if (!boqText.trim()) return;
+    if (!boqText.trim() || !tender) return;
     setLoading(true);
     try {
       const res = await fetch(`${API_CONFIG.WEBHOOK_BASE}/tdx-boq-analysis`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tender_id: tenderId, boq_text: boqText }),
+        body: JSON.stringify({ tender_id: tender.id, boq_text: boqText }),
       });
       const result = await res.json();
       setBoqResult(result);
@@ -55,13 +58,13 @@ export function AnalysisPage() {
   }
 
   async function analyzeSOW() {
-    if (!sowText.trim()) return;
+    if (!sowText.trim() || !tender) return;
     setLoading(true);
     try {
       const res = await fetch(`${API_CONFIG.WEBHOOK_BASE}/tdx-sow-analysis`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tender_id: tenderId, sow_text: sowText }),
+        body: JSON.stringify({ tender_id: tender.id, sow_text: sowText }),
       });
       const result = await res.json();
       setSowResult(result);
@@ -72,6 +75,24 @@ export function AnalysisPage() {
     }
   }
 
+  if (initialLoading) return <Loading />;
+
+  // Show message if no tender is selected
+  if (!tender) {
+    return (
+      <div className="page">
+        <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
+          <AlertCircle size={48} style={{ color: 'var(--warning)', marginBottom: '1rem' }} />
+          <h2>לא נבחר מכרז</h2>
+          <p style={{ color: 'var(--gray-500)', marginBottom: '1.5rem' }}>
+            יש לבחור מכרז מהדשבורד או להעלות מכרז חדש
+          </p>
+          <a href="/" className="btn btn-primary">חזור לדשבורד</a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="page-header">
@@ -80,7 +101,8 @@ export function AnalysisPage() {
           ניתוח מפרט וכמויות
         </h1>
         <p className="page-subtitle">
-          {tenderName ? `מכרז: ${tenderName}` : 'ניתוח BOQ ו-SOW'}
+          {tender.tender_name}
+          {tender.tender_number && ` | מכרז ${tender.tender_number}`}
         </p>
       </div>
 

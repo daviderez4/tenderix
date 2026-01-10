@@ -6,8 +6,11 @@ interface LoginProps {
 }
 
 // Simple hardcoded auth - in production use proper auth!
-const VALID_USER = 'david';
-const VALID_PASS = 'tenderix2024';
+const VALID_USERS: Record<string, string> = {
+  'david': 'tenderix2024',
+  'partner': 'partner2024',
+  'demo': 'demo123',
+};
 
 export function Login({ onLogin }: LoginProps) {
   const [username, setUsername] = useState('');
@@ -16,7 +19,7 @@ export function Login({ onLogin }: LoginProps) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (username === VALID_USER && password === VALID_PASS) {
+    if (VALID_USERS[username] === password) {
       localStorage.setItem('tenderix_auth', 'true');
       onLogin();
     } else {

@@ -1,18 +1,47 @@
-import { useState } from 'react';
-import { Target, RefreshCw, AlertTriangle, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Target, RefreshCw, AlertTriangle, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
 import { api } from '../api/tenderix';
-import { TEST_IDS } from '../api/config';
+import type { Tender } from '../api/tenderix';
+import { getCurrentTenderId, getCurrentOrgId } from '../api/config';
 import { StatusBadge } from '../components/StatusBadge';
+import { Loading } from '../components/Loading';
 
 export function DecisionPage() {
+  const [tender, setTender] = useState<Tender | null>(null);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [decision, setDecision] = useState<any>(null);
 
+  useEffect(() => {
+    loadTender();
+
+    // Listen for tender changes
+    const handleStorage = () => loadTender();
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  async function loadTender() {
+    setInitialLoading(true);
+    try {
+      const tenderId = getCurrentTenderId();
+      const tenderData = await api.tenders.get(tenderId);
+      setTender(tenderData);
+    } catch (error) {
+      console.error('Error loading tender:', error);
+    } finally {
+      setInitialLoading(false);
+    }
+  }
+
   async function generateDecision() {
+    const tenderId = getCurrentTenderId();
+    const orgId = getCurrentOrgId();
+
     setLoading(true);
     try {
-      const result = await api.workflows.getFinalDecision(TEST_IDS.TENDER_ID, TEST_IDS.ORG_ID);
+      const result = await api.workflows.getFinalDecision(tenderId, orgId);
       setDecision(result);
     } catch (error) {
       console.error('Error generating decision:', error);
@@ -37,6 +66,24 @@ export function DecisionPage() {
     }
   };
 
+  if (initialLoading) return <Loading />;
+
+  // Show message if no tender is selected
+  if (!tender) {
+    return (
+      <div className="page">
+        <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
+          <AlertCircle size={48} style={{ color: 'var(--warning)', marginBottom: '1rem' }} />
+          <h2>לא נבחר מכרז</h2>
+          <p style={{ color: 'var(--gray-500)', marginBottom: '1.5rem' }}>
+            יש לבחור מכרז מהדשבורד או להעלות מכרז חדש
+          </p>
+          <a href="/" className="btn btn-primary">חזור לדשבורד</a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="page-header">
@@ -44,7 +91,10 @@ export function DecisionPage() {
           <Target size={28} style={{ marginLeft: '0.5rem', verticalAlign: 'middle' }} />
           דוח החלטה GO/NO-GO
         </h1>
-        <p className="page-subtitle">דוח מסכם להחלטה על השתתפות במכרז</p>
+        <p className="page-subtitle">
+          {tender.tender_name}
+          {tender.tender_number && ` | מכרז ${tender.tender_number}`}
+        </p>
       </div>
 
       {!decision && (

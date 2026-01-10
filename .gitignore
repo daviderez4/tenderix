@@ -2,3 +2,14 @@ node_modules/
 .env
 *.log
 .DS_Store
+*.js
+n8n-workflows/
+backup_*/
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!frontend/package.json
+!frontend/package-lock.json
+!frontend/tsconfig.json
+!frontend/tsconfig.node.json
