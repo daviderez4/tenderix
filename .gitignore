@@ -2,9 +2,16 @@ node_modules/
 .env
 *.log
 .DS_Store
-*.js
 n8n-workflows/
 backup_*/
+
+# Ignore root JS files (utility scripts)
+/*.js
+
+# Allow js/ folder for app code
+!js/
+
+# JSON files
 *.json
 !package.json
 !package-lock.json
