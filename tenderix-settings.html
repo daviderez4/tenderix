@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tenderix | הגדרות - Settings</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="tenderix-styles.css">
+  <link rel="stylesheet" href="tenderix-animations.css">
+
+  <style>
+    body {
+      font-family: 'Heebo', sans-serif;
+      background: #0a0a0f;
+    }
+    .settings-nav-item.active {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
+      border-color: rgba(99, 102, 241, 0.3);
+      color: white;
+    }
+    .settings-nav-item.active svg {
+      color: #818cf8;
+    }
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      background: #374151;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .toggle-switch.active {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    }
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.3s;
+    }
+    .toggle-switch.active::after {
+      transform: translateX(20px);
+    }
+  </style>
+</head>
+<body class="text-white antialiased">
+
+  <!-- Sidebar -->
+  <aside class="fixed right-0 top-0 bottom-0 w-72 bg-black/50 backdrop-blur-xl border-l border-white/5 p-6 flex flex-col z-40">
+    <!-- Logo -->
+    <div class="flex items-center gap-3 mb-10">
+      <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+        <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-white">Tenderix</h1>
+        <p class="text-xs text-gray-500">AI Tender Intelligence</p>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="space-y-2 flex-1">
+      <a href="tenderix-dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-white/5 hover:text-white transition-all duration-300">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+        </svg>
+        <span>לוח בקרה</span>
+      </a>
+
+      <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-white/5 hover:text-white transition-all duration-300">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        <span>מכרזים פעילים</span>
+      </a>
+
+      <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-white/5 hover:text-white transition-all duration-300">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+        <span>ניתוחים</span>
+      </a>
+
+      <a href="#" class="flex items-center justify-between px-4 py-3 rounded-xl text-gray-400 hover:bg-white/5 hover:text-white transition-all duration-300">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+          </svg>
+          <span>התראות</span>
+        </div>
+        <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500 text-white">5</span>
+      </a>
+
+      <div class="pt-4 mt-4 border-t border-white/5">
+        <a href="tenderix-profile.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-white/5 hover:text-white transition-all duration-300">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+          </svg>
+          <span>פרופיל</span>
+        </a>
+
+        <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-500/20 to-purple-500/10 border border-indigo-500/30 text-white">
+          <svg class="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          <span class="font-medium">הגדרות</span>
+        </a>
+      </div>
+    </nav>
+
+    <!-- User Profile -->
+    <div class="pt-6 border-t border-white/5">
+      <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer transition-colors">
+        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-cyan-500 flex items-center justify-center text-white font-bold shadow-lg">
+          ד
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-white truncate">דוד אריז</p>
+          <p class="text-xs text-gray-500 truncate">david@company.com</p>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="mr-72 min-h-screen">
+    <!-- Header -->
+    <header class="sticky top-0 z-30 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/5">
+      <div class="px-8 py-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-2xl font-bold text-white">הגדרות</h1>
+            <p class="text-gray-500">נהל את העדפות החשבון שלך</p>
+          </div>
+          <button class="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold text-sm rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:-translate-y-0.5 transition-all flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            שמור שינויים
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="p-8">
+      <div class="flex gap-8">
+        <!-- Settings Navigation -->
+        <div class="w-64 flex-shrink-0">
+          <nav class="space-y-2 sticky top-32">
+            <button onclick="showSection('general')" class="settings-nav-item active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 border border-transparent hover:bg-white/5 hover:text-white transition-all text-right">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+              </svg>
+              כללי
+            </button>
+
+            <button onclick="showSection('notifications')" class="settings-nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 border border-transparent hover:bg-white/5 hover:text-white transition-all text-right">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+              </svg>
+              התראות
+            </button>
+
+            <button onclick="showSection('security')" class="settings-nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 border border-transparent hover:bg-white/5 hover:text-white transition-all text-right">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+              </svg>
+              אבטחה
+            </button>
+
+            <button onclick="showSection('integrations')" class="settings-nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 border border-transparent hover:bg-white/5 hover:text-white transition-all text-right">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/>
+              </svg>
+              אינטגרציות
+            </button>
+
+            <button onclick="showSection('billing')" class="settings-nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 border border-transparent hover:bg-white/5 hover:text-white transition-all text-right">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+              </svg>
+              חיוב ותשלומים
+            </button>
+
+            <button onclick="showSection('team')" class="settings-nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 border border-transparent hover:bg-white/5 hover:text-white transition-all text-right">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+              </svg>
+              צוות
+            </button>
+
+            <button onclick="showSection('api')" class="settings-nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 border border-transparent hover:bg-white/5 hover:text-white transition-all text-right">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+              </svg>
+              API
+            </button>
+          </nav>
+        </div>
+
+        <!-- Settings Content -->
+        <div class="flex-1 max-w-3xl">
+          <!-- General Settings -->
+          <div id="general-section" class="settings-section space-y-6">
+            <div class="p-6 rounded-2xl bg-gray-900/50 border border-white/5">
+              <h3 class="text-lg font-semibold text-white mb-6">העדפות כלליות</h3>
+
+              <div class="space-y-6">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-white font-medium">שפת ממשק</p>
+                    <p class="text-sm text-gray-500">בחר את שפת התצוגה של המערכת</p>
+                  </div>
+                  <select class="px-4 py-2.5 bg-black/50 border border-white/10 rounded-xl text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                    <option value="he">עברית</option>
+                    <option value="en">English</option>
+                  </select>
+                </div>
+
+                <div class="border-t border-white/5"></div>
+
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-white font-medium">אזור זמן</p>
+                    <p class="text-sm text-gray-500">מתי יופיעו מועדי הגשה ותאריכים</p>
+                  </div>
+                  <select class="px-4 py-2.5 bg-black/50 border border-white/10 rounded-xl text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                    <option value="asia_jerusalem">ישראל (GMT+2)</option>
+                    <option value="utc">UTC</option>
+                  </select>
+                </div>
+
+                <div class="border-t border-white/5"></div>
+
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-white font-medium">פורמט תאריך</p>
+                    <p class="text-sm text-gray-500">איך יוצגו תאריכים במערכת</p>
+                  </div>
+                  <select class="px-4 py-2.5 bg-black/50 border border-white/10 rounded-xl text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                    <option value="dd/mm/yyyy">DD/MM/YYYY</option>
+                    <option value="mm/dd/yyyy">MM/DD/YYYY</option>
+                    <option value="yyyy-mm-dd">YYYY-MM-DD</option>
+                  </select>
+                </div>
+
+                <div class="border-t border-white/5"></div>
+
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-white font-medium">מצב כהה</p>
+                    <p class="text-sm text-gray-500">המערכת תמיד במצב כהה</p>
+                  </div>
+                  <div class="toggle-switch active" onclick="this.classList.toggle('active')"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-6 rounded-2xl bg-gray-900/50 border border-white/5">
+              <h3 class="text-lg font-semibold text-white mb-6">העדפות ניתוח</h3>
+
+              <div class="space-y-6">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-white font-medium">ניתוח אוטומטי</p>
+                    <p class="text-sm text-gray-500">התחל ניתוח מיד עם העלאת מסמך</p>
+                  </div>
+                  <div class="toggle-switch active" onclick="this.classList.toggle('active')"></div>
+                </div>
+
+                <div class="border-t border-white/5"></div>
+
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-white font-medium">שמור היסטוריית ניתוחים</p>
+                    <p class="text-sm text-gray-500">שמור ניתוחים קודמים לצפייה עתידית</p>
+                  </div>
+                  <div class="toggle-switch active" onclick="this.classList.toggle('active')"></div>
+                </div>
+
+                <div class="border-t border-white/5"></div>
+
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-white font-medium">רמת פירוט ברירת מחדל</p>
+                    <p class="text-sm text-gray-500">כמה מפורט יהיה הניתוח</p>
+                  </div>
+                  <select class="px-4 py-2.5 bg-black/50 border border-white/10 rounded-xl text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                    <option value="basic">בסיסי</option>
+                    <option value="standard" selected>רגיל</option>
+                    <option value="detailed">מפורט</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notifications Settings -->
+          <div id="notifications-section" class="settings-section hidden space-y-6">
+            <div class="p-6 rounded-2xl bg-gray-900/50 border border-white/5">
+              <h3 class="text-lg font-semibold text-white mb-6">התראות אימייל</h3>
+
+              <div class="space-y-6">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-white font-medium">מכרזים חדשים</p>
+                    <p class="text-sm text-gray-500">קבל התראה כשמכרז חדש מתאים לפרופיל שלך</p>
+                  </div>
+                  <div class="toggle-switch active" onclick="this.classList.toggle('active')"></div>
+                </div>
+
+                <div class="border-t border-white/5"></div>
+
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-white font-medium">מועדי הגשה</p>
+                    <p class="text-sm text-gray-500">תזכורות על מועדי הגשה מתקרבים</p>
+                  </div>
+                  <div class="toggle-switch active" onclick="this.classList.toggle('active')"></div>
+                </div>
+
+                <div class="border-t border-white/5"></div>
+
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-white font-medium">סיום ניתוח</p>
+                    <p class="text-sm text-gray-500">הודעה כשניתוח AI מסתיים</p>
+                  </div>
+                  <div class="toggle-switch active" onclick="this.classList.toggle('active')"></div>
+                </div>
+
+                <div class="border-t border-white/5"></div>
+
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-white font-medium">סיכום שבועי</p>
+                    <p class="text-sm text-gray-500">דוח שבועי על הפעילות שלך</p>
+                  </div>
+                  <div class="toggle-switch" onclick="this.classList.toggle('active')"></div>
+                </div>
+
+                <div class="border-t border-white/5"></div>
+
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-white font-medium">עדכוני מוצר</p>
+                    <p class="text-sm text-gray-500">חדשות על פיצ׳רים חדשים ושיפורים</p>
+                  </div>
+                  <div class="toggle-switch" onclick="this.classList.toggle('active')"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-6 rounded-2xl bg-gray-900/50 border border-white/5">
+              <h3 class="text-lg font-semibold text-white mb-6">התראות במערכת</h3>
+
+              <div class="space-y-6">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-white font-medium">הודעות פוש</p>
+                    <p class="text-sm text-gray-500">קבל התראות בדפדפן</p>
+                  </div>
+                  <div class="toggle-switch active" onclick="this.classList.toggle('active')"></div>
+                </div>
+
+                <div class="border-t border-white/5"></div>
+
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-white font-medium">צלילי התראה</p>
+                    <p class="text-sm text-gray-500">השמע צליל בעת קבלת התראה</p>
+                  </div>
+                  <div class="toggle-switch" onclick="this.classList.toggle('active')"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Security Settings -->
+          <div id="security-section" class="settings-section hidden space-y-6">
+            <div class="p-6 rounded-2xl bg-gray-900/50 border border-white/5">
+              <h3 class="text-lg font-semibold text-white mb-6">סיסמה</h3>
+
+              <form id="password-form" class="space-y-4" onsubmit="handlePasswordUpdate(event)">
+                <div class="space-y-2">
+                  <label class="block text-sm font-medium text-gray-300">סיסמה נוכחית</label>
+                  <input type="password" id="current-password" class="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all" placeholder="••••••••" dir="ltr" required>
+                </div>
+
+                <div class="space-y-2">
+                  <label class="block text-sm font-medium text-gray-300">סיסמה חדשה</label>
+                  <input type="password" id="new-password" class="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all" placeholder="••••••••" dir="ltr" required minlength="6">
+                </div>
+
+                <div class="space-y-2">
+                  <label class="block text-sm font-medium text-gray-300">אימות סיסמה חדשה</label>
+                  <input type="password" id="confirm-password" class="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all" placeholder="••••••••" dir="ltr" required minlength="6">
+                </div>
+
+                <button type="submit" id="update-password-btn" class="px-6 py-3 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                  עדכן סיסמה
+                </button>
+              </form>
+            </div>
+
+            <div class="p-6 rounded-2xl bg-gray-900/50 border border-white/5">
+              <h3 class="text-lg font-semibold text-white mb-6">אימות דו-שלבי (2FA)</h3>
+
+              <div class="flex items-center justify-between p-4 rounded-xl bg-green-500/10 border border-green-500/20 mb-6">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="text-white font-medium">2FA מופעל</p>
+                    <p class="text-sm text-gray-400">החשבון שלך מאובטח עם אימות דו-שלבי</p>
+                  </div>
+                </div>
+                <button class="px-4 py-2 text-sm text-red-400 hover:text-red-300 transition-colors">
+                  השבת
+                </button>
+              </div>
+
+              <div class="space-y-4">
+                <div class="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+                  <div class="flex items-center gap-3">
+                    <svg class="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                    </svg>
+                    <div>
+                      <p class="text-white">אפליקציית אימות</p>
+                      <p class="text-sm text-gray-500">Google Authenticator או דומה</p>
+                    </div>
+                  </div>
+                  <span class="px-2 py-1 rounded-lg bg-green-500/20 text-green-400 text-xs">פעיל</span>
+                </div>
+
+                <div class="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+                  <div class="flex items-center gap-3">
+                    <svg class="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                    <div>
+                      <p class="text-white">SMS</p>
+                      <p class="text-sm text-gray-500">קוד אימות בהודעה</p>
+                    </div>
+                  </div>
+                  <button class="px-4 py-2 text-sm text-indigo-400 hover:text-indigo-300 transition-colors">
+                    הגדר
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-6 rounded-2xl bg-gray-900/50 border border-white/5">
+              <h3 class="text-lg font-semibold text-white mb-6">התחברויות פעילות</h3>
+
+              <div class="space-y-4">
+                <div class="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+                  <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                      <svg class="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p class="text-white">Windows • Chrome</p>
+                      <p class="text-sm text-gray-500">תל אביב, ישראל • עכשיו (מכשיר נוכחי)</p>
+                    </div>
+                  </div>
+                  <span class="px-2 py-1 rounded-lg bg-green-500/20 text-green-400 text-xs">פעיל</span>
+                </div>
+
+                <div class="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+                  <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-lg bg-gray-500/20 flex items-center justify-center">
+                      <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p class="text-white">iPhone • Safari</p>
+                      <p class="text-sm text-gray-500">תל אביב, ישראל • לפני 2 שעות</p>
+                    </div>
+                  </div>
+                  <button class="px-4 py-2 text-sm text-red-400 hover:text-red-300 transition-colors">
+                    נתק
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Integrations Settings -->
+          <div id="integrations-section" class="settings-section hidden space-y-6">
+            <div class="p-6 rounded-2xl bg-gray-900/50 border border-white/5">
+              <h3 class="text-lg font-semibold text-white mb-6">אינטגרציות מחוברות</h3>
+
+              <div class="space-y-4">
+                <div class="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+                  <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                      <svg class="w-6 h-6 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p class="text-white font-medium">Google Workspace</p>
+                      <p class="text-sm text-gray-500">מחובר כ-david@company.com</p>
+                    </div>
+                  </div>
+                  <button class="px-4 py-2 text-sm text-red-400 hover:text-red-300 transition-colors">
+                    נתק
+                  </button>
+                </div>
+
+                <div class="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+                  <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-[#2F2F2F] flex items-center justify-center">
+                      <svg class="w-6 h-6" viewBox="0 0 23 23">
+                        <path fill="#f35325" d="M1 1h10v10H1z"/>
+                        <path fill="#81bc06" d="M12 1h10v10H12z"/>
+                        <path fill="#05a6f0" d="M1 12h10v10H1z"/>
+                        <path fill="#ffba08" d="M12 12h10v10H12z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p class="text-white font-medium">Microsoft 365</p>
+                      <p class="text-sm text-gray-500">לא מחובר</p>
+                    </div>
+                  </div>
+                  <button class="px-4 py-2 text-sm bg-indigo-500/20 text-indigo-400 rounded-lg hover:bg-indigo-500/30 transition-colors">
+                    חבר
+                  </button>
+                </div>
+
+                <div class="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+                  <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
+                      <svg class="w-6 h-6 text-green-400" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p class="text-white font-medium">WhatsApp Business</p>
+                      <p class="text-sm text-gray-500">לא מחובר</p>
+                    </div>
+                  </div>
+                  <button class="px-4 py-2 text-sm bg-indigo-500/20 text-indigo-400 rounded-lg hover:bg-indigo-500/30 transition-colors">
+                    חבר
+                  </button>
+                </div>
+
+                <div class="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+                  <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                      <svg class="w-6 h-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p class="text-white font-medium">Slack</p>
+                      <p class="text-sm text-gray-500">לא מחובר</p>
+                    </div>
+                  </div>
+                  <button class="px-4 py-2 text-sm bg-indigo-500/20 text-indigo-400 rounded-lg hover:bg-indigo-500/30 transition-colors">
+                    חבר
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Billing Settings -->
+          <div id="billing-section" class="settings-section hidden space-y-6">
+            <div class="p-6 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
+              <div class="flex items-center justify-between mb-6">
+                <div>
+                  <h3 class="text-lg font-semibold text-white">חבילה נוכחית</h3>
+                  <p class="text-gray-400">Pro Plan</p>
+                </div>
+                <span class="px-4 py-2 rounded-full bg-indigo-500/20 text-indigo-400 font-medium">₪999/חודש</span>
+              </div>
+
+              <div class="grid grid-cols-3 gap-4 mb-6">
+                <div class="p-4 rounded-xl bg-white/5">
+                  <div class="text-2xl font-bold text-white mb-1">37/50</div>
+                  <div class="text-sm text-gray-500">מכרזים החודש</div>
+                </div>
+                <div class="p-4 rounded-xl bg-white/5">
+                  <div class="text-2xl font-bold text-white mb-1">5</div>
+                  <div class="text-sm text-gray-500">משתמשים</div>
+                </div>
+                <div class="p-4 rounded-xl bg-white/5">
+                  <div class="text-2xl font-bold text-white mb-1">15.01</div>
+                  <div class="text-sm text-gray-500">תאריך חידוש</div>
+                </div>
+              </div>
+
+              <div class="flex gap-3">
+                <button class="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/25 transition-all">
+                  שדרג חבילה
+                </button>
+                <button class="px-6 py-3 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-all">
+                  נהל מנוי
+                </button>
+              </div>
+            </div>
+
+            <div class="p-6 rounded-2xl bg-gray-900/50 border border-white/5">
+              <h3 class="text-lg font-semibold text-white mb-6">אמצעי תשלום</h3>
+
+              <div class="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 mb-4">
+                <div class="flex items-center gap-4">
+                  <div class="w-12 h-8 rounded bg-gradient-to-r from-blue-600 to-blue-400 flex items-center justify-center text-white text-xs font-bold">
+                    VISA
+                  </div>
+                  <div>
+                    <p class="text-white">•••• •••• •••• 4242</p>
+                    <p class="text-sm text-gray-500">תוקף: 12/26</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-1 rounded-lg bg-green-500/20 text-green-400 text-xs">ראשי</span>
+                  <button class="p-2 text-gray-400 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <button class="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                הוסף אמצעי תשלום
+              </button>
+            </div>
+
+            <div class="p-6 rounded-2xl bg-gray-900/50 border border-white/5">
+              <h3 class="text-lg font-semibold text-white mb-6">היסטוריית חיובים</h3>
+
+              <div class="space-y-3">
+                <div class="flex items-center justify-between p-4 rounded-xl bg-white/5">
+                  <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                      <svg class="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p class="text-white">Pro Plan - ינואר 2026</p>
+                      <p class="text-sm text-gray-500">15.01.2026</p>
+                    </div>
+                  </div>
+                  <div class="text-left">
+                    <p class="text-white font-medium">₪999</p>
+                    <button class="text-sm text-indigo-400 hover:text-indigo-300">הורד חשבונית</button>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between p-4 rounded-xl bg-white/5">
+                  <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                      <svg class="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p class="text-white">Pro Plan - דצמבר 2025</p>
+                      <p class="text-sm text-gray-500">15.12.2025</p>
+                    </div>
+                  </div>
+                  <div class="text-left">
+                    <p class="text-white font-medium">₪999</p>
+                    <button class="text-sm text-indigo-400 hover:text-indigo-300">הורד חשבונית</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Team Settings -->
+          <div id="team-section" class="settings-section hidden space-y-6">
+            <div class="p-6 rounded-2xl bg-gray-900/50 border border-white/5">
+              <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-semibold text-white">חברי צוות</h3>
+                <button class="px-4 py-2 bg-indigo-500/20 text-indigo-400 rounded-xl hover:bg-indigo-500/30 transition-all flex items-center gap-2">
+                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                  </svg>
+                  הזמן חבר צוות
+                </button>
+              </div>
+
+              <div class="space-y-4">
+                <div class="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+                  <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-cyan-500 flex items-center justify-center text-white font-bold">
+                      ד
+                    </div>
+                    <div>
+                      <p class="text-white font-medium">דוד אריז</p>
+                      <p class="text-sm text-gray-500">david@company.com</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <span class="px-3 py-1 rounded-lg bg-indigo-500/20 text-indigo-400 text-sm">מנהל</span>
+                    <span class="text-sm text-gray-500">אתה</span>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+                  <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white font-bold">
+                      ר
+                    </div>
+                    <div>
+                      <p class="text-white font-medium">רונית כהן</p>
+                      <p class="text-sm text-gray-500">ronit@company.com</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <select class="px-3 py-1 bg-transparent border border-white/10 rounded-lg text-sm text-gray-400">
+                      <option value="admin">מנהל</option>
+                      <option value="editor" selected>עורך</option>
+                      <option value="viewer">צופה</option>
+                    </select>
+                    <button class="p-2 text-gray-400 hover:text-red-400 transition-colors">
+                      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+                  <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white font-bold">
+                      א
+                    </div>
+                    <div>
+                      <p class="text-white font-medium">אבי לוי</p>
+                      <p class="text-sm text-gray-500">avi@company.com</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <select class="px-3 py-1 bg-transparent border border-white/10 rounded-lg text-sm text-gray-400">
+                      <option value="admin">מנהל</option>
+                      <option value="editor">עורך</option>
+                      <option value="viewer" selected>צופה</option>
+                    </select>
+                    <button class="p-2 text-gray-400 hover:text-red-400 transition-colors">
+                      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Pending Invitation -->
+                <div class="flex items-center justify-between p-4 rounded-xl bg-orange-500/5 border border-orange-500/20">
+                  <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
+                      <svg class="w-5 h-5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p class="text-white font-medium">sara@company.com</p>
+                      <p class="text-sm text-orange-400">ממתין לאישור</p>
+                    </div>
+                  </div>
+                  <button class="text-sm text-gray-400 hover:text-red-400 transition-colors">
+                    בטל הזמנה
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- API Settings -->
+          <div id="api-section" class="settings-section hidden space-y-6">
+            <div class="p-6 rounded-2xl bg-gray-900/50 border border-white/5">
+              <h3 class="text-lg font-semibold text-white mb-6">מפתחות API</h3>
+
+              <div class="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 mb-6">
+                <div class="flex items-start gap-3">
+                  <svg class="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                  </svg>
+                  <div>
+                    <p class="text-orange-400 font-medium">שמור על המפתחות שלך בסוד!</p>
+                    <p class="text-sm text-gray-400">לעולם אל תשתף את מפתחות ה-API שלך בקוד פומבי או עם אנשים לא מורשים.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="space-y-4">
+                <div class="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <div class="flex items-center justify-between mb-3">
+                    <div>
+                      <p class="text-white font-medium">Production Key</p>
+                      <p class="text-sm text-gray-500">נוצר ב-01.01.2026</p>
+                    </div>
+                    <span class="px-2 py-1 rounded-lg bg-green-500/20 text-green-400 text-xs">פעיל</span>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <code class="flex-1 px-4 py-2 bg-black/50 rounded-lg text-gray-400 text-sm font-mono" dir="ltr">
+                      sk_live_••••••••••••••••••••••••
+                    </code>
+                    <button class="p-2 text-gray-400 hover:text-white transition-colors" title="העתק">
+                      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                      </svg>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-red-400 transition-colors" title="מחק">
+                      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <div class="flex items-center justify-between mb-3">
+                    <div>
+                      <p class="text-white font-medium">Test Key</p>
+                      <p class="text-sm text-gray-500">נוצר ב-01.01.2026</p>
+                    </div>
+                    <span class="px-2 py-1 rounded-lg bg-orange-500/20 text-orange-400 text-xs">בדיקות</span>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <code class="flex-1 px-4 py-2 bg-black/50 rounded-lg text-gray-400 text-sm font-mono" dir="ltr">
+                      sk_test_••••••••••••••••••••••••
+                    </code>
+                    <button class="p-2 text-gray-400 hover:text-white transition-colors" title="העתק">
+                      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                      </svg>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-red-400 transition-colors" title="מחק">
+                      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <button class="mt-4 px-4 py-2 bg-indigo-500/20 text-indigo-400 rounded-xl hover:bg-indigo-500/30 transition-all flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                צור מפתח חדש
+              </button>
+            </div>
+
+            <div class="p-6 rounded-2xl bg-gray-900/50 border border-white/5">
+              <h3 class="text-lg font-semibold text-white mb-4">תיעוד API</h3>
+              <p class="text-gray-400 mb-4">למד איך לשלב את Tenderix API בפרויקטים שלך</p>
+              <a href="#" class="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                </svg>
+                פתח תיעוד API
+              </a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    function showSection(sectionName) {
+      // Hide all sections
+      document.querySelectorAll('.settings-section').forEach(section => {
+        section.classList.add('hidden');
+      });
+
+      // Show selected section
+      document.getElementById(sectionName + '-section').classList.remove('hidden');
+
+      // Update nav items
+      document.querySelectorAll('.settings-nav-item').forEach(item => {
+        item.classList.remove('active');
+      });
+
+      event.currentTarget.classList.add('active');
+    }
+
+    // Set button loading state
+    function setButtonLoading(buttonId, loading) {
+      const button = document.getElementById(buttonId);
+      if (loading) {
+        button.disabled = true;
+        button.dataset.originalText = button.textContent;
+        button.innerHTML = `<svg class="animate-spin h-5 w-5 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>`;
+      } else {
+        button.disabled = false;
+        button.textContent = button.dataset.originalText;
+      }
+    }
+
+    // Handle password update
+    async function handlePasswordUpdate(event) {
+      event.preventDefault();
+
+      const currentPassword = document.getElementById('current-password').value;
+      const newPassword = document.getElementById('new-password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+
+      // Validate passwords match
+      if (newPassword !== confirmPassword) {
+        Utils.showToast('error', 'שגיאה', 'הסיסמאות אינן תואמות');
+        return;
+      }
+
+      // Validate password length
+      if (newPassword.length < 6) {
+        Utils.showToast('error', 'שגיאה', 'הסיסמה חייבת להכיל לפחות 6 תווים');
+        return;
+      }
+
+      setButtonLoading('update-password-btn', true);
+
+      try {
+        // First verify current password by re-authenticating
+        const user = await Auth.getCurrentUser();
+        if (!user) {
+          Utils.showToast('error', 'שגיאה', 'יש להתחבר מחדש');
+          window.location.href = 'tenderix-login.html';
+          return;
+        }
+
+        // Update password
+        await Auth.updatePassword(newPassword);
+
+        // Clear form
+        document.getElementById('password-form').reset();
+
+      } catch (error) {
+        console.error('Password update failed:', error);
+      } finally {
+        setButtonLoading('update-password-btn', false);
+      }
+    }
+
+    // Check authentication on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+      const isLoggedIn = await Auth.requireAuth();
+      if (!isLoggedIn) return;
+
+      // Load user data into settings form if needed
+      const user = await Auth.getCurrentUser();
+      if (user) {
+        // You can populate user data here if needed
+        console.log('Settings loaded for user:', user.email);
+      }
+    });
+  </script>
+
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Tenderix Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+
+</body>
+</html>

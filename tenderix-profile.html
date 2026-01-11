@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הפרופיל שלי | Tenderix</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="tenderix-styles.css">
+    <link rel="stylesheet" href="tenderix-animations.css">
+    <style>
+        body {
+            font-family: 'Heebo', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .avatar-upload {
+            position: relative;
+            width: 120px;
+            height: 120px;
+        }
+
+        .avatar-upload img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 3px solid var(--primary);
+        }
+
+        .avatar-upload-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            cursor: pointer;
+        }
+
+        .avatar-upload:hover .avatar-upload-overlay {
+            opacity: 1;
+        }
+
+        .stat-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--primary);
+            box-shadow: var(--glow-primary);
+            transform: translateY(-2px);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .certification-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 9999px;
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+        }
+
+        .certification-badge:hover {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .certification-badge svg {
+            color: var(--success);
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem;
+            border-radius: 12px;
+            transition: background 0.3s ease;
+        }
+
+        .activity-item:hover {
+            background: var(--glass-bg);
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .activity-icon.view {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--primary);
+        }
+
+        .activity-icon.submit {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .activity-icon.analyze {
+            background: rgba(139, 92, 246, 0.2);
+            color: var(--accent);
+        }
+
+        .activity-icon.win {
+            background: rgba(245, 158, 11, 0.2);
+            color: #F59E0B;
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.5s ease;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .info-value {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .edit-btn {
+            color: var(--primary);
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .edit-btn:hover {
+            color: var(--primary-light);
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="fixed top-0 right-0 h-full w-64 bg-glass-bg backdrop-blur-xl border-l border-glass-border z-50 p-6 flex flex-col" style="background: var(--glass-bg); border-color: var(--glass-border);">
+        <!-- Logo -->
+        <div class="flex items-center gap-3 mb-8">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: var(--gradient-primary);">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+            </div>
+            <span class="text-xl font-bold">Tenderix</span>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 space-y-2">
+            <a href="tenderix-dashboard.html" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl transition-all" style="color: var(--text-secondary);">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                </svg>
+                דשבורד
+            </a>
+            <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl transition-all" style="color: var(--text-secondary);">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                מכרזים
+            </a>
+            <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl transition-all" style="color: var(--text-secondary);">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+                אנליטיקס
+            </a>
+            <a href="tenderix-settings.html" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl transition-all" style="color: var(--text-secondary);">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                הגדרות
+            </a>
+        </nav>
+
+        <!-- User Profile Link -->
+        <div class="pt-4 border-t" style="border-color: var(--border-subtle);">
+            <a href="tenderix-profile.html" class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all" style="background: var(--glass-bg); border: 1px solid var(--primary);">
+                <div class="w-10 h-10 rounded-full overflow-hidden" style="border: 2px solid var(--primary);">
+                    <img src="https://ui-avatars.com/api/?name=David+Cohen&background=6366f1&color=fff" alt="Profile" class="w-full h-full object-cover">
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="font-medium truncate">דוד כהן</div>
+                    <div class="text-xs truncate" style="color: var(--text-muted);">מנכ"ל</div>
+                </div>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="mr-64 p-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold mb-2">הפרופיל שלי</h1>
+            <p style="color: var(--text-secondary);">נהל את הפרטים האישיים והמידע העסקי שלך</p>
+        </div>
+
+        <!-- Profile Header Card -->
+        <div class="rounded-2xl p-8 mb-8 animate-fade-in" style="background: var(--glass-bg); border: 1px solid var(--glass-border);">
+            <div class="flex items-start gap-8">
+                <!-- Avatar -->
+                <div class="avatar-upload">
+                    <img src="https://ui-avatars.com/api/?name=David+Cohen&background=6366f1&color=fff&size=200" alt="Profile">
+                    <div class="avatar-upload-overlay">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                    </div>
+                    <input type="file" class="hidden" id="avatar-input" accept="image/*">
+                </div>
+
+                <!-- Info -->
+                <div class="flex-1">
+                    <div class="flex items-center gap-4 mb-2">
+                        <h2 id="profile-name" class="text-2xl font-bold">טוען...</h2>
+                        <span class="px-3 py-1 rounded-full text-xs font-medium" style="background: rgba(99, 102, 241, 0.2); color: var(--primary);">
+                            Pro Plan
+                        </span>
+                    </div>
+                    <p id="profile-title" class="mb-4" style="color: var(--text-secondary);">טוען...</p>
+
+                    <div class="flex flex-wrap gap-4 text-sm" style="color: var(--text-muted);">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                            </svg>
+                            <span id="profile-email">טוען...</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                            </svg>
+                            <span id="profile-phone">טוען...</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            <span id="profile-location">טוען...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit Button -->
+                <button onclick="openEditModal()" class="px-4 py-2 rounded-xl font-medium transition-all flex items-center gap-2" style="background: var(--gradient-primary); color: white;">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                    ערוך פרופיל
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-4 gap-6 mb-8">
+            <div class="stat-card animate-fade-in" style="animation-delay: 0.1s;">
+                <div class="stat-value">47</div>
+                <div class="text-sm mt-1" style="color: var(--text-secondary);">מכרזים שנותחו</div>
+            </div>
+            <div class="stat-card animate-fade-in" style="animation-delay: 0.2s;">
+                <div class="stat-value">12</div>
+                <div class="text-sm mt-1" style="color: var(--text-secondary);">הצעות שהוגשו</div>
+            </div>
+            <div class="stat-card animate-fade-in" style="animation-delay: 0.3s;">
+                <div class="stat-value">8</div>
+                <div class="text-sm mt-1" style="color: var(--text-secondary);">זכיות</div>
+            </div>
+            <div class="stat-card animate-fade-in" style="animation-delay: 0.4s;">
+                <div class="stat-value">67%</div>
+                <div class="text-sm mt-1" style="color: var(--text-secondary);">אחוז זכייה</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-8">
+            <!-- Personal Information -->
+            <div class="col-span-2 space-y-8">
+                <!-- Personal Details -->
+                <div class="rounded-2xl p-6 animate-fade-in" style="background: var(--glass-bg); border: 1px solid var(--glass-border); animation-delay: 0.2s;">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-semibold">פרטים אישיים</h3>
+                        <span class="edit-btn">ערוך</span>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="info-label">שם מלא</span>
+                        <span id="info-fullname" class="info-value">טוען...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">אימייל</span>
+                        <span id="info-email" class="info-value">טוען...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">טלפון</span>
+                        <span id="info-phone" class="info-value">טוען...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">תפקיד</span>
+                        <span id="info-role" class="info-value">טוען...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">תאריך הצטרפות</span>
+                        <span id="info-joined" class="info-value">טוען...</span>
+                    </div>
+                </div>
+
+                <!-- Company Details -->
+                <div class="rounded-2xl p-6 animate-fade-in" style="background: var(--glass-bg); border: 1px solid var(--glass-border); animation-delay: 0.3s;">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-semibold">פרטי החברה</h3>
+                        <span class="edit-btn">ערוך</span>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="info-label">שם החברה</span>
+                        <span id="info-company" class="info-value">טוען...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">ח.פ.</span>
+                        <span id="info-business-id" class="info-value">טוען...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">שנת הקמה</span>
+                        <span id="info-founded" class="info-value">טוען...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">מספר עובדים</span>
+                        <span id="info-employees" class="info-value">טוען...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">מחזור שנתי</span>
+                        <span id="info-revenue" class="info-value">טוען...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">כתובת</span>
+                        <span id="info-address" class="info-value">טוען...</span>
+                    </div>
+                </div>
+
+                <!-- Certifications -->
+                <div class="rounded-2xl p-6 animate-fade-in" style="background: var(--glass-bg); border: 1px solid var(--glass-border); animation-delay: 0.4s;">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-semibold">הסמכות ואישורים</h3>
+                        <button class="text-sm px-3 py-1 rounded-lg transition-all" style="background: var(--glass-bg); border: 1px solid var(--border-subtle); color: var(--text-secondary);">
+                            + הוסף הסמכה
+                        </button>
+                    </div>
+
+                    <div class="flex flex-wrap gap-3">
+                        <div class="certification-badge">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                            </svg>
+                            ISO 9001:2015
+                        </div>
+                        <div class="certification-badge">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                            </svg>
+                            ISO 27001
+                        </div>
+                        <div class="certification-badge">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                            </svg>
+                            רישיון קבלן רשום
+                        </div>
+                        <div class="certification-badge">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                            </svg>
+                            אישור ניהול ספרים
+                        </div>
+                        <div class="certification-badge">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                            </svg>
+                            אישור עוסק מורשה
+                        </div>
+                        <div class="certification-badge">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                            </svg>
+                            SOC 2 Type II
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Industries -->
+                <div class="rounded-2xl p-6 animate-fade-in" style="background: var(--glass-bg); border: 1px solid var(--glass-border); animation-delay: 0.5s;">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-semibold">תחומי פעילות</h3>
+                        <span class="edit-btn">ערוך</span>
+                    </div>
+
+                    <div class="flex flex-wrap gap-3">
+                        <span class="px-4 py-2 rounded-full text-sm" style="background: rgba(99, 102, 241, 0.2); color: var(--primary);">
+                            טכנולוגיה ומידע
+                        </span>
+                        <span class="px-4 py-2 rounded-full text-sm" style="background: rgba(139, 92, 246, 0.2); color: var(--accent);">
+                            פיתוח תוכנה
+                        </span>
+                        <span class="px-4 py-2 rounded-full text-sm" style="background: rgba(16, 185, 129, 0.2); color: var(--success);">
+                            אבטחת מידע
+                        </span>
+                        <span class="px-4 py-2 rounded-full text-sm" style="background: rgba(245, 158, 11, 0.2); color: #F59E0B;">
+                            ייעוץ וליווי
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="space-y-8">
+                <!-- Win Rate Ring -->
+                <div class="rounded-2xl p-6 text-center animate-fade-in" style="background: var(--glass-bg); border: 1px solid var(--glass-border); animation-delay: 0.3s;">
+                    <h3 class="text-lg font-semibold mb-4">אחוז זכייה</h3>
+
+                    <div class="relative inline-block">
+                        <svg class="w-32 h-32 progress-ring">
+                            <defs>
+                                <linearGradient id="winGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color: #6366F1"/>
+                                    <stop offset="100%" style="stop-color: #8B5CF6"/>
+                                </linearGradient>
+                            </defs>
+                            <circle
+                                cx="64"
+                                cy="64"
+                                r="56"
+                                fill="none"
+                                stroke="rgba(255,255,255,0.1)"
+                                stroke-width="12"
+                            />
+                            <circle
+                                class="progress-ring-circle"
+                                cx="64"
+                                cy="64"
+                                r="56"
+                                fill="none"
+                                stroke="url(#winGradient)"
+                                stroke-width="12"
+                                stroke-linecap="round"
+                                stroke-dasharray="352"
+                                stroke-dashoffset="116"
+                            />
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <span class="text-3xl font-bold" style="color: var(--primary);">67%</span>
+                        </div>
+                    </div>
+
+                    <p class="text-sm mt-4" style="color: var(--text-secondary);">8 זכיות מתוך 12 הגשות</p>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="rounded-2xl p-6 animate-fade-in" style="background: var(--glass-bg); border: 1px solid var(--glass-border); animation-delay: 0.4s;">
+                    <h3 class="text-lg font-semibold mb-4">פעילות אחרונה</h3>
+
+                    <div class="space-y-2">
+                        <div class="activity-item">
+                            <div class="activity-icon view">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-medium truncate">צפייה במכרז מערכות IT</div>
+                                <div class="text-xs" style="color: var(--text-muted);">לפני שעתיים</div>
+                            </div>
+                        </div>
+
+                        <div class="activity-item">
+                            <div class="activity-icon analyze">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-medium truncate">ניתוח AI הושלם</div>
+                                <div class="text-xs" style="color: var(--text-muted);">לפני 5 שעות</div>
+                            </div>
+                        </div>
+
+                        <div class="activity-item">
+                            <div class="activity-icon submit">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-medium truncate">הגשת הצעה - משרד הבריאות</div>
+                                <div class="text-xs" style="color: var(--text-muted);">אתמול</div>
+                            </div>
+                        </div>
+
+                        <div class="activity-item">
+                            <div class="activity-icon win">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-medium truncate">זכייה במכרז!</div>
+                                <div class="text-xs" style="color: var(--text-muted);">לפני 3 ימים</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <a href="#" class="block text-center text-sm mt-4 py-2 rounded-lg transition-all" style="color: var(--primary);">
+                        צפה בכל הפעילות →
+                    </a>
+                </div>
+
+                <!-- Account Status -->
+                <div class="rounded-2xl p-6 animate-fade-in" style="background: var(--glass-bg); border: 1px solid var(--glass-border); animation-delay: 0.5s;">
+                    <h3 class="text-lg font-semibold mb-4">סטטוס חשבון</h3>
+
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm" style="color: var(--text-secondary);">תוכנית</span>
+                            <span class="font-medium" style="color: var(--primary);">Pro</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm" style="color: var(--text-secondary);">ניתוחים החודש</span>
+                            <span class="font-medium">23 / 50</span>
+                        </div>
+                        <div class="w-full h-2 rounded-full" style="background: var(--bg-tertiary);">
+                            <div class="h-full rounded-full" style="width: 46%; background: var(--gradient-primary);"></div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm" style="color: var(--text-secondary);">חידוש</span>
+                            <span class="font-medium">15 בפברואר 2026</span>
+                        </div>
+                    </div>
+
+                    <button class="w-full mt-4 py-2 rounded-xl font-medium transition-all" style="background: var(--glass-bg); border: 1px solid var(--border-subtle); color: var(--text-secondary);">
+                        שדרג תוכנית
+                    </button>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="rounded-2xl p-6 animate-fade-in" style="background: var(--glass-bg); border: 1px solid var(--glass-border); animation-delay: 0.6s;">
+                    <h3 class="text-lg font-semibold mb-4">פעולות מהירות</h3>
+
+                    <div class="space-y-3">
+                        <a href="tenderix-settings.html" class="flex items-center gap-3 p-3 rounded-xl transition-all" style="background: var(--bg-tertiary);">
+                            <svg class="w-5 h-5" style="color: var(--text-secondary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            <span class="text-sm">הגדרות חשבון</span>
+                        </a>
+                        <a href="#" class="flex items-center gap-3 p-3 rounded-xl transition-all" style="background: var(--bg-tertiary);">
+                            <svg class="w-5 h-5" style="color: var(--text-secondary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                            </svg>
+                            <span class="text-sm">ייצוא נתונים</span>
+                        </a>
+                        <a href="#" class="flex items-center gap-3 p-3 rounded-xl transition-all" style="background: var(--bg-tertiary);">
+                            <svg class="w-5 h-5" style="color: var(--text-secondary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="text-sm">מרכז עזרה</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Edit Profile Modal -->
+    <div id="edit-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeEditModal()"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl p-6" style="background: var(--bg-secondary); border: 1px solid var(--glass-border);">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold">עריכת פרופיל</h3>
+                <button onclick="closeEditModal()" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="edit-profile-form" onsubmit="handleProfileUpdate(event)" class="space-y-4">
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium" style="color: var(--text-secondary);">שם מלא</label>
+                    <input type="text" id="edit-fullname" class="w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500/20 transition-all" style="background: var(--bg-tertiary); border: 1px solid var(--border-subtle);" required>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium" style="color: var(--text-secondary);">טלפון</label>
+                    <input type="tel" id="edit-phone" class="w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500/20 transition-all" style="background: var(--bg-tertiary); border: 1px solid var(--border-subtle);" dir="ltr">
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium" style="color: var(--text-secondary);">תפקיד</label>
+                    <input type="text" id="edit-role" class="w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500/20 transition-all" style="background: var(--bg-tertiary); border: 1px solid var(--border-subtle);">
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium" style="color: var(--text-secondary);">שם החברה</label>
+                    <input type="text" id="edit-company" class="w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500/20 transition-all" style="background: var(--bg-tertiary); border: 1px solid var(--border-subtle);">
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium" style="color: var(--text-secondary);">כתובת</label>
+                    <input type="text" id="edit-address" class="w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500/20 transition-all" style="background: var(--bg-tertiary); border: 1px solid var(--border-subtle);">
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeEditModal()" class="flex-1 py-3 rounded-xl font-medium transition-all" style="background: var(--bg-tertiary); border: 1px solid var(--border-subtle); color: var(--text-secondary);">
+                        ביטול
+                    </button>
+                    <button type="submit" id="save-profile-btn" class="flex-1 py-3 rounded-xl font-medium transition-all text-white disabled:opacity-50" style="background: var(--gradient-primary);">
+                        שמור שינויים
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Current user data cache
+        let currentUserData = null;
+
+        // Avatar upload
+        const avatarUpload = document.querySelector('.avatar-upload');
+        const avatarInput = document.getElementById('avatar-input');
+
+        avatarUpload.addEventListener('click', () => {
+            avatarInput.click();
+        });
+
+        avatarInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    avatarUpload.querySelector('img').src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Open edit modal
+        function openEditModal() {
+            const modal = document.getElementById('edit-modal');
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+
+            // Populate form with current data
+            if (currentUserData) {
+                document.getElementById('edit-fullname').value = currentUserData.full_name || '';
+                document.getElementById('edit-phone').value = currentUserData.phone || '';
+                document.getElementById('edit-role').value = currentUserData.role || '';
+                document.getElementById('edit-company').value = currentUserData.company_name || '';
+                document.getElementById('edit-address').value = currentUserData.address || '';
+            }
+        }
+
+        // Close edit modal
+        function closeEditModal() {
+            const modal = document.getElementById('edit-modal');
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        // Set button loading state
+        function setButtonLoading(buttonId, loading) {
+            const button = document.getElementById(buttonId);
+            if (loading) {
+                button.disabled = true;
+                button.dataset.originalText = button.textContent;
+                button.innerHTML = `<svg class="animate-spin h-5 w-5 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>`;
+            } else {
+                button.disabled = false;
+                button.textContent = button.dataset.originalText;
+            }
+        }
+
+        // Handle profile update
+        async function handleProfileUpdate(event) {
+            event.preventDefault();
+
+            const updates = {
+                full_name: document.getElementById('edit-fullname').value,
+                phone: document.getElementById('edit-phone').value,
+                role: document.getElementById('edit-role').value,
+                company_name: document.getElementById('edit-company').value,
+                address: document.getElementById('edit-address').value
+            };
+
+            setButtonLoading('save-profile-btn', true);
+
+            try {
+                await Auth.updateProfile(updates);
+
+                // Update local cache
+                currentUserData = { ...currentUserData, ...updates };
+
+                // Update UI
+                updateProfileDisplay(currentUserData);
+
+                closeEditModal();
+            } catch (error) {
+                console.error('Profile update failed:', error);
+            } finally {
+                setButtonLoading('save-profile-btn', false);
+            }
+        }
+
+        // Update profile display with user data
+        function updateProfileDisplay(userData) {
+            const fullName = userData.full_name || 'משתמש';
+            const email = userData.email || '';
+            const phone = userData.phone || 'לא הוגדר';
+            const role = userData.role || 'לא הוגדר';
+            const companyName = userData.company_name || 'לא הוגדר';
+            const address = userData.address || 'לא הוגדר';
+
+            // Header section
+            document.getElementById('profile-name').textContent = fullName;
+            document.getElementById('profile-title').textContent = `${role} | ${companyName}`;
+            document.getElementById('profile-email').textContent = email;
+            document.getElementById('profile-phone').textContent = phone;
+            document.getElementById('profile-location').textContent = address;
+
+            // Personal details section
+            document.getElementById('info-fullname').textContent = fullName;
+            document.getElementById('info-email').textContent = email;
+            document.getElementById('info-phone').textContent = phone;
+            document.getElementById('info-role').textContent = role;
+
+            // Format join date
+            const joinDate = userData.created_at ? new Date(userData.created_at).toLocaleDateString('he-IL', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            }) : 'לא ידוע';
+            document.getElementById('info-joined').textContent = joinDate;
+
+            // Company details section
+            document.getElementById('info-company').textContent = companyName;
+            document.getElementById('info-business-id').textContent = userData.business_id || 'לא הוגדר';
+            document.getElementById('info-founded').textContent = userData.founded_year || 'לא הוגדר';
+            document.getElementById('info-employees').textContent = userData.employees || 'לא הוגדר';
+            document.getElementById('info-revenue').textContent = userData.annual_revenue || 'לא הוגדר';
+            document.getElementById('info-address').textContent = address;
+
+            // Update avatar
+            const avatarUrl = userData.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=6366f1&color=fff&size=200`;
+            document.querySelector('.avatar-upload img').src = avatarUrl;
+
+            // Update sidebar avatar
+            const sidebarAvatar = document.querySelector('aside img');
+            if (sidebarAvatar) {
+                sidebarAvatar.src = avatarUrl;
+            }
+
+            // Update sidebar name
+            const sidebarName = document.querySelector('aside .font-medium');
+            if (sidebarName) {
+                sidebarName.textContent = fullName;
+            }
+
+            // Update sidebar role
+            const sidebarRole = document.querySelector('aside .text-xs');
+            if (sidebarRole) {
+                sidebarRole.textContent = role;
+            }
+        }
+
+        // Load user profile on page load
+        async function loadUserProfile() {
+            try {
+                const user = await Auth.getCurrentUser();
+
+                if (!user) {
+                    window.location.href = 'tenderix-login.html';
+                    return;
+                }
+
+                // Combine auth user data with metadata
+                currentUserData = {
+                    email: user.email,
+                    created_at: user.created_at,
+                    ...user.user_metadata
+                };
+
+                updateProfileDisplay(currentUserData);
+
+            } catch (error) {
+                console.error('Failed to load profile:', error);
+                Utils.showToast('error', 'שגיאה', 'לא ניתן לטעון את הפרופיל');
+            }
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeEditModal();
+            }
+        });
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            const isLoggedIn = await Auth.requireAuth();
+            if (isLoggedIn) {
+                loadUserProfile();
+            }
+        });
+    </script>
+
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Tenderix Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tenderix | הגדרת חשבון - AI Tender Intelligence</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="tenderix-styles.css">
+  <link rel="stylesheet" href="tenderix-animations.css">
+
+  <style>
+    body {
+      font-family: 'Heebo', sans-serif;
+      background: #0a0a0f;
+      min-height: 100vh;
+    }
+
+    .onboarding-bg {
+      background:
+        radial-gradient(ellipse at 30% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 80%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
+        #0a0a0f;
+    }
+
+    .step-line {
+      height: 2px;
+      background: linear-gradient(90deg, var(--from-color) 0%, var(--to-color) 100%);
+    }
+
+    .industry-card.selected {
+      border-color: rgba(99, 102, 241, 0.5);
+      background: rgba(99, 102, 241, 0.1);
+    }
+
+    .industry-card.selected .check-icon {
+      display: flex;
+    }
+
+    .file-upload-zone.dragover {
+      border-color: rgba(99, 102, 241, 0.5);
+      background: rgba(99, 102, 241, 0.05);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      background: transparent;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 8px;
+      background: linear-gradient(90deg, #6366f1 0%, #00d4ff 100%);
+      border-radius: 4px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      margin-top: -6px;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+<body class="text-white antialiased onboarding-bg">
+  <!-- Progress Header -->
+  <header class="fixed top-0 left-0 right-0 z-50 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/5">
+    <div class="max-w-4xl mx-auto px-6 py-4">
+      <div class="flex items-center justify-between mb-4">
+        <!-- Logo -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <span class="font-bold text-white">Tenderix</span>
+        </div>
+
+        <!-- Skip -->
+        <a href="tenderix-dashboard.html" class="text-sm text-gray-500 hover:text-white transition-colors">
+          דלג לעת עתה
+        </a>
+      </div>
+
+      <!-- Progress Steps -->
+      <div class="flex items-center gap-2">
+        <!-- Step 1 -->
+        <div class="flex items-center gap-2">
+          <div id="step1-indicator" class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-indigo-500/25">
+            1
+          </div>
+          <span class="text-sm text-white font-medium hidden sm:block">פרטי חברה</span>
+        </div>
+
+        <div class="flex-1 h-0.5 bg-gray-800 rounded-full mx-2">
+          <div id="progress-1-2" class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="flex items-center gap-2">
+          <div id="step2-indicator" class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-gray-500 text-sm font-bold transition-all">
+            2
+          </div>
+          <span class="text-sm text-gray-500 font-medium hidden sm:block">תחומי פעילות</span>
+        </div>
+
+        <div class="flex-1 h-0.5 bg-gray-800 rounded-full mx-2">
+          <div id="progress-2-3" class="h-full bg-gradient-to-r from-purple-500 to-cyan-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="flex items-center gap-2">
+          <div id="step3-indicator" class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-gray-500 text-sm font-bold transition-all">
+            3
+          </div>
+          <span class="text-sm text-gray-500 font-medium hidden sm:block">תעודות והסמכות</span>
+        </div>
+
+        <div class="flex-1 h-0.5 bg-gray-800 rounded-full mx-2">
+          <div id="progress-3-4" class="h-full bg-gradient-to-r from-cyan-500 to-green-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="flex items-center gap-2">
+          <div id="step4-indicator" class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-gray-500 text-sm font-bold transition-all">
+            4
+          </div>
+          <span class="text-sm text-gray-500 font-medium hidden sm:block">סיום</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="pt-32 pb-24 px-6">
+    <div class="max-w-2xl mx-auto">
+
+      <!-- Step 1: Company Details -->
+      <div id="step1" class="step-content animate-fade-in-up">
+        <div class="text-center mb-10">
+          <div class="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center">
+            <svg class="w-8 h-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+            </svg>
+          </div>
+          <h1 class="text-3xl font-bold text-white mb-3">ספר לנו על החברה שלך</h1>
+          <p class="text-gray-400">המידע יעזור לנו להתאים את הניתוחים לפרופיל שלכם</p>
+        </div>
+
+        <div class="p-8 rounded-3xl bg-gray-900/50 backdrop-blur-xl border border-white/10 space-y-6">
+          <div class="space-y-2">
+            <label class="block text-sm font-medium text-gray-300">שם החברה</label>
+            <input type="text" id="company-name" class="w-full px-4 py-3.5 bg-black/50 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all" placeholder="שם החברה המלא" required>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-gray-300">ח.פ. / ע.מ.</label>
+              <input type="text" id="business-id" class="w-full px-4 py-3.5 bg-black/50 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all" placeholder="512345678" dir="ltr">
+            </div>
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-gray-300">שנת הקמה</label>
+              <input type="number" id="founded-year" class="w-full px-4 py-3.5 bg-black/50 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all" placeholder="2015" dir="ltr">
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-sm font-medium text-gray-300">מספר עובדים</label>
+            <div class="grid grid-cols-4 gap-3">
+              <button class="employee-btn py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 hover:border-indigo-500/30 hover:text-white transition-all text-sm" onclick="selectEmployees(this, '1-10')">1-10</button>
+              <button class="employee-btn py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 hover:border-indigo-500/30 hover:text-white transition-all text-sm" onclick="selectEmployees(this, '11-50')">11-50</button>
+              <button class="employee-btn py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 hover:border-indigo-500/30 hover:text-white transition-all text-sm" onclick="selectEmployees(this, '51-200')">51-200</button>
+              <button class="employee-btn py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 hover:border-indigo-500/30 hover:text-white transition-all text-sm" onclick="selectEmployees(this, '200+')">200+</button>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-sm font-medium text-gray-300">מחזור שנתי (מיליוני ₪)</label>
+            <div class="pt-2">
+              <input type="range" min="1" max="100" value="20" class="w-full" id="revenue-slider" oninput="updateRevenue(this.value)">
+              <div class="flex justify-between text-sm text-gray-500 mt-2">
+                <span>₪1M</span>
+                <span id="revenue-value" class="text-indigo-400 font-medium">₪20M</span>
+                <span>₪100M+</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Industries -->
+      <div id="step2" class="step-content hidden">
+        <div class="text-center mb-10">
+          <div class="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30 flex items-center justify-center">
+            <svg class="w-8 h-8 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+            </svg>
+          </div>
+          <h1 class="text-3xl font-bold text-white mb-3">באילו תחומים אתם פועלים?</h1>
+          <p class="text-gray-400">בחרו את התחומים הרלוונטיים - נציג לכם מכרזים מתאימים</p>
+        </div>
+
+        <div id="industries-grid" class="grid grid-cols-2 gap-4">
+          <!-- IT & Software -->
+          <div class="industry-card p-5 rounded-2xl bg-gray-900/50 border border-white/10 cursor-pointer hover:border-indigo-500/30 transition-all" data-industry="it_software" onclick="toggleIndustry(this)">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                <svg class="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <h3 class="font-semibold text-white mb-1">IT ותוכנה</h3>
+                <p class="text-sm text-gray-500">פיתוח, תשתיות, ענן</p>
+              </div>
+              <div class="check-icon hidden w-6 h-6 rounded-full bg-indigo-500 items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cyber Security -->
+          <div class="industry-card p-5 rounded-2xl bg-gray-900/50 border border-white/10 cursor-pointer hover:border-indigo-500/30 transition-all" data-industry="cyber_security" onclick="toggleIndustry(this)">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                <svg class="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <h3 class="font-semibold text-white mb-1">סייבר ואבטחה</h3>
+                <p class="text-sm text-gray-500">אבטחת מידע, SOC</p>
+              </div>
+              <div class="check-icon hidden w-6 h-6 rounded-full bg-indigo-500 items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Construction -->
+          <div class="industry-card p-5 rounded-2xl bg-gray-900/50 border border-white/10 cursor-pointer hover:border-indigo-500/30 transition-all" data-industry="construction" onclick="toggleIndustry(this)">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                <svg class="w-6 h-6 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <h3 class="font-semibold text-white mb-1">בנייה ותשתיות</h3>
+                <p class="text-sm text-gray-500">בנייה, הנדסה אזרחית</p>
+              </div>
+              <div class="check-icon hidden w-6 h-6 rounded-full bg-indigo-500 items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Consulting -->
+          <div class="industry-card p-5 rounded-2xl bg-gray-900/50 border border-white/10 cursor-pointer hover:border-indigo-500/30 transition-all" data-industry="consulting" onclick="toggleIndustry(this)">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                <svg class="w-6 h-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <h3 class="font-semibold text-white mb-1">ייעוץ וניהול</h3>
+                <p class="text-sm text-gray-500">ייעוץ אסטרטגי, ניהול פרויקטים</p>
+              </div>
+              <div class="check-icon hidden w-6 h-6 rounded-full bg-indigo-500 items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Healthcare -->
+          <div class="industry-card p-5 rounded-2xl bg-gray-900/50 border border-white/10 cursor-pointer hover:border-indigo-500/30 transition-all" data-industry="healthcare" onclick="toggleIndustry(this)">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center flex-shrink-0">
+                <svg class="w-6 h-6 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <h3 class="font-semibold text-white mb-1">בריאות ורפואה</h3>
+                <p class="text-sm text-gray-500">ציוד רפואי, שירותים</p>
+              </div>
+              <div class="check-icon hidden w-6 h-6 rounded-full bg-indigo-500 items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Logistics -->
+          <div class="industry-card p-5 rounded-2xl bg-gray-900/50 border border-white/10 cursor-pointer hover:border-indigo-500/30 transition-all" data-industry="logistics" onclick="toggleIndustry(this)">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+                <svg class="w-6 h-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <h3 class="font-semibold text-white mb-1">לוגיסטיקה ושינוע</h3>
+                <p class="text-sm text-gray-500">הובלות, שרשרת אספקה</p>
+              </div>
+              <div class="check-icon hidden w-6 h-6 rounded-full bg-indigo-500 items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Education -->
+          <div class="industry-card p-5 rounded-2xl bg-gray-900/50 border border-white/10 cursor-pointer hover:border-indigo-500/30 transition-all" data-industry="education" onclick="toggleIndustry(this)">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center flex-shrink-0">
+                <svg class="w-6 h-6 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <h3 class="font-semibold text-white mb-1">חינוך והדרכה</h3>
+                <p class="text-sm text-gray-500">הדרכות, קורסים</p>
+              </div>
+              <div class="check-icon hidden w-6 h-6 rounded-full bg-indigo-500 items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Other -->
+          <div class="industry-card p-5 rounded-2xl bg-gray-900/50 border border-white/10 cursor-pointer hover:border-indigo-500/30 transition-all" data-industry="other" onclick="toggleIndustry(this)">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-xl bg-gray-500/20 flex items-center justify-center flex-shrink-0">
+                <svg class="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"/>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <h3 class="font-semibold text-white mb-1">אחר</h3>
+                <p class="text-sm text-gray-500">תחומים נוספים</p>
+              </div>
+              <div class="check-icon hidden w-6 h-6 rounded-full bg-indigo-500 items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Certifications -->
+      <div id="step3" class="step-content hidden">
+        <div class="text-center mb-10">
+          <div class="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 flex items-center justify-center">
+            <svg class="w-8 h-8 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
+            </svg>
+          </div>
+          <h1 class="text-3xl font-bold text-white mb-3">תעודות והסמכות</h1>
+          <p class="text-gray-400">העלו את התעודות שלכם - נבדוק אוטומטית עמידה בתנאי סף</p>
+        </div>
+
+        <div class="p-8 rounded-3xl bg-gray-900/50 backdrop-blur-xl border border-white/10 space-y-6">
+          <!-- Common Certifications -->
+          <div class="space-y-3">
+            <label class="block text-sm font-medium text-gray-300 mb-4">סמן את ההסמכות שיש לחברה:</label>
+
+            <label class="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-all">
+              <input type="checkbox" id="cert-iso9001" class="w-5 h-5 rounded border-gray-600 bg-transparent text-indigo-500 focus:ring-indigo-500">
+              <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                <span class="text-blue-400 text-xs font-bold">ISO</span>
+              </div>
+              <div class="flex-1">
+                <span class="text-white font-medium">ISO 9001:2015</span>
+                <p class="text-sm text-gray-500">ניהול איכות</p>
+              </div>
+            </label>
+
+            <label class="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-all">
+              <input type="checkbox" id="cert-iso27001" class="w-5 h-5 rounded border-gray-600 bg-transparent text-indigo-500 focus:ring-indigo-500">
+              <div class="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                <span class="text-red-400 text-xs font-bold">ISO</span>
+              </div>
+              <div class="flex-1">
+                <span class="text-white font-medium">ISO 27001</span>
+                <p class="text-sm text-gray-500">אבטחת מידע</p>
+              </div>
+            </label>
+
+            <label class="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-all">
+              <input type="checkbox" id="cert-iso14001" class="w-5 h-5 rounded border-gray-600 bg-transparent text-indigo-500 focus:ring-indigo-500">
+              <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                <span class="text-green-400 text-xs font-bold">ISO</span>
+              </div>
+              <div class="flex-1">
+                <span class="text-white font-medium">ISO 14001</span>
+                <p class="text-sm text-gray-500">ניהול סביבתי</p>
+              </div>
+            </label>
+
+            <label class="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-all">
+              <input type="checkbox" id="cert-security" class="w-5 h-5 rounded border-gray-600 bg-transparent text-indigo-500 focus:ring-indigo-500">
+              <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <span class="text-white font-medium">סיווג ביטחוני</span>
+                <p class="text-sm text-gray-500">אישור בטחוני ממשלתי</p>
+              </div>
+            </label>
+          </div>
+
+          <!-- File Upload -->
+          <div class="pt-4 border-t border-white/10">
+            <label class="block text-sm font-medium text-gray-300 mb-4">או העלה קבצי תעודות:</label>
+            <div class="file-upload-zone p-8 border-2 border-dashed border-white/10 rounded-2xl text-center cursor-pointer hover:border-indigo-500/50 transition-all" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+              <svg class="w-12 h-12 mx-auto text-gray-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+              </svg>
+              <p class="text-gray-400 mb-2">גרור קבצים לכאן או לחץ לבחירה</p>
+              <p class="text-sm text-gray-600">PDF, JPG, PNG עד 10MB</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Complete -->
+      <div id="step4" class="step-content hidden">
+        <div class="text-center">
+          <!-- Success Animation -->
+          <div class="w-24 h-24 mx-auto mb-8 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-2xl shadow-green-500/30 animate-bounce-in">
+            <svg class="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+
+          <h1 class="text-4xl font-bold text-white mb-4">מעולה! הכל מוכן</h1>
+          <p class="text-xl text-gray-400 mb-10">הפרופיל שלך הוגדר בהצלחה. בוא נתחיל לנצח מכרזים!</p>
+
+          <!-- Stats Preview -->
+          <div class="grid grid-cols-3 gap-4 mb-10">
+            <div class="p-5 rounded-2xl bg-gray-900/50 border border-white/10">
+              <div class="text-3xl font-bold text-cyan-400 mb-1">47</div>
+              <div class="text-sm text-gray-500">מכרזים מתאימים</div>
+            </div>
+            <div class="p-5 rounded-2xl bg-gray-900/50 border border-white/10">
+              <div class="text-3xl font-bold text-green-400 mb-1">12</div>
+              <div class="text-sm text-gray-500">הזדמנויות GO</div>
+            </div>
+            <div class="p-5 rounded-2xl bg-gray-900/50 border border-white/10">
+              <div class="text-3xl font-bold text-purple-400 mb-1">3</div>
+              <div class="text-sm text-gray-500">מועדים קרובים</div>
+            </div>
+          </div>
+
+          <!-- AI Welcome Message -->
+          <div class="p-6 rounded-2xl bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent border border-indigo-500/20 mb-10 text-right">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-white font-semibold mb-2">הבינה המלאכותית של Tenderix</h3>
+                <p class="text-gray-400 leading-relaxed">מצאתי 47 מכרזים שמתאימים לפרופיל החברה שלך. 12 מהם מסומנים כהזדמנויות מצוינות עם סיכוי גבוה לזכייה. מומלץ להתחיל עם מכרז #722109 של משרד האוצר - יש לכם 87% התאמה!</p>
+              </div>
+            </div>
+          </div>
+
+          <a href="tenderix-dashboard.html" class="inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 text-white font-bold text-lg rounded-2xl shadow-xl shadow-indigo-500/30 hover:shadow-2xl hover:shadow-indigo-500/40 hover:-translate-y-1 transition-all duration-300">
+            כניסה ללוח הבקרה
+            <svg class="w-6 h-6 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Navigation Footer -->
+  <footer class="fixed bottom-0 left-0 right-0 bg-[#0a0a0f]/80 backdrop-blur-xl border-t border-white/5">
+    <div class="max-w-2xl mx-auto px-6 py-4 flex items-center justify-between">
+      <button id="prev-btn" onclick="prevStep()" class="px-6 py-3 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all flex items-center gap-2 invisible">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        הקודם
+      </button>
+
+      <div class="flex items-center gap-2">
+        <div id="dot-1" class="w-2 h-2 rounded-full bg-indigo-500"></div>
+        <div id="dot-2" class="w-2 h-2 rounded-full bg-gray-700"></div>
+        <div id="dot-3" class="w-2 h-2 rounded-full bg-gray-700"></div>
+        <div id="dot-4" class="w-2 h-2 rounded-full bg-gray-700"></div>
+      </div>
+
+      <button id="next-btn" onclick="nextStep()" class="px-8 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:-translate-y-0.5 transition-all flex items-center gap-2">
+        הבא
+        <svg class="w-5 h-5 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </button>
+    </div>
+  </footer>
+
+  <script>
+    let currentStep = 1;
+    const totalSteps = 4;
+
+    // Form data storage
+    const onboardingData = {
+      company_name: '',
+      business_id: '',
+      founded_year: '',
+      employees: '',
+      annual_revenue: '20',
+      industries: [],
+      certifications: []
+    };
+
+    function updateStep() {
+      // Hide all steps
+      for (let i = 1; i <= totalSteps; i++) {
+        document.getElementById(`step${i}`).classList.add('hidden');
+        document.getElementById(`step${i}-indicator`).classList.remove('bg-gradient-to-br', 'from-indigo-500', 'to-purple-600', 'text-white', 'shadow-lg', 'shadow-indigo-500/25');
+        document.getElementById(`step${i}-indicator`).classList.add('bg-gray-800', 'text-gray-500');
+        document.getElementById(`dot-${i}`).classList.remove('bg-indigo-500');
+        document.getElementById(`dot-${i}`).classList.add('bg-gray-700');
+      }
+
+      // Show current step
+      document.getElementById(`step${currentStep}`).classList.remove('hidden');
+      document.getElementById(`step${currentStep}`).classList.add('animate-fade-in-up');
+
+      // Update indicators for completed and current steps
+      for (let i = 1; i <= currentStep; i++) {
+        const indicator = document.getElementById(`step${i}-indicator`);
+        indicator.classList.remove('bg-gray-800', 'text-gray-500');
+        indicator.classList.add('bg-gradient-to-br', 'from-indigo-500', 'to-purple-600', 'text-white', 'shadow-lg', 'shadow-indigo-500/25');
+
+        document.getElementById(`dot-${i}`).classList.remove('bg-gray-700');
+        document.getElementById(`dot-${i}`).classList.add('bg-indigo-500');
+
+        // Add checkmark for completed steps
+        if (i < currentStep) {
+          indicator.innerHTML = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>';
+        } else {
+          indicator.textContent = i;
+        }
+      }
+
+      // Update progress bars
+      for (let i = 1; i < totalSteps; i++) {
+        const progress = document.getElementById(`progress-${i}-${i+1}`);
+        if (i < currentStep) {
+          progress.style.width = '100%';
+        } else {
+          progress.style.width = '0%';
+        }
+      }
+
+      // Update sibling text colors
+      for (let i = 1; i <= totalSteps; i++) {
+        const label = document.querySelector(`#step${i}-indicator`).nextElementSibling;
+        if (label) {
+          if (i <= currentStep) {
+            label.classList.remove('text-gray-500');
+            label.classList.add('text-white');
+          } else {
+            label.classList.remove('text-white');
+            label.classList.add('text-gray-500');
+          }
+        }
+      }
+
+      // Update navigation buttons
+      const prevBtn = document.getElementById('prev-btn');
+      const nextBtn = document.getElementById('next-btn');
+
+      if (currentStep === 1) {
+        prevBtn.classList.add('invisible');
+      } else {
+        prevBtn.classList.remove('invisible');
+      }
+
+      if (currentStep === totalSteps) {
+        nextBtn.classList.add('hidden');
+      } else {
+        nextBtn.classList.remove('hidden');
+      }
+    }
+
+    // Collect data from current step
+    function collectStepData() {
+      if (currentStep === 1) {
+        onboardingData.company_name = document.getElementById('company-name').value;
+        onboardingData.business_id = document.getElementById('business-id').value;
+        onboardingData.founded_year = document.getElementById('founded-year').value;
+        onboardingData.annual_revenue = document.getElementById('revenue-slider').value;
+      } else if (currentStep === 2) {
+        onboardingData.industries = [];
+        document.querySelectorAll('.industry-card.selected').forEach(card => {
+          onboardingData.industries.push(card.dataset.industry);
+        });
+      } else if (currentStep === 3) {
+        onboardingData.certifications = [];
+        if (document.getElementById('cert-iso9001').checked) onboardingData.certifications.push('ISO 9001:2015');
+        if (document.getElementById('cert-iso27001').checked) onboardingData.certifications.push('ISO 27001');
+        if (document.getElementById('cert-iso14001').checked) onboardingData.certifications.push('ISO 14001');
+        if (document.getElementById('cert-security').checked) onboardingData.certifications.push('Security Clearance');
+      }
+    }
+
+    // Validate current step
+    function validateStep() {
+      if (currentStep === 1) {
+        const companyName = document.getElementById('company-name').value;
+        if (!companyName.trim()) {
+          Utils.showToast('warning', 'שדה חובה', 'יש להזין שם חברה');
+          return false;
+        }
+        if (!onboardingData.employees) {
+          Utils.showToast('warning', 'שדה חובה', 'יש לבחור מספר עובדים');
+          return false;
+        }
+      }
+      return true;
+    }
+
+    // Save onboarding data to profile
+    async function saveOnboardingData() {
+      try {
+        const revenueDisplay = onboardingData.annual_revenue >= 100
+          ? '₪100M+'
+          : `₪${onboardingData.annual_revenue}M`;
+
+        const profileData = {
+          company_name: onboardingData.company_name,
+          business_id: onboardingData.business_id,
+          founded_year: onboardingData.founded_year,
+          employees: onboardingData.employees,
+          annual_revenue: revenueDisplay,
+          industries: onboardingData.industries,
+          certifications: onboardingData.certifications,
+          onboarding_completed: true
+        };
+
+        await Auth.updateProfile(profileData);
+        console.log('Onboarding data saved:', profileData);
+
+      } catch (error) {
+        console.error('Failed to save onboarding data:', error);
+        Utils.showToast('error', 'שגיאה', 'לא ניתן לשמור את הנתונים');
+      }
+    }
+
+    async function nextStep() {
+      collectStepData();
+
+      if (!validateStep()) return;
+
+      if (currentStep < totalSteps) {
+        currentStep++;
+        updateStep();
+
+        // Save data when reaching final step
+        if (currentStep === totalSteps) {
+          await saveOnboardingData();
+        }
+      }
+    }
+
+    function prevStep() {
+      if (currentStep > 1) {
+        currentStep--;
+        updateStep();
+      }
+    }
+
+    function selectEmployees(btn, value) {
+      document.querySelectorAll('.employee-btn').forEach(b => {
+        b.classList.remove('bg-indigo-500/20', 'border-indigo-500/50', 'text-white');
+        b.classList.add('bg-white/5', 'border-white/10', 'text-gray-400');
+      });
+      btn.classList.remove('bg-white/5', 'border-white/10', 'text-gray-400');
+      btn.classList.add('bg-indigo-500/20', 'border-indigo-500/50', 'text-white');
+      onboardingData.employees = value;
+    }
+
+    function updateRevenue(value) {
+      const display = value >= 100 ? '₪100M+' : `₪${value}M`;
+      document.getElementById('revenue-value').textContent = display;
+      onboardingData.annual_revenue = value;
+    }
+
+    function toggleIndustry(card) {
+      card.classList.toggle('selected');
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      e.target.classList.remove('dragover');
+      // Handle file upload
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        Utils.showToast('info', 'קבצים נבחרו', `${files.length} קבצים מוכנים להעלאה`);
+      }
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+      e.currentTarget.classList.add('dragover');
+    }
+
+    function handleDragLeave(e) {
+      e.currentTarget.classList.remove('dragover');
+    }
+
+    // Check authentication and load existing data
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Check if user is logged in
+      const user = await Auth.getCurrentUser();
+
+      if (!user) {
+        window.location.href = 'tenderix-login.html';
+        return;
+      }
+
+      // Pre-fill with existing user data if available
+      if (user.user_metadata) {
+        if (user.user_metadata.company_name) {
+          document.getElementById('company-name').value = user.user_metadata.company_name;
+        }
+        if (user.user_metadata.business_id) {
+          document.getElementById('business-id').value = user.user_metadata.business_id;
+        }
+        if (user.user_metadata.founded_year) {
+          document.getElementById('founded-year').value = user.user_metadata.founded_year;
+        }
+      }
+
+      // Initialize step display
+      updateStep();
+    });
+  </script>
+
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Tenderix Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tenderix | ניתוח מכרז #722109 - שירותי ענן ממשלתי</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="tenderix-styles.css">
+  <link rel="stylesheet" href="tenderix-animations.css">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            'hebrew': ['Heebo', 'Rubik', 'Assistant', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Heebo', sans-serif;
+      background: #0a0a0f;
+    }
+    .tab-active {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.1) 100%);
+      border-color: rgba(99, 102, 241, 0.3);
+    }
+    .requirement-card:hover {
+      border-color: rgba(99, 102, 241, 0.3);
+    }
+    .gradient-border {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.5) 0%, rgba(0, 212, 255, 0.5) 100%);
+    }
+  </style>
+</head>
+<body class="text-white antialiased">
+  <!-- SVG Definitions -->
+  <svg class="hidden">
+    <defs>
+      <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#6366f1"/>
+        <stop offset="100%" stop-color="#00d4ff"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <!-- Sidebar -->
+  <aside class="fixed right-0 top-0 bottom-0 w-72 bg-black/50 backdrop-blur-xl border-l border-white/5 p-6 flex flex-col z-40">
+    <!-- Logo -->
+    <div class="flex items-center gap-3 mb-10">
+      <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+        <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-white">Tenderix</h1>
+        <p class="text-xs text-gray-500">AI Tender Intelligence</p>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="space-y-2 flex-1">
+      <a href="tenderix-dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-white/5 hover:text-white transition-all duration-300">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+        </svg>
+        <span>לוח בקרה</span>
+      </a>
+
+      <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-white/5 hover:text-white transition-all duration-300">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        <span>מכרזים פעילים</span>
+      </a>
+
+      <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-500/20 to-purple-500/10 border border-indigo-500/30 text-white">
+        <svg class="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+        </svg>
+        <span class="font-medium">ניתוח מכרז</span>
+      </a>
+    </nav>
+
+    <!-- User Profile -->
+    <div class="pt-6 border-t border-white/5">
+      <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer transition-colors">
+        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-cyan-500 flex items-center justify-center text-white font-bold shadow-lg">
+          ד
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-white truncate">דוד אריז</p>
+          <p class="text-xs text-gray-500 truncate">david@company.com</p>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="mr-72 min-h-screen">
+    <!-- Header with Tender Info -->
+    <header class="sticky top-0 z-30 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/5">
+      <div class="p-6">
+        <!-- Breadcrumb & Actions -->
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-3 text-sm">
+            <a href="tenderix-dashboard.html" class="text-gray-500 hover:text-white transition-colors">לוח בקרה</a>
+            <svg class="w-4 h-4 text-gray-600 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+            <a href="#" class="text-gray-500 hover:text-white transition-colors">מכרזים</a>
+            <svg class="w-4 h-4 text-gray-600 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+            <span class="text-white">#722109</span>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button class="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-gray-400 hover:text-white hover:bg-white/10 transition-all flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              הורד דוח
+            </button>
+            <button class="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-gray-400 hover:text-white hover:bg-white/10 transition-all flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+              </svg>
+              שתף
+            </button>
+          </div>
+        </div>
+
+        <!-- Tender Title & Meta -->
+        <div class="flex items-start gap-6">
+          <!-- Score -->
+          <div class="relative w-24 h-24 flex-shrink-0">
+            <svg class="w-full h-full -rotate-90" viewBox="0 0 96 96">
+              <circle cx="48" cy="48" r="42" fill="none" stroke="currentColor" class="text-gray-800" stroke-width="6"/>
+              <circle cx="48" cy="48" r="42" fill="none" stroke="url(#scoreGradient)" stroke-width="6" stroke-dasharray="230 264" stroke-linecap="round"/>
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <span class="text-3xl font-bold text-white">87</span>
+              <span class="text-xs text-gray-500">ציון</span>
+            </div>
+          </div>
+
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="px-3 py-1 rounded-full text-xs font-medium bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                בניתוח
+              </span>
+              <span class="text-gray-500 text-sm">#722109</span>
+            </div>
+            <h1 class="text-2xl font-bold text-white mb-2">אספקת שירותי ענן ממשלתי</h1>
+            <div class="flex items-center gap-6 text-sm text-gray-400">
+              <div class="flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
+                <span>משרד האוצר | אגף המחשוב</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span class="font-mono" dir="ltr">₪12,500,000</span>
+              </div>
+              <div class="flex items-center gap-2 text-orange-400">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>3 ימים להגשה</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Stats -->
+          <div class="flex gap-4">
+            <div class="text-center p-4 rounded-xl bg-white/5 border border-white/10">
+              <div class="text-2xl font-bold text-green-400">4/5</div>
+              <div class="text-xs text-gray-500">תנאי סף</div>
+            </div>
+            <div class="text-center p-4 rounded-xl bg-white/5 border border-white/10">
+              <div class="text-2xl font-bold text-cyan-400">85%</div>
+              <div class="text-xs text-gray-500">התאמה</div>
+            </div>
+            <div class="text-center p-4 rounded-xl bg-white/5 border border-white/10">
+              <div class="text-2xl font-bold text-purple-400">3</div>
+              <div class="text-xs text-gray-500">מתחרים</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="px-6">
+        <div class="flex gap-1 border-b border-white/5">
+          <button class="px-6 py-4 text-sm font-medium text-white border-b-2 border-indigo-500 -mb-px" onclick="showTab('prerequisites')">
+            <span class="flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+              </svg>
+              תנאי סף
+              <span class="px-2 py-0.5 rounded-full text-xs bg-green-500/20 text-green-400">4/5</span>
+            </span>
+          </button>
+          <button class="px-6 py-4 text-sm font-medium text-gray-400 hover:text-white transition-colors" onclick="showTab('specifications')">
+            <span class="flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              מפרט טכני
+            </span>
+          </button>
+          <button class="px-6 py-4 text-sm font-medium text-gray-400 hover:text-white transition-colors" onclick="showTab('competitors')">
+            <span class="flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+              </svg>
+              מודיעין תחרותי
+              <span class="px-2 py-0.5 rounded-full text-xs bg-purple-500/20 text-purple-400">3</span>
+            </span>
+          </button>
+          <button class="px-6 py-4 text-sm font-medium text-gray-400 hover:text-white transition-colors" onclick="showTab('decision')">
+            <span class="flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+              </svg>
+              החלטה סופית
+            </span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Tab Content -->
+    <div class="p-6">
+      <!-- Tab 1: Prerequisites (תנאי סף) -->
+      <div id="prerequisites-tab" class="tab-content">
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-4 gap-4 mb-8">
+          <div class="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                <svg class="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+              <div>
+                <div class="text-2xl font-bold text-white">4</div>
+                <div class="text-xs text-gray-400">עומד בדרישה</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
+                <svg class="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </div>
+              <div>
+                <div class="text-2xl font-bold text-white">1</div>
+                <div class="text-xs text-gray-400">לא עומד</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                <svg class="w-5 h-5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+              </div>
+              <div>
+                <div class="text-2xl font-bold text-white">0</div>
+                <div class="text-xs text-gray-400">דורש בדיקה</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+                <svg class="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+              </div>
+              <div>
+                <div class="text-2xl font-bold text-white">80%</div>
+                <div class="text-xs text-gray-400">עמידה כוללת</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Requirements List -->
+        <div class="space-y-4">
+          <!-- Requirement 1 - Pass -->
+          <div class="requirement-card p-5 rounded-2xl bg-gray-900/50 border border-white/5 hover:shadow-lg transition-all duration-300">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                <svg class="w-6 h-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-3 mb-2">
+                  <h3 class="font-semibold text-white">ניסיון בפרויקטי IT ממשלתיים</h3>
+                  <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
+                    עומד בדרישה
+                  </span>
+                </div>
+                <p class="text-gray-400 text-sm mb-4">נדרש ניסיון מוכח של לפחות 3 פרויקטים בסדר גודל של 5 מיליון ₪ ומעלה בשירותי ענן לגופים ממשלתיים או ציבוריים בשנים 2020-2024.</p>
+
+                <div class="p-4 rounded-xl bg-green-500/5 border border-green-500/20">
+                  <div class="flex items-center gap-2 text-green-400 text-sm font-medium mb-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    ניתוח AI
+                  </div>
+                  <p class="text-sm text-gray-300">זוהו 5 פרויקטים רלוונטיים בפרופיל החברה: משרד הפנים (2023), משרד החינוך (2022), עיריית חיפה (2021), משרד הבריאות (2020), בנק ישראל (2020). סך הכל ₪47M בפרויקטים מתאימים.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Requirement 2 - Pass -->
+          <div class="requirement-card p-5 rounded-2xl bg-gray-900/50 border border-white/5 hover:shadow-lg transition-all duration-300">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                <svg class="w-6 h-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-3 mb-2">
+                  <h3 class="font-semibold text-white">תקן ISO 9001:2015</h3>
+                  <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
+                    עומד בדרישה
+                  </span>
+                </div>
+                <p class="text-gray-400 text-sm mb-4">נדרש תעודת ISO 9001:2015 בתוקף לניהול איכות.</p>
+
+                <div class="p-4 rounded-xl bg-green-500/5 border border-green-500/20">
+                  <div class="flex items-center gap-2 text-green-400 text-sm font-medium mb-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    ניתוח AI
+                  </div>
+                  <p class="text-sm text-gray-300">זוהתה תעודת ISO 9001:2015 בתוקף עד 12/2026 במסמכי החברה.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Requirement 3 - Pass -->
+          <div class="requirement-card p-5 rounded-2xl bg-gray-900/50 border border-white/5 hover:shadow-lg transition-all duration-300">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                <svg class="w-6 h-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-3 mb-2">
+                  <h3 class="font-semibold text-white">מחזור כספי שנתי</h3>
+                  <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
+                    עומד בדרישה
+                  </span>
+                </div>
+                <p class="text-gray-400 text-sm mb-4">נדרש מחזור כספי שנתי מינימלי של 20 מיליון ₪ בממוצע ב-3 השנים האחרונות.</p>
+
+                <div class="p-4 rounded-xl bg-green-500/5 border border-green-500/20">
+                  <div class="flex items-center gap-2 text-green-400 text-sm font-medium mb-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    ניתוח AI
+                  </div>
+                  <p class="text-sm text-gray-300">מחזור ממוצע זוהה: ₪35.2M (2022: ₪32M, 2023: ₪36M, 2024: ₪37.5M). עומד בדרישה.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Requirement 4 - Pass -->
+          <div class="requirement-card p-5 rounded-2xl bg-gray-900/50 border border-white/5 hover:shadow-lg transition-all duration-300">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                <svg class="w-6 h-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-3 mb-2">
+                  <h3 class="font-semibold text-white">צוות מקצועי מוסמך</h3>
+                  <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
+                    עומד בדרישה
+                  </span>
+                </div>
+                <p class="text-gray-400 text-sm mb-4">נדרש צוות הכולל לפחות 2 ארכיטקטי ענן מוסמכים (AWS/Azure/GCP) ו-3 מהנדסי DevOps עם ניסיון של 5 שנים לפחות.</p>
+
+                <div class="p-4 rounded-xl bg-green-500/5 border border-green-500/20">
+                  <div class="flex items-center gap-2 text-green-400 text-sm font-medium mb-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    ניתוח AI
+                  </div>
+                  <p class="text-sm text-gray-300">זוהו 4 ארכיטקטים מוסמכים (2x AWS, 1x Azure, 1x GCP) ו-6 מהנדסי DevOps בצוות. כולם עם ניסיון של 5+ שנים לפי LinkedIn.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Requirement 5 - Fail -->
+          <div class="requirement-card p-5 rounded-2xl bg-gray-900/50 border border-red-500/30 hover:shadow-lg transition-all duration-300">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0 animate-pulse">
+                <svg class="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-3 mb-2">
+                  <h3 class="font-semibold text-white">תקן ISO 27001 - אבטחת מידע</h3>
+                  <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/30">
+                    לא עומד בדרישה
+                  </span>
+                </div>
+                <p class="text-gray-400 text-sm mb-4">נדרש תעודת ISO 27001 בתוקף לניהול אבטחת מידע.</p>
+
+                <div class="p-4 rounded-xl bg-red-500/10 border border-red-500/30">
+                  <div class="flex items-center gap-2 text-red-400 text-sm font-medium mb-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                    בעיה קריטית
+                  </div>
+                  <p class="text-sm text-gray-300 mb-4">לא נמצאה תעודת ISO 27001 בתוקף במסמכי החברה. התעודה האחרונה פגה ב-06/2025.</p>
+
+                  <div class="flex items-center gap-3 p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+                    <svg class="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    </svg>
+                    <div>
+                      <p class="text-sm text-indigo-400 font-medium">המלצת AI</p>
+                      <p class="text-sm text-gray-400">ניתן לחדש את התקן תוך 2-3 שבועות אם מתחילים מיד. יש לפנות לגוף ההסמכה.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Specifications (מפרט) - Hidden by default -->
+      <div id="specifications-tab" class="tab-content hidden">
+        <div class="grid grid-cols-2 gap-6">
+          <!-- Technical Requirements -->
+          <div class="p-6 rounded-2xl bg-gray-900/50 border border-white/5">
+            <h3 class="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+              <svg class="w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+              </svg>
+              דרישות טכניות
+            </h3>
+
+            <div class="space-y-4">
+              <div class="p-4 rounded-xl bg-white/5 border border-white/10">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-white font-medium">תשתית ענן</span>
+                  <span class="px-2 py-0.5 rounded-full text-xs bg-green-500/20 text-green-400">תואם</span>
+                </div>
+                <p class="text-sm text-gray-400">AWS / Azure / GCP - Multi-cloud architecture</p>
+              </div>
+
+              <div class="p-4 rounded-xl bg-white/5 border border-white/10">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-white font-medium">זמינות שירות (SLA)</span>
+                  <span class="px-2 py-0.5 rounded-full text-xs bg-green-500/20 text-green-400">תואם</span>
+                </div>
+                <p class="text-sm text-gray-400">99.95% uptime נדרש. החברה מציעה 99.99%</p>
+              </div>
+
+              <div class="p-4 rounded-xl bg-white/5 border border-white/10">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-white font-medium">גיבוי ושחזור</span>
+                  <span class="px-2 py-0.5 rounded-full text-xs bg-green-500/20 text-green-400">תואם</span>
+                </div>
+                <p class="text-sm text-gray-400">RPO: 1 hour, RTO: 4 hours - עומד בדרישות</p>
+              </div>
+
+              <div class="p-4 rounded-xl bg-white/5 border border-white/10">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-white font-medium">אבטחת מידע</span>
+                  <span class="px-2 py-0.5 rounded-full text-xs bg-orange-500/20 text-orange-400">חלקי</span>
+                </div>
+                <p class="text-sm text-gray-400">Encryption at rest & in transit. חסר ISO 27001.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Scope -->
+          <div class="p-6 rounded-2xl bg-gray-900/50 border border-white/5">
+            <h3 class="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+              <svg class="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+              </svg>
+              היקף העבודה
+            </h3>
+
+            <div class="space-y-4">
+              <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span class="text-purple-400 text-sm font-bold">1</span>
+                </div>
+                <div>
+                  <p class="text-white font-medium">הקמת תשתית ענן</p>
+                  <p class="text-sm text-gray-400">הקמת סביבות Production, Staging, Development</p>
+                </div>
+              </div>
+
+              <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span class="text-purple-400 text-sm font-bold">2</span>
+                </div>
+                <div>
+                  <p class="text-white font-medium">מיגרציה של מערכות קיימות</p>
+                  <p class="text-sm text-gray-400">העברת 15 מערכות קיימות לענן</p>
+                </div>
+              </div>
+
+              <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span class="text-purple-400 text-sm font-bold">3</span>
+                </div>
+                <div>
+                  <p class="text-white font-medium">תחזוקה שוטפת</p>
+                  <p class="text-sm text-gray-400">תמיכה 24/7, עדכונים, ניטור</p>
+                </div>
+              </div>
+
+              <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span class="text-purple-400 text-sm font-bold">4</span>
+                </div>
+                <div>
+                  <p class="text-white font-medium">הדרכות וליווי</p>
+                  <p class="text-sm text-gray-400">הדרכת צוותים, מסמכי knowledge base</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Competitors (מתחרים) - Hidden by default -->
+      <div id="competitors-tab" class="tab-content hidden">
+        <div class="space-y-6">
+          <!-- Competitor 1 -->
+          <div class="p-6 rounded-2xl bg-gray-900/50 border border-white/5">
+            <div class="flex items-start gap-6">
+              <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white text-2xl font-bold">
+                מ
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-3 mb-2">
+                  <h3 class="text-xl font-semibold text-white">מטריקס IT</h3>
+                  <span class="px-2 py-0.5 rounded-full text-xs bg-red-500/20 text-red-400">מתחרה עיקרי</span>
+                </div>
+                <p class="text-gray-400 text-sm mb-4">חברת ענק בתחום שירותי IT וענן בישראל. ניסיון רב בפרויקטים ממשלתיים.</p>
+
+                <div class="grid grid-cols-4 gap-4">
+                  <div class="text-center p-3 rounded-xl bg-white/5">
+                    <div class="text-lg font-bold text-white">₪2.5B</div>
+                    <div class="text-xs text-gray-500">מחזור שנתי</div>
+                  </div>
+                  <div class="text-center p-3 rounded-xl bg-white/5">
+                    <div class="text-lg font-bold text-white">5,000+</div>
+                    <div class="text-xs text-gray-500">עובדים</div>
+                  </div>
+                  <div class="text-center p-3 rounded-xl bg-white/5">
+                    <div class="text-lg font-bold text-white">45%</div>
+                    <div class="text-xs text-gray-500">סיכוי זכייה</div>
+                  </div>
+                  <div class="text-center p-3 rounded-xl bg-white/5">
+                    <div class="text-lg font-bold text-orange-400">גבוה</div>
+                    <div class="text-xs text-gray-500">רמת איום</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Competitor 2 -->
+          <div class="p-6 rounded-2xl bg-gray-900/50 border border-white/5">
+            <div class="flex items-start gap-6">
+              <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-2xl font-bold">
+                נ
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-3 mb-2">
+                  <h3 class="text-xl font-semibold text-white">נס טכנולוגיות</h3>
+                  <span class="px-2 py-0.5 rounded-full text-xs bg-orange-500/20 text-orange-400">מתחרה משמעותי</span>
+                </div>
+                <p class="text-gray-400 text-sm mb-4">חברת תוכנה ושירותי IT מובילה. חזקה במגזר הציבורי.</p>
+
+                <div class="grid grid-cols-4 gap-4">
+                  <div class="text-center p-3 rounded-xl bg-white/5">
+                    <div class="text-lg font-bold text-white">₪1.8B</div>
+                    <div class="text-xs text-gray-500">מחזור שנתי</div>
+                  </div>
+                  <div class="text-center p-3 rounded-xl bg-white/5">
+                    <div class="text-lg font-bold text-white">3,500+</div>
+                    <div class="text-xs text-gray-500">עובדים</div>
+                  </div>
+                  <div class="text-center p-3 rounded-xl bg-white/5">
+                    <div class="text-lg font-bold text-white">30%</div>
+                    <div class="text-xs text-gray-500">סיכוי זכייה</div>
+                  </div>
+                  <div class="text-center p-3 rounded-xl bg-white/5">
+                    <div class="text-lg font-bold text-orange-400">בינוני</div>
+                    <div class="text-xs text-gray-500">רמת איום</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Competitor 3 -->
+          <div class="p-6 rounded-2xl bg-gray-900/50 border border-white/5">
+            <div class="flex items-start gap-6">
+              <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center text-white text-2xl font-bold">
+                ב
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-3 mb-2">
+                  <h3 class="text-xl font-semibold text-white">בינת תקשורת מחשבים</h3>
+                  <span class="px-2 py-0.5 rounded-full text-xs bg-yellow-500/20 text-yellow-400">מתחרה</span>
+                </div>
+                <p class="text-gray-400 text-sm mb-4">מתמחה בפתרונות תשתית ואינטגרציה. פחות ניסיון בענן.</p>
+
+                <div class="grid grid-cols-4 gap-4">
+                  <div class="text-center p-3 rounded-xl bg-white/5">
+                    <div class="text-lg font-bold text-white">₪800M</div>
+                    <div class="text-xs text-gray-500">מחזור שנתי</div>
+                  </div>
+                  <div class="text-center p-3 rounded-xl bg-white/5">
+                    <div class="text-lg font-bold text-white">1,200+</div>
+                    <div class="text-xs text-gray-500">עובדים</div>
+                  </div>
+                  <div class="text-center p-3 rounded-xl bg-white/5">
+                    <div class="text-lg font-bold text-white">15%</div>
+                    <div class="text-xs text-gray-500">סיכוי זכייה</div>
+                  </div>
+                  <div class="text-center p-3 rounded-xl bg-white/5">
+                    <div class="text-lg font-bold text-green-400">נמוך</div>
+                    <div class="text-xs text-gray-500">רמת איום</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Our Position -->
+          <div class="p-6 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
+            <div class="flex items-start gap-6">
+              <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+                <svg class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-3 mb-2">
+                  <h3 class="text-xl font-semibold text-white">החברה שלנו</h3>
+                  <span class="px-2 py-0.5 rounded-full text-xs bg-indigo-500/20 text-indigo-400">המיקום שלך</span>
+                </div>
+                <p class="text-gray-400 text-sm mb-4">יתרון תחרותי: מומחיות ב-AI, זמני תגובה מהירים, גמישות.</p>
+
+                <div class="grid grid-cols-4 gap-4">
+                  <div class="text-center p-3 rounded-xl bg-white/5">
+                    <div class="text-lg font-bold text-white">₪35M</div>
+                    <div class="text-xs text-gray-500">מחזור שנתי</div>
+                  </div>
+                  <div class="text-center p-3 rounded-xl bg-white/5">
+                    <div class="text-lg font-bold text-white">85+</div>
+                    <div class="text-xs text-gray-500">עובדים</div>
+                  </div>
+                  <div class="text-center p-3 rounded-xl bg-white/5">
+                    <div class="text-lg font-bold text-cyan-400">10%</div>
+                    <div class="text-xs text-gray-500">סיכוי זכייה</div>
+                  </div>
+                  <div class="text-center p-3 rounded-xl bg-white/5">
+                    <div class="text-lg font-bold text-indigo-400">#4</div>
+                    <div class="text-xs text-gray-500">דירוג</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 4: Decision (החלטה) - Hidden by default -->
+      <div id="decision-tab" class="tab-content hidden">
+        <!-- AI Recommendation -->
+        <div class="p-8 rounded-2xl bg-gradient-to-br from-orange-500/10 via-amber-500/5 to-transparent border border-orange-500/30 mb-8">
+          <div class="flex items-start gap-6">
+            <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/25 animate-pulse">
+              <svg class="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+            </div>
+            <div class="flex-1">
+              <div class="flex items-center gap-4 mb-4">
+                <h2 class="text-3xl font-bold text-white">המלצה: GO מותנה</h2>
+                <span class="px-4 py-1.5 rounded-full text-sm font-medium bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                  דורש פעולה
+                </span>
+              </div>
+              <p class="text-lg text-gray-300 mb-6">המכרז מתאים לפרופיל החברה עם פוטנציאל רווח משמעותי, אך יש לטפל בחסר ISO 27001 לפני ההגשה.</p>
+
+              <div class="flex gap-4">
+                <button class="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold text-lg rounded-xl shadow-lg shadow-green-500/25 hover:shadow-xl hover:shadow-green-500/30 hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-3">
+                  <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                  אשר הגשה
+                </button>
+                <button class="px-8 py-4 bg-red-500/10 border border-red-500/30 text-red-400 font-bold text-lg rounded-xl hover:bg-red-500/20 transition-all duration-300 flex items-center gap-3">
+                  <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                  דחה מכרז
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Decision Factors -->
+        <div class="grid grid-cols-2 gap-6">
+          <!-- Pros -->
+          <div class="p-6 rounded-2xl bg-green-500/5 border border-green-500/20">
+            <h3 class="text-lg font-semibold text-green-400 mb-4 flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+              נקודות לטובת הגשה
+            </h3>
+            <ul class="space-y-3">
+              <li class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                </div>
+                <span class="text-gray-300">עמידה ב-4 מתוך 5 תנאי סף</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                </div>
+                <span class="text-gray-300">ניסיון מוכח בפרויקטים דומים</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                </div>
+                <span class="text-gray-300">היקף כספי משמעותי - ₪12.5M</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                </div>
+                <span class="text-gray-300">צוות טכני מוכשר ומוסמך</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                </div>
+                <span class="text-gray-300">התאמה גבוהה לאסטרטגיית החברה</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Cons -->
+          <div class="p-6 rounded-2xl bg-red-500/5 border border-red-500/20">
+            <h3 class="text-lg font-semibold text-red-400 mb-4 flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+              נקודות לשיקול
+            </h3>
+            <ul class="space-y-3">
+              <li class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </div>
+                <span class="text-gray-300">חסר ISO 27001 - קריטי לתיקון</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </div>
+                <span class="text-gray-300">תחרות חזקה מחברות גדולות</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-4 h-4 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"/>
+                  </svg>
+                </div>
+                <span class="text-gray-300">מועד הגשה קרוב - 3 ימים</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-4 h-4 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"/>
+                  </svg>
+                </div>
+                <span class="text-gray-300">נדרשים משאבים משמעותיים להצעה</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Action Items -->
+        <div class="mt-8 p-6 rounded-2xl bg-indigo-500/5 border border-indigo-500/20">
+          <h3 class="text-lg font-semibold text-indigo-400 mb-4 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+            </svg>
+            פעולות נדרשות
+          </h3>
+          <div class="space-y-3">
+            <div class="flex items-center gap-4 p-3 rounded-xl bg-white/5">
+              <input type="checkbox" class="w-5 h-5 rounded border-gray-600 bg-transparent text-indigo-500 focus:ring-indigo-500">
+              <span class="text-gray-300">יצירת קשר עם גוף ההסמכה לחידוש ISO 27001</span>
+              <span class="mr-auto px-2 py-0.5 rounded text-xs bg-red-500/20 text-red-400">דחוף</span>
+            </div>
+            <div class="flex items-center gap-4 p-3 rounded-xl bg-white/5">
+              <input type="checkbox" class="w-5 h-5 rounded border-gray-600 bg-transparent text-indigo-500 focus:ring-indigo-500">
+              <span class="text-gray-300">הכנת תיק הצעה מפורט</span>
+            </div>
+            <div class="flex items-center gap-4 p-3 rounded-xl bg-white/5">
+              <input type="checkbox" class="w-5 h-5 rounded border-gray-600 bg-transparent text-indigo-500 focus:ring-indigo-500">
+              <span class="text-gray-300">תיאום ישיבת צוות להגשה</span>
+            </div>
+            <div class="flex items-center gap-4 p-3 rounded-xl bg-white/5">
+              <input type="checkbox" class="w-5 h-5 rounded border-gray-600 bg-transparent text-indigo-500 focus:ring-indigo-500">
+              <span class="text-gray-300">בניית הצעת מחיר תחרותית</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Tab Switching Script -->
+  <script>
+    function showTab(tabName) {
+      // Hide all tab contents
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.add('hidden');
+      });
+
+      // Show selected tab
+      document.getElementById(tabName + '-tab').classList.remove('hidden');
+
+      // Update tab buttons
+      document.querySelectorAll('header button').forEach(btn => {
+        btn.classList.remove('text-white', 'border-b-2', 'border-indigo-500');
+        btn.classList.add('text-gray-400');
+      });
+
+      // Find and activate the clicked button (more robust selection)
+      const buttons = document.querySelectorAll('header .flex.gap-1 button');
+      buttons.forEach(btn => {
+        if (btn.getAttribute('onclick')?.includes(tabName)) {
+          btn.classList.remove('text-gray-400');
+          btn.classList.add('text-white', 'border-b-2', 'border-indigo-500');
+        }
+      });
+    }
+  </script>
+
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Tenderix Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/n8n.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/tender.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tenderix | התחברות - AI Tender Intelligence</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="tenderix-styles.css">
+  <link rel="stylesheet" href="tenderix-animations.css">
+
+  <style>
+    body {
+      font-family: 'Heebo', sans-serif;
+      background: #0a0a0f;
+      min-height: 100vh;
+    }
+
+    .login-bg {
+      background:
+        radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(0, 212, 255, 0.05) 0%, transparent 50%),
+        #0a0a0f;
+    }
+
+    .grid-pattern {
+      background-image:
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+
+    .floating-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(60px);
+      animation: float 6s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0) translateX(0); }
+      50% { transform: translateY(-20px) translateX(10px); }
+    }
+
+    .input-glow:focus {
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2), 0 0 20px rgba(99, 102, 241, 0.1);
+    }
+  </style>
+</head>
+<body class="text-white antialiased login-bg grid-pattern">
+  <!-- Floating Orbs Background -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none">
+    <div class="floating-orb w-96 h-96 bg-indigo-500/20 -top-48 -right-48" style="animation-delay: 0s;"></div>
+    <div class="floating-orb w-64 h-64 bg-purple-500/20 top-1/2 -left-32" style="animation-delay: 2s;"></div>
+    <div class="floating-orb w-80 h-80 bg-cyan-500/10 -bottom-40 right-1/4" style="animation-delay: 4s;"></div>
+  </div>
+
+  <div class="min-h-screen flex">
+    <!-- Left Side - Branding -->
+    <div class="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative">
+      <!-- Logo -->
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+          <svg class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-white">Tenderix</h1>
+          <p class="text-sm text-gray-500">AI Tender Intelligence</p>
+        </div>
+      </div>
+
+      <!-- Hero Content -->
+      <div class="max-w-lg">
+        <h2 class="text-5xl font-bold text-white mb-6 leading-tight">
+          העתיד של
+          <span class="bg-gradient-to-r from-indigo-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
+            מודיעין מכרזים
+          </span>
+        </h2>
+        <p class="text-xl text-gray-400 mb-8 leading-relaxed">
+          נתח מכרזי ממשלה בעזרת AI מתקדם. קבל המלצות GO/NO-GO מבוססות נתונים תוך דקות.
+        </p>
+
+        <!-- Features -->
+        <div class="space-y-4">
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+            <span class="text-gray-300">ניתוח אוטומטי של תנאי סף</span>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+              </svg>
+            </div>
+            <span class="text-gray-300">מודיעין תחרותי בזמן אמת</span>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+            </div>
+            <span class="text-gray-300">המלצות מחיר מבוססות AI</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Testimonial -->
+      <div class="p-6 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10">
+        <p class="text-gray-300 mb-4 leading-relaxed">
+          "Tenderix שינה את הדרך בה אנחנו מתמודדים על מכרזים. חסכנו 70% מזמן ההכנה ושיפרנו את אחוזי הזכייה ב-40%."
+        </p>
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-bold">
+            ר
+          </div>
+          <div>
+            <p class="text-white font-medium">רונית כהן</p>
+            <p class="text-sm text-gray-500">מנהלת פיתוח עסקי, TechCorp</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Side - Login Form -->
+    <div class="flex-1 flex items-center justify-center p-8">
+      <div class="w-full max-w-md">
+        <!-- Mobile Logo -->
+        <div class="lg:hidden flex items-center justify-center gap-3 mb-10">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+            <svg class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-2xl font-bold text-white">Tenderix</h1>
+          </div>
+        </div>
+
+        <!-- Login Card -->
+        <div class="p-8 rounded-3xl bg-gray-900/50 backdrop-blur-xl border border-white/10 shadow-2xl animate-fade-in-up">
+          <!-- Tabs -->
+          <div class="flex gap-1 p-1 bg-white/5 rounded-xl mb-8">
+            <button id="login-tab" onclick="switchTab('login')" class="flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all bg-white/10 text-white">
+              התחברות
+            </button>
+            <button id="signup-tab" onclick="switchTab('signup')" class="flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all text-gray-400 hover:text-white">
+              הרשמה
+            </button>
+          </div>
+
+          <!-- Login Form -->
+          <form id="login-form" class="space-y-6" onsubmit="handleLogin(event)">
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-gray-300">אימייל</label>
+              <div class="relative">
+                <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/>
+                </svg>
+                <input type="email" id="login-email" class="w-full pr-12 pl-4 py-3.5 bg-black/50 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-indigo-500 input-glow transition-all duration-300" placeholder="name@company.com" dir="ltr" required>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="block text-sm font-medium text-gray-300">סיסמה</label>
+                <button type="button" onclick="handleForgotPassword()" class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">שכחת סיסמה?</button>
+              </div>
+              <div class="relative">
+                <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+                <input type="password" id="login-password" class="w-full pr-12 pl-12 py-3.5 bg-black/50 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-indigo-500 input-glow transition-all duration-300" placeholder="••••••••" dir="ltr" required>
+                <button type="button" onclick="togglePasswordVisibility('login-password', this)" class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors">
+                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <input type="checkbox" id="remember" class="w-4 h-4 rounded border-gray-600 bg-transparent text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0">
+              <label for="remember" class="text-sm text-gray-400">זכור אותי</label>
+            </div>
+
+            <button type="submit" id="login-btn" class="w-full py-4 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 text-white font-semibold text-center rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+              התחבר
+            </button>
+          </form>
+
+          <!-- Signup Form (Hidden) -->
+          <form id="signup-form" class="space-y-6 hidden" onsubmit="handleSignup(event)">
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-gray-300">שם מלא</label>
+              <div class="relative">
+                <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                <input type="text" id="signup-name" class="w-full pr-12 pl-4 py-3.5 bg-black/50 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-indigo-500 input-glow transition-all duration-300" placeholder="ישראל ישראלי" required>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-gray-300">אימייל</label>
+              <div class="relative">
+                <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/>
+                </svg>
+                <input type="email" id="signup-email" class="w-full pr-12 pl-4 py-3.5 bg-black/50 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-indigo-500 input-glow transition-all duration-300" placeholder="name@company.com" dir="ltr" required>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-gray-300">סיסמה</label>
+              <div class="relative">
+                <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+                <input type="password" id="signup-password" class="w-full pr-12 pl-4 py-3.5 bg-black/50 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-indigo-500 input-glow transition-all duration-300" placeholder="לפחות 8 תווים" dir="ltr" required minlength="6" oninput="updatePasswordStrength(this.value)">
+              </div>
+              <div class="flex gap-1 mt-2" id="password-strength">
+                <div class="h-1 flex-1 rounded-full bg-gray-700 transition-colors"></div>
+                <div class="h-1 flex-1 rounded-full bg-gray-700 transition-colors"></div>
+                <div class="h-1 flex-1 rounded-full bg-gray-700 transition-colors"></div>
+                <div class="h-1 flex-1 rounded-full bg-gray-700 transition-colors"></div>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-3">
+              <input type="checkbox" id="terms" class="w-4 h-4 mt-1 rounded border-gray-600 bg-transparent text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0" required>
+              <label for="terms" class="text-sm text-gray-400">
+                אני מסכים ל<a href="#" class="text-indigo-400 hover:text-indigo-300">תנאי השימוש</a> ול<a href="#" class="text-indigo-400 hover:text-indigo-300">מדיניות הפרטיות</a>
+              </label>
+            </div>
+
+            <button type="submit" id="signup-btn" class="w-full py-4 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 text-white font-semibold text-center rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+              צור חשבון
+            </button>
+          </form>
+
+          <!-- Divider -->
+          <div class="relative my-8">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-white/10"></div>
+            </div>
+            <div class="relative flex justify-center text-sm">
+              <span class="px-4 bg-gray-900/50 text-gray-500">או המשך עם</span>
+            </div>
+          </div>
+
+          <!-- Social Login -->
+          <div class="grid grid-cols-2 gap-4">
+            <button type="button" onclick="handleGoogleLogin()" class="flex items-center justify-center gap-3 py-3.5 px-4 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20 transition-all duration-300">
+              <svg class="w-5 h-5" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              Google
+            </button>
+            <button type="button" onclick="handleGitHubLogin()" class="flex items-center justify-center gap-3 py-3.5 px-4 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20 transition-all duration-300">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+              </svg>
+              GitHub
+            </button>
+          </div>
+
+          <!-- Microsoft SSO -->
+          <button type="button" onclick="handleMicrosoftLogin()" class="w-full mt-4 flex items-center justify-center gap-3 py-3.5 px-4 rounded-xl bg-[#2F2F2F] border border-white/10 text-gray-300 hover:bg-[#3F3F3F] transition-all duration-300">
+            <svg class="w-5 h-5" viewBox="0 0 23 23">
+              <path fill="#f35325" d="M1 1h10v10H1z"/>
+              <path fill="#81bc06" d="M12 1h10v10H12z"/>
+              <path fill="#05a6f0" d="M1 12h10v10H1z"/>
+              <path fill="#ffba08" d="M12 12h10v10H12z"/>
+            </svg>
+            המשך עם Microsoft
+          </button>
+        </div>
+
+        <!-- Footer -->
+        <p class="text-center text-sm text-gray-500 mt-8">
+          © 2026 Tenderix. כל הזכויות שמורות.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Tab switching
+    function switchTab(tab) {
+      const loginTab = document.getElementById('login-tab');
+      const signupTab = document.getElementById('signup-tab');
+      const loginForm = document.getElementById('login-form');
+      const signupForm = document.getElementById('signup-form');
+
+      if (tab === 'login') {
+        loginTab.classList.add('bg-white/10', 'text-white');
+        loginTab.classList.remove('text-gray-400');
+        signupTab.classList.remove('bg-white/10', 'text-white');
+        signupTab.classList.add('text-gray-400');
+        loginForm.classList.remove('hidden');
+        signupForm.classList.add('hidden');
+      } else {
+        signupTab.classList.add('bg-white/10', 'text-white');
+        signupTab.classList.remove('text-gray-400');
+        loginTab.classList.remove('bg-white/10', 'text-white');
+        loginTab.classList.add('text-gray-400');
+        signupForm.classList.remove('hidden');
+        loginForm.classList.add('hidden');
+      }
+    }
+
+    // Toggle password visibility
+    function togglePasswordVisibility(inputId, button) {
+      const input = document.getElementById(inputId);
+      const isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
+
+      // Update icon
+      button.innerHTML = isPassword
+        ? `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+           </svg>`
+        : `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+           </svg>`;
+    }
+
+    // Password strength indicator
+    function updatePasswordStrength(password) {
+      const bars = document.querySelectorAll('#password-strength > div');
+      let strength = 0;
+
+      if (password.length >= 6) strength++;
+      if (password.length >= 8) strength++;
+      if (/[A-Z]/.test(password) && /[a-z]/.test(password)) strength++;
+      if (/[0-9]/.test(password) || /[^A-Za-z0-9]/.test(password)) strength++;
+
+      const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500'];
+
+      bars.forEach((bar, index) => {
+        bar.classList.remove('bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500');
+        if (index < strength) {
+          bar.classList.add(colors[strength - 1]);
+        } else {
+          bar.classList.add('bg-gray-700');
+        }
+      });
+    }
+
+    // Set button loading state
+    function setButtonLoading(buttonId, loading) {
+      const button = document.getElementById(buttonId);
+      if (loading) {
+        button.disabled = true;
+        button.dataset.originalText = button.textContent;
+        button.innerHTML = `<svg class="animate-spin h-5 w-5 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>`;
+      } else {
+        button.disabled = false;
+        button.textContent = button.dataset.originalText;
+      }
+    }
+
+    // Handle login form submission
+    async function handleLogin(event) {
+      event.preventDefault();
+
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+
+      setButtonLoading('login-btn', true);
+
+      try {
+        await Auth.signIn(email, password);
+        window.location.href = 'tenderix-dashboard.html';
+      } catch (error) {
+        console.error('Login failed:', error);
+      } finally {
+        setButtonLoading('login-btn', false);
+      }
+    }
+
+    // Handle signup form submission
+    async function handleSignup(event) {
+      event.preventDefault();
+
+      const name = document.getElementById('signup-name').value;
+      const email = document.getElementById('signup-email').value;
+      const password = document.getElementById('signup-password').value;
+
+      setButtonLoading('signup-btn', true);
+
+      try {
+        await Auth.signUp(email, password, { fullName: name });
+        // Redirect to onboarding after successful signup
+        window.location.href = 'tenderix-onboarding.html';
+      } catch (error) {
+        console.error('Signup failed:', error);
+      } finally {
+        setButtonLoading('signup-btn', false);
+      }
+    }
+
+    // Handle forgot password
+    async function handleForgotPassword() {
+      const email = document.getElementById('login-email').value;
+
+      if (!email) {
+        Utils.showToast('warning', 'הזן אימייל', 'יש להזין כתובת אימייל לשחזור סיסמה');
+        return;
+      }
+
+      try {
+        await Auth.resetPassword(email);
+      } catch (error) {
+        console.error('Password reset failed:', error);
+      }
+    }
+
+    // Social login handlers
+    async function handleGoogleLogin() {
+      try {
+        await Auth.signInWithGoogle();
+      } catch (error) {
+        console.error('Google login failed:', error);
+      }
+    }
+
+    async function handleGitHubLogin() {
+      try {
+        await Auth.signInWithGitHub();
+      } catch (error) {
+        console.error('GitHub login failed:', error);
+      }
+    }
+
+    async function handleMicrosoftLogin() {
+      try {
+        await Auth.signInWithMicrosoft();
+      } catch (error) {
+        console.error('Microsoft login failed:', error);
+      }
+    }
+
+    // Check if already logged in on page load
+    
+  </script>
+
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Tenderix Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+
+  <!-- Initialize on load -->
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      console.log('[Login] Page loaded, checking auth...');
+      if (typeof Auth !== 'undefined') {
+        await Auth.redirectIfLoggedIn('tenderix-dashboard.html');
+      }
+    });
+  </script>
+
+</body>
+</html>
+
+

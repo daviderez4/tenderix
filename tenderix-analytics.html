@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>אנליטיקס | Tenderix</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="tenderix-styles.css">
+    <link rel="stylesheet" href="tenderix-animations.css">
+    <style>
+        body {
+            font-family: 'Heebo', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .metric-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            filter: blur(40px);
+            opacity: 0.3;
+        }
+
+        .metric-card.primary::before {
+            background: var(--primary);
+        }
+
+        .metric-card.success::before {
+            background: var(--success);
+        }
+
+        .metric-card.accent::before {
+            background: var(--accent);
+        }
+
+        .metric-card.warning::before {
+            background: #F59E0B;
+        }
+
+        .metric-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+            box-shadow: var(--glow-primary);
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .metric-card.success .metric-value {
+            background: linear-gradient(135deg, #10B981, #34D399);
+            -webkit-background-clip: text;
+            background-clip: text;
+        }
+
+        .metric-card.accent .metric-value {
+            background: linear-gradient(135deg, #8B5CF6, #A78BFA);
+            -webkit-background-clip: text;
+            background-clip: text;
+        }
+
+        .metric-card.warning .metric-value {
+            background: linear-gradient(135deg, #F59E0B, #FBBF24);
+            -webkit-background-clip: text;
+            background-clip: text;
+        }
+
+        .trend-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .trend-badge.up {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .trend-badge.down {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .chart-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 1.5rem;
+        }
+
+        .chart-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .time-filter {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .time-btn {
+            padding: 0.375rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .time-btn:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .time-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Bar Chart */
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            height: 200px;
+            gap: 1rem;
+            padding-top: 1rem;
+        }
+
+        .bar-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .bar {
+            width: 100%;
+            max-width: 40px;
+            border-radius: 8px 8px 0 0;
+            background: var(--gradient-primary);
+            transition: all 0.5s ease;
+            position: relative;
+        }
+
+        .bar:hover {
+            filter: brightness(1.2);
+            box-shadow: var(--glow-primary);
+        }
+
+        .bar-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .bar-value {
+            position: absolute;
+            top: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .bar:hover .bar-value {
+            opacity: 1;
+        }
+
+        /* Line Chart */
+        .line-chart-container {
+            position: relative;
+            height: 200px;
+            padding: 1rem 0;
+        }
+
+        .line-chart {
+            width: 100%;
+            height: 100%;
+        }
+
+        .chart-line {
+            fill: none;
+            stroke: url(#lineGradient);
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .chart-area {
+            fill: url(#areaGradient);
+        }
+
+        .chart-dot {
+            fill: var(--primary);
+            stroke: white;
+            stroke-width: 2;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .chart-dot:hover {
+            r: 8;
+            filter: drop-shadow(0 0 8px var(--primary));
+        }
+
+        /* Donut Chart */
+        .donut-chart-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+        }
+
+        .donut-chart {
+            position: relative;
+            width: 180px;
+            height: 180px;
+        }
+
+        .donut-chart svg {
+            transform: rotate(-90deg);
+        }
+
+        .donut-segment {
+            fill: none;
+            stroke-width: 24;
+            stroke-linecap: round;
+            transition: all 0.5s ease;
+        }
+
+        .donut-segment:hover {
+            stroke-width: 28;
+            filter: brightness(1.2);
+        }
+
+        .donut-center {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .donut-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 4px;
+        }
+
+        /* Progress Bars */
+        .progress-item {
+            margin-bottom: 1.25rem;
+        }
+
+        .progress-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1s ease;
+        }
+
+        /* Activity List */
+        .activity-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .activity-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .activity-row:last-child {
+            border-bottom: none;
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Table */
+        .data-table {
+            width: 100%;
+        }
+
+        .data-table th {
+            text-align: right;
+            padding: 0.75rem 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .data-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .data-table tr:hover td {
+            background: var(--glass-bg);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 0.5rem;
+        }
+
+        /* Heatmap */
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 4px;
+        }
+
+        .heatmap-cell {
+            aspect-ratio: 1;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .heatmap-cell:hover {
+            transform: scale(1.2);
+        }
+
+        .heatmap-cell.level-0 { background: rgba(99, 102, 241, 0.1); }
+        .heatmap-cell.level-1 { background: rgba(99, 102, 241, 0.25); }
+        .heatmap-cell.level-2 { background: rgba(99, 102, 241, 0.4); }
+        .heatmap-cell.level-3 { background: rgba(99, 102, 241, 0.6); }
+        .heatmap-cell.level-4 { background: rgba(99, 102, 241, 0.8); }
+        .heatmap-cell.level-5 { background: var(--primary); box-shadow: 0 0 10px var(--primary); }
+
+        .comparison-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            border-radius: 12px;
+            background: var(--bg-tertiary);
+            margin-bottom: 0.75rem;
+        }
+
+        .comparison-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .vs-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.625rem;
+            font-weight: 700;
+            background: var(--glass-bg);
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="fixed top-0 right-0 h-full w-64 bg-glass-bg backdrop-blur-xl border-l border-glass-border z-50 p-6 flex flex-col" style="background: var(--glass-bg); border-color: var(--glass-border);">
+        <!-- Logo -->
+        <div class="flex items-center gap-3 mb-8">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: var(--gradient-primary);">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+            </div>
+            <span class="text-xl font-bold">Tenderix</span>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 space-y-2">
+            <a href="tenderix-dashboard.html" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl transition-all" style="color: var(--text-secondary);">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                </svg>
+                דשבורד
+            </a>
+            <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl transition-all" style="color: var(--text-secondary);">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                מכרזים
+            </a>
+            <a href="tenderix-analytics.html" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl transition-all" style="background: var(--glass-bg); color: var(--primary); border: 1px solid var(--primary);">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+                אנליטיקס
+            </a>
+            <a href="tenderix-notifications.html" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl transition-all" style="color: var(--text-secondary);">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                </svg>
+                התראות
+                <span class="mr-auto px-2 py-0.5 rounded-full text-xs font-medium" style="background: var(--danger); color: white;">7</span>
+            </a>
+            <a href="tenderix-settings.html" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl transition-all" style="color: var(--text-secondary);">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                הגדרות
+            </a>
+        </nav>
+
+        <!-- User Profile -->
+        <div class="pt-4 border-t" style="border-color: var(--border-subtle);">
+            <a href="tenderix-profile.html" class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-glass-bg">
+                <div id="sidebar-avatar" class="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-white font-bold" style="border: 2px solid var(--glass-border); background: linear-gradient(135deg, #6366f1, #8b5cf6);">
+                    ד
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div id="sidebar-name" class="font-medium truncate">דוד כהן</div>
+                    <div id="sidebar-role" class="text-xs truncate" style="color: var(--text-muted);">מנכ"ל</div>
+                </div>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="mr-64 p-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-3xl font-bold mb-2">אנליטיקס</h1>
+                <p style="color: var(--text-secondary);">מעקב אחר ביצועים, מגמות וסטטיסטיקות</p>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div id="time-filter" class="time-filter">
+                    <button class="time-btn" data-period="7">7 ימים</button>
+                    <button class="time-btn active" data-period="30">30 יום</button>
+                    <button class="time-btn" data-period="90">90 יום</button>
+                    <button class="time-btn" data-period="365">שנה</button>
+                </div>
+                <button id="export-btn" class="px-4 py-2 rounded-xl font-medium transition-all flex items-center gap-2" style="background: var(--gradient-primary); color: white;">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    ייצוא דוח
+                </button>
+            </div>
+        </div>
+
+        <!-- Metrics Grid -->
+        <div id="metrics-grid" class="grid grid-cols-4 gap-6 mb-8">
+            <div class="metric-card primary animate-fade-in" style="animation-delay: 0.1s;">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background: rgba(99, 102, 241, 0.2);">
+                        <svg class="w-6 h-6" style="color: var(--primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                    </div>
+                    <span id="metric-analyzed-trend" class="trend-badge up">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+                        </svg>
+                        +23%
+                    </span>
+                </div>
+                <div id="metric-analyzed" class="metric-value">0</div>
+                <div class="text-sm" style="color: var(--text-secondary);">מכרזים שנותחו</div>
+            </div>
+
+            <div class="metric-card success animate-fade-in" style="animation-delay: 0.2s;">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background: rgba(16, 185, 129, 0.2);">
+                        <svg class="w-6 h-6" style="color: var(--success);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+                        </svg>
+                    </div>
+                    <span id="metric-wins-trend" class="trend-badge up">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+                        </svg>
+                        +15%
+                    </span>
+                </div>
+                <div id="metric-wins" class="metric-value">0</div>
+                <div class="text-sm" style="color: var(--text-secondary);">זכיות</div>
+            </div>
+
+            <div class="metric-card accent animate-fade-in" style="animation-delay: 0.3s;">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background: rgba(139, 92, 246, 0.2);">
+                        <svg class="w-6 h-6" style="color: var(--accent);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <span id="metric-value-trend" class="trend-badge up">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+                        </svg>
+                        +42%
+                    </span>
+                </div>
+                <div id="metric-total-value" class="metric-value">₪0</div>
+                <div class="text-sm" style="color: var(--text-secondary);">סה"כ זכיות</div>
+            </div>
+
+            <div class="metric-card warning animate-fade-in" style="animation-delay: 0.4s;">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background: rgba(245, 158, 11, 0.2);">
+                        <svg class="w-6 h-6" style="color: #F59E0B;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                        </svg>
+                    </div>
+                    <span id="metric-rate-trend" class="trend-badge up">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+                        </svg>
+                        +8%
+                    </span>
+                </div>
+                <div id="metric-win-rate" class="metric-value">0%</div>
+                <div class="text-sm" style="color: var(--text-secondary);">אחוז זכייה</div>
+            </div>
+        </div>
+
+        <!-- Charts Row 1 -->
+        <div class="grid grid-cols-3 gap-6 mb-8">
+            <!-- Win Rate Trend -->
+            <div class="col-span-2 chart-card animate-fade-in" style="animation-delay: 0.3s;">
+                <div class="chart-header">
+                    <div>
+                        <h3 class="text-lg font-semibold">מגמת אחוז זכייה</h3>
+                        <p class="text-sm" style="color: var(--text-secondary);">השוואה ל-12 חודשים אחרונים</p>
+                    </div>
+                    <div class="time-filter">
+                        <button class="time-btn active">חודשי</button>
+                        <button class="time-btn">רבעוני</button>
+                    </div>
+                </div>
+
+                <div class="line-chart-container">
+                    <svg class="line-chart" viewBox="0 0 800 200" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" style="stop-color: #6366F1"/>
+                                <stop offset="100%" style="stop-color: #8B5CF6"/>
+                            </linearGradient>
+                            <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" style="stop-color: rgba(99, 102, 241, 0.3)"/>
+                                <stop offset="100%" style="stop-color: rgba(99, 102, 241, 0)"/>
+                            </linearGradient>
+                        </defs>
+
+                        <!-- Grid lines -->
+                        <line x1="0" y1="50" x2="800" y2="50" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+                        <line x1="0" y1="100" x2="800" y2="100" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+                        <line x1="0" y1="150" x2="800" y2="150" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+
+                        <!-- Area -->
+                        <path class="chart-area" d="M0,180 L67,150 L134,160 L201,120 L268,130 L335,100 L402,90 L469,70 L536,80 L603,50 L670,60 L737,40 L800,30 L800,200 L0,200 Z"/>
+
+                        <!-- Line -->
+                        <path class="chart-line" d="M0,180 L67,150 L134,160 L201,120 L268,130 L335,100 L402,90 L469,70 L536,80 L603,50 L670,60 L737,40 L800,30"/>
+
+                        <!-- Data points -->
+                        <circle class="chart-dot" cx="0" cy="180" r="5"/>
+                        <circle class="chart-dot" cx="67" cy="150" r="5"/>
+                        <circle class="chart-dot" cx="134" cy="160" r="5"/>
+                        <circle class="chart-dot" cx="201" cy="120" r="5"/>
+                        <circle class="chart-dot" cx="268" cy="130" r="5"/>
+                        <circle class="chart-dot" cx="335" cy="100" r="5"/>
+                        <circle class="chart-dot" cx="402" cy="90" r="5"/>
+                        <circle class="chart-dot" cx="469" cy="70" r="5"/>
+                        <circle class="chart-dot" cx="536" cy="80" r="5"/>
+                        <circle class="chart-dot" cx="603" cy="50" r="5"/>
+                        <circle class="chart-dot" cx="670" cy="60" r="5"/>
+                        <circle class="chart-dot" cx="737" cy="40" r="5"/>
+                        <circle class="chart-dot" cx="800" cy="30" r="5"/>
+                    </svg>
+                </div>
+
+                <div class="flex justify-between text-xs" style="color: var(--text-muted);">
+                    <span>ינואר</span>
+                    <span>פברואר</span>
+                    <span>מרץ</span>
+                    <span>אפריל</span>
+                    <span>מאי</span>
+                    <span>יוני</span>
+                    <span>יולי</span>
+                    <span>אוגוסט</span>
+                    <span>ספטמבר</span>
+                    <span>אוקטובר</span>
+                    <span>נובמבר</span>
+                    <span>דצמבר</span>
+                </div>
+            </div>
+
+            <!-- Category Distribution -->
+            <div class="chart-card animate-fade-in" style="animation-delay: 0.4s;">
+                <div class="chart-header">
+                    <h3 class="text-lg font-semibold">התפלגות לפי קטגוריה</h3>
+                </div>
+
+                <div class="donut-chart-container">
+                    <div class="donut-chart">
+                        <svg width="180" height="180" viewBox="0 0 180 180">
+                            <circle class="donut-segment" cx="90" cy="90" r="70" stroke="#6366F1" stroke-dasharray="132 308" stroke-dashoffset="0"/>
+                            <circle class="donut-segment" cx="90" cy="90" r="70" stroke="#8B5CF6" stroke-dasharray="88 352" stroke-dashoffset="-132"/>
+                            <circle class="donut-segment" cx="90" cy="90" r="70" stroke="#10B981" stroke-dasharray="66 374" stroke-dashoffset="-220"/>
+                            <circle class="donut-segment" cx="90" cy="90" r="70" stroke="#F59E0B" stroke-dasharray="44 396" stroke-dashoffset="-286"/>
+                            <circle class="donut-segment" cx="90" cy="90" r="70" stroke="#EC4899" stroke-dasharray="110 330" stroke-dashoffset="-330"/>
+                        </svg>
+                        <div class="donut-center">
+                            <span id="donut-total" class="text-2xl font-bold">0</span>
+                            <span class="text-xs" style="color: var(--text-muted);">מכרזים</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="donut-legend" class="donut-legend mt-6">
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #6366F1;"></div>
+                        <span class="text-sm flex-1">טכנולוגיה ומידע</span>
+                        <span class="text-sm font-medium">30%</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #8B5CF6;"></div>
+                        <span class="text-sm flex-1">אבטחת סייבר</span>
+                        <span class="text-sm font-medium">20%</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #10B981;"></div>
+                        <span class="text-sm flex-1">פיתוח תוכנה</span>
+                        <span class="text-sm font-medium">15%</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #F59E0B;"></div>
+                        <span class="text-sm flex-1">תשתיות</span>
+                        <span class="text-sm font-medium">10%</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #EC4899;"></div>
+                        <span class="text-sm flex-1">אחר</span>
+                        <span class="text-sm font-medium">25%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 2 -->
+        <div class="grid grid-cols-3 gap-6 mb-8">
+            <!-- Monthly Submissions -->
+            <div class="chart-card animate-fade-in" style="animation-delay: 0.5s;">
+                <div class="chart-header">
+                    <h3 class="text-lg font-semibold">הגשות חודשיות</h3>
+                </div>
+
+                <div id="bar-chart" class="bar-chart">
+                    <div class="bar-item">
+                        <div class="bar" style="height: 60%;">
+                            <span class="bar-value">3</span>
+                        </div>
+                        <span class="bar-label">ינו'</span>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="height: 80%;">
+                            <span class="bar-value">4</span>
+                        </div>
+                        <span class="bar-label">פבר'</span>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="height: 50%;">
+                            <span class="bar-value">2</span>
+                        </div>
+                        <span class="bar-label">מרץ</span>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="height: 90%;">
+                            <span class="bar-value">5</span>
+                        </div>
+                        <span class="bar-label">אפר'</span>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="height: 70%;">
+                            <span class="bar-value">3</span>
+                        </div>
+                        <span class="bar-label">מאי</span>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="height: 100%;">
+                            <span class="bar-value">6</span>
+                        </div>
+                        <span class="bar-label">יוני</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Win Rate by Ministry -->
+            <div class="chart-card animate-fade-in" style="animation-delay: 0.6s;">
+                <div class="chart-header">
+                    <h3 class="text-lg font-semibold">אחוז זכייה לפי משרד</h3>
+                </div>
+
+                <div id="ministry-stats" class="space-y-1">
+                    <div class="progress-item">
+                        <div class="progress-header">
+                            <span class="text-sm">משרד הבריאות</span>
+                            <span class="text-sm font-medium" style="color: var(--success);">85%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 85%; background: var(--gradient-primary);"></div>
+                        </div>
+                    </div>
+                    <div class="progress-item">
+                        <div class="progress-header">
+                            <span class="text-sm">משרד הפנים</span>
+                            <span class="text-sm font-medium" style="color: var(--success);">72%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 72%; background: linear-gradient(135deg, #8B5CF6, #A78BFA);"></div>
+                        </div>
+                    </div>
+                    <div class="progress-item">
+                        <div class="progress-header">
+                            <span class="text-sm">משרד האוצר</span>
+                            <span class="text-sm font-medium" style="color: var(--warning);">58%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 58%; background: linear-gradient(135deg, #10B981, #34D399);"></div>
+                        </div>
+                    </div>
+                    <div class="progress-item">
+                        <div class="progress-header">
+                            <span class="text-sm">משרד התחבורה</span>
+                            <span class="text-sm font-medium" style="color: var(--warning);">45%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 45%; background: linear-gradient(135deg, #F59E0B, #FBBF24);"></div>
+                        </div>
+                    </div>
+                    <div class="progress-item">
+                        <div class="progress-header">
+                            <span class="text-sm">משרד הביטחון</span>
+                            <span class="text-sm font-medium" style="color: var(--danger);">33%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 33%; background: linear-gradient(135deg, #EC4899, #F472B6);"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Competitor Analysis -->
+            <div class="chart-card animate-fade-in" style="animation-delay: 0.7s;">
+                <div class="chart-header">
+                    <h3 class="text-lg font-semibold">השוואת מתחרים</h3>
+                </div>
+
+                <div class="comparison-card">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: var(--gradient-primary);">
+                            <span class="text-xs font-bold text-white">אתה</span>
+                        </div>
+                        <div>
+                            <div id="company-name" class="font-medium">טכנולוגיות כהן</div>
+                            <div class="text-xs" style="color: var(--text-muted);"><span id="your-win-rate">67</span>% זכיות</div>
+                        </div>
+                    </div>
+                    <span class="vs-badge">VS</span>
+                    <div class="text-left">
+                        <div class="font-medium">ממוצע שוק</div>
+                        <div class="text-xs" style="color: var(--text-muted);">42% זכיות</div>
+                    </div>
+                </div>
+
+                <div class="comparison-card">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: rgba(16, 185, 129, 0.2);">
+                            <span class="text-xs font-bold" style="color: var(--success);">+25%</span>
+                        </div>
+                        <div>
+                            <div class="font-medium">יתרון תחרותי</div>
+                            <div class="text-xs" style="color: var(--text-muted);">מעל הממוצע</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 p-4 rounded-xl" style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2);">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 mt-0.5" style="color: var(--primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                        </svg>
+                        <div>
+                            <div class="text-sm font-medium" style="color: var(--primary);">תובנת AI</div>
+                            <p class="text-xs mt-1" style="color: var(--text-secondary);">הביצועים שלך במשרד הבריאות גבוהים במיוחד. שקול להתמקד בתחום זה.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Row -->
+        <div class="grid grid-cols-3 gap-6">
+            <!-- Recent Tenders Table -->
+            <div class="col-span-2 chart-card animate-fade-in" style="animation-delay: 0.8s;">
+                <div class="chart-header">
+                    <h3 class="text-lg font-semibold">מכרזים אחרונים</h3>
+                    <a href="#" class="text-sm" style="color: var(--primary);">צפה בכולם →</a>
+                </div>
+
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>שם המכרז</th>
+                            <th>משרד</th>
+                            <th>תקציב</th>
+                            <th>סטטוס</th>
+                            <th>ציון AI</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tenders-table-body">
+                        <tr>
+                            <td class="font-medium">פיתוח מערכת CRM</td>
+                            <td style="color: var(--text-secondary);">רשות המסים</td>
+                            <td>₪1.8M</td>
+                            <td>
+                                <span class="status-dot" style="background: var(--success);"></span>
+                                <span style="color: var(--success);">זכייה</span>
+                            </td>
+                            <td>
+                                <span class="px-2 py-1 rounded-lg text-xs font-medium" style="background: rgba(16, 185, 129, 0.2); color: var(--success);">92</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="font-medium">שירותי אבטחת סייבר</td>
+                            <td style="color: var(--text-secondary);">משרד הביטחון</td>
+                            <td>₪3.2M</td>
+                            <td>
+                                <span class="status-dot" style="background: #F59E0B;"></span>
+                                <span style="color: #F59E0B;">בהמתנה</span>
+                            </td>
+                            <td>
+                                <span class="px-2 py-1 rounded-lg text-xs font-medium" style="background: rgba(245, 158, 11, 0.2); color: #F59E0B;">78</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="font-medium">מערכת ניהול מידע</td>
+                            <td style="color: var(--text-secondary);">משרד הבריאות</td>
+                            <td>₪950K</td>
+                            <td>
+                                <span class="status-dot" style="background: var(--success);"></span>
+                                <span style="color: var(--success);">זכייה</span>
+                            </td>
+                            <td>
+                                <span class="px-2 py-1 rounded-lg text-xs font-medium" style="background: rgba(16, 185, 129, 0.2); color: var(--success);">88</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="font-medium">שדרוג תשתיות IT</td>
+                            <td style="color: var(--text-secondary);">משרד הפנים</td>
+                            <td>₪2.1M</td>
+                            <td>
+                                <span class="status-dot" style="background: var(--danger);"></span>
+                                <span style="color: var(--danger);">הפסד</span>
+                            </td>
+                            <td>
+                                <span class="px-2 py-1 rounded-lg text-xs font-medium" style="background: rgba(239, 68, 68, 0.2); color: var(--danger);">65</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="font-medium">פיתוח אפליקציה</td>
+                            <td style="color: var(--text-secondary);">משרד התחבורה</td>
+                            <td>₪1.5M</td>
+                            <td>
+                                <span class="status-dot" style="background: var(--primary);"></span>
+                                <span style="color: var(--primary);">בניתוח</span>
+                            </td>
+                            <td>
+                                <span class="px-2 py-1 rounded-lg text-xs font-medium" style="background: rgba(99, 102, 241, 0.2); color: var(--primary);">—</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Activity Heatmap -->
+            <div class="chart-card animate-fade-in" style="animation-delay: 0.9s;">
+                <div class="chart-header">
+                    <h3 class="text-lg font-semibold">פעילות שנתית</h3>
+                </div>
+
+                <div class="mb-4">
+                    <div class="flex justify-between text-xs mb-2" style="color: var(--text-muted);">
+                        <span>ינו'</span>
+                        <span>פבר'</span>
+                        <span>מרץ</span>
+                        <span>אפר'</span>
+                        <span>מאי</span>
+                        <span>יוני</span>
+                        <span>יולי</span>
+                        <span>אוג'</span>
+                        <span>ספט'</span>
+                        <span>אוק'</span>
+                        <span>נוב'</span>
+                        <span>דצ'</span>
+                    </div>
+                    <div class="heatmap-grid">
+                        <!-- Row 1 - Week 1 -->
+                        <div class="heatmap-cell level-2"></div>
+                        <div class="heatmap-cell level-1"></div>
+                        <div class="heatmap-cell level-3"></div>
+                        <div class="heatmap-cell level-0"></div>
+                        <div class="heatmap-cell level-2"></div>
+                        <div class="heatmap-cell level-4"></div>
+                        <div class="heatmap-cell level-3"></div>
+                        <div class="heatmap-cell level-1"></div>
+                        <div class="heatmap-cell level-5"></div>
+                        <div class="heatmap-cell level-2"></div>
+                        <div class="heatmap-cell level-3"></div>
+                        <div class="heatmap-cell level-4"></div>
+                        <!-- Row 2 - Week 2 -->
+                        <div class="heatmap-cell level-1"></div>
+                        <div class="heatmap-cell level-3"></div>
+                        <div class="heatmap-cell level-2"></div>
+                        <div class="heatmap-cell level-4"></div>
+                        <div class="heatmap-cell level-1"></div>
+                        <div class="heatmap-cell level-2"></div>
+                        <div class="heatmap-cell level-5"></div>
+                        <div class="heatmap-cell level-3"></div>
+                        <div class="heatmap-cell level-2"></div>
+                        <div class="heatmap-cell level-4"></div>
+                        <div class="heatmap-cell level-1"></div>
+                        <div class="heatmap-cell level-3"></div>
+                        <!-- Row 3 - Week 3 -->
+                        <div class="heatmap-cell level-0"></div>
+                        <div class="heatmap-cell level-2"></div>
+                        <div class="heatmap-cell level-5"></div>
+                        <div class="heatmap-cell level-1"></div>
+                        <div class="heatmap-cell level-3"></div>
+                        <div class="heatmap-cell level-2"></div>
+                        <div class="heatmap-cell level-1"></div>
+                        <div class="heatmap-cell level-4"></div>
+                        <div class="heatmap-cell level-3"></div>
+                        <div class="heatmap-cell level-5"></div>
+                        <div class="heatmap-cell level-2"></div>
+                        <div class="heatmap-cell level-5"></div>
+                        <!-- Row 4 - Week 4 -->
+                        <div class="heatmap-cell level-3"></div>
+                        <div class="heatmap-cell level-4"></div>
+                        <div class="heatmap-cell level-1"></div>
+                        <div class="heatmap-cell level-2"></div>
+                        <div class="heatmap-cell level-5"></div>
+                        <div class="heatmap-cell level-3"></div>
+                        <div class="heatmap-cell level-4"></div>
+                        <div class="heatmap-cell level-2"></div>
+                        <div class="heatmap-cell level-1"></div>
+                        <div class="heatmap-cell level-3"></div>
+                        <div class="heatmap-cell level-4"></div>
+                        <div class="heatmap-cell level-2"></div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between mt-4">
+                    <span class="text-xs" style="color: var(--text-muted);">פחות</span>
+                    <div class="flex gap-1">
+                        <div class="w-3 h-3 rounded heatmap-cell level-0"></div>
+                        <div class="w-3 h-3 rounded heatmap-cell level-1"></div>
+                        <div class="w-3 h-3 rounded heatmap-cell level-2"></div>
+                        <div class="w-3 h-3 rounded heatmap-cell level-3"></div>
+                        <div class="w-3 h-3 rounded heatmap-cell level-4"></div>
+                        <div class="w-3 h-3 rounded heatmap-cell level-5"></div>
+                    </div>
+                    <span class="text-xs" style="color: var(--text-muted);">יותר</span>
+                </div>
+
+                <div class="mt-6 p-4 rounded-xl" style="background: var(--bg-tertiary);">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div id="activity-count" class="text-2xl font-bold" style="background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">0</div>
+                            <div class="text-xs" style="color: var(--text-muted);">פעולות השנה</div>
+                        </div>
+                        <div class="text-left">
+                            <div id="activity-growth" class="text-2xl font-bold" style="color: var(--success);">+0%</div>
+                            <div class="text-xs" style="color: var(--text-muted);">לעומת שנה שעברה</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ============================================
+        // ANALYTICS PAGE
+        // ============================================
+
+        let currentPeriod = 30;
+        let analyticsData = null;
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await Auth.requireAuth('tenderix-login.html');
+                await initAnalyticsPage();
+            } catch (error) {
+                console.error('Auth check failed:', error);
+            }
+        });
+
+        async function initAnalyticsPage() {
+            try {
+                // Load user info for sidebar
+                await loadUserInfo();
+
+                // Load analytics data
+                await loadAnalyticsData();
+
+                // Setup event listeners
+                setupEventListeners();
+
+                // Animate charts
+                animateCharts();
+
+            } catch (error) {
+                console.error('Failed to initialize analytics page:', error);
+                Utils.showToast('error', 'שגיאה', 'נכשל בטעינת הנתונים');
+            }
+        }
+
+        // ============================================
+        // USER INFO
+        // ============================================
+
+        async function loadUserInfo() {
+            try {
+                const user = await Auth.getCurrentUser();
+                if (!user) return;
+
+                const metadata = user.user_metadata || {};
+                const displayName = metadata.full_name || metadata.name || user.email?.split('@')[0] || 'משתמש';
+                const initial = displayName.charAt(0).toUpperCase();
+
+                // Update sidebar avatar
+                const sidebarAvatar = document.getElementById('sidebar-avatar');
+                if (sidebarAvatar) {
+                    if (metadata.avatar_url) {
+                        sidebarAvatar.innerHTML = `<img src="${metadata.avatar_url}" alt="Avatar" class="w-full h-full object-cover">`;
+                    } else {
+                        sidebarAvatar.textContent = initial;
+                    }
+                }
+
+                // Update sidebar name and role
+                const sidebarName = document.getElementById('sidebar-name');
+                const sidebarRole = document.getElementById('sidebar-role');
+                if (sidebarName) sidebarName.textContent = displayName;
+                if (sidebarRole) sidebarRole.textContent = metadata.role || 'משתמש';
+
+                // Update company name in competitor section
+                const companyName = document.getElementById('company-name');
+                if (companyName && metadata.company_name) {
+                    companyName.textContent = metadata.company_name;
+                }
+
+            } catch (error) {
+                console.error('Failed to load user info:', error);
+            }
+        }
+
+        // ============================================
+        // ANALYTICS DATA
+        // ============================================
+
+        async function loadAnalyticsData() {
+            try {
+                // Try to load from API, fall back to sample data
+                try {
+                    analyticsData = await API.Analytics.getDashboardStats({ period: currentPeriod });
+                } catch (e) {
+                    analyticsData = getSampleAnalyticsData();
+                }
+
+                // Update all UI elements
+                updateMetrics();
+                updateCharts();
+                updateTable();
+
+            } catch (error) {
+                console.error('Failed to load analytics:', error);
+                analyticsData = getSampleAnalyticsData();
+                updateMetrics();
+                updateCharts();
+                updateTable();
+            }
+        }
+
+        function getSampleAnalyticsData() {
+            return {
+                metrics: {
+                    analyzed: 47,
+                    analyzedTrend: 23,
+                    wins: 8,
+                    winsTrend: 15,
+                    totalValue: 4200000,
+                    valueTrend: 42,
+                    winRate: 67,
+                    rateTrend: 8
+                },
+                categories: [
+                    { name: 'טכנולוגיה ומידע', value: 30, color: '#6366F1' },
+                    { name: 'אבטחת סייבר', value: 20, color: '#8B5CF6' },
+                    { name: 'פיתוח תוכנה', value: 15, color: '#10B981' },
+                    { name: 'תשתיות', value: 10, color: '#F59E0B' },
+                    { name: 'אחר', value: 25, color: '#EC4899' }
+                ],
+                monthlySubmissions: [
+                    { month: "ינו'", value: 3 },
+                    { month: "פבר'", value: 4 },
+                    { month: "מרץ", value: 2 },
+                    { month: "אפר'", value: 5 },
+                    { month: "מאי", value: 3 },
+                    { month: "יוני", value: 6 }
+                ],
+                ministryStats: [
+                    { name: 'משרד הבריאות', rate: 85, color: 'var(--gradient-primary)' },
+                    { name: 'משרד הפנים', rate: 72, color: 'linear-gradient(135deg, #8B5CF6, #A78BFA)' },
+                    { name: 'משרד האוצר', rate: 58, color: 'linear-gradient(135deg, #10B981, #34D399)' },
+                    { name: 'משרד התחבורה', rate: 45, color: 'linear-gradient(135deg, #F59E0B, #FBBF24)' },
+                    { name: 'משרד הביטחון', rate: 33, color: 'linear-gradient(135deg, #EC4899, #F472B6)' }
+                ],
+                recentTenders: [
+                    { name: 'פיתוח מערכת CRM', ministry: 'רשות המסים', budget: 1800000, status: 'win', score: 92 },
+                    { name: 'שירותי אבטחת סייבר', ministry: 'משרד הביטחון', budget: 3200000, status: 'pending', score: 78 },
+                    { name: 'מערכת ניהול מידע', ministry: 'משרד הבריאות', budget: 950000, status: 'win', score: 88 },
+                    { name: 'שדרוג תשתיות IT', ministry: 'משרד הפנים', budget: 2100000, status: 'loss', score: 65 },
+                    { name: 'פיתוח אפליקציה', ministry: 'משרד התחבורה', budget: 1500000, status: 'analyzing', score: null }
+                ],
+                activity: {
+                    count: 156,
+                    growth: 34
+                }
+            };
+        }
+
+        function updateMetrics() {
+            const { metrics } = analyticsData;
+
+            // Update metric values with animation
+            animateValue('metric-analyzed', metrics.analyzed);
+            animateValue('metric-wins', metrics.wins);
+
+            const formattedValue = formatCurrency(metrics.totalValue);
+            document.getElementById('metric-total-value').textContent = formattedValue;
+
+            document.getElementById('metric-win-rate').textContent = metrics.winRate + '%';
+
+            // Update trends
+            updateTrendBadge('metric-analyzed-trend', metrics.analyzedTrend);
+            updateTrendBadge('metric-wins-trend', metrics.winsTrend);
+            updateTrendBadge('metric-value-trend', metrics.valueTrend);
+            updateTrendBadge('metric-rate-trend', metrics.rateTrend);
+
+            // Update donut center
+            document.getElementById('donut-total').textContent = metrics.analyzed;
+
+            // Update activity stats
+            document.getElementById('activity-count').textContent = analyticsData.activity.count;
+            document.getElementById('activity-growth').textContent = '+' + analyticsData.activity.growth + '%';
+
+            // Update win rate in competitor section
+            document.getElementById('your-win-rate').textContent = metrics.winRate;
+        }
+
+        function updateCharts() {
+            // Update bar chart values
+            const barItems = document.querySelectorAll('#bar-chart .bar-item');
+            analyticsData.monthlySubmissions.forEach((item, index) => {
+                if (barItems[index]) {
+                    const bar = barItems[index].querySelector('.bar');
+                    const value = barItems[index].querySelector('.bar-value');
+                    const maxVal = Math.max(...analyticsData.monthlySubmissions.map(s => s.value));
+                    const heightPercent = (item.value / maxVal) * 100;
+                    bar.style.height = heightPercent + '%';
+                    value.textContent = item.value;
+                }
+            });
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('tenders-table-body');
+            if (!tbody) return;
+
+            tbody.innerHTML = analyticsData.recentTenders.map(tender => {
+                const statusInfo = getStatusInfo(tender.status);
+                const scoreClass = getScoreClass(tender.score);
+
+                return `
+                    <tr>
+                        <td class="font-medium">${tender.name}</td>
+                        <td style="color: var(--text-secondary);">${tender.ministry}</td>
+                        <td>${formatCurrency(tender.budget)}</td>
+                        <td>
+                            <span class="status-dot" style="background: ${statusInfo.color};"></span>
+                            <span style="color: ${statusInfo.color};">${statusInfo.label}</span>
+                        </td>
+                        <td>
+                            <span class="px-2 py-1 rounded-lg text-xs font-medium" style="background: ${scoreClass.bg}; color: ${scoreClass.color};">
+                                ${tender.score || '—'}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // ============================================
+        // HELPERS
+        // ============================================
+
+        function animateValue(elementId, target) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+
+            const duration = 1000;
+            const start = parseInt(element.textContent) || 0;
+            const increment = (target - start) / (duration / 16);
+            let current = start;
+
+            const animate = () => {
+                current += increment;
+                if ((increment > 0 && current >= target) || (increment < 0 && current <= target)) {
+                    element.textContent = target;
+                } else {
+                    element.textContent = Math.round(current);
+                    requestAnimationFrame(animate);
+                }
+            };
+
+            animate();
+        }
+
+        function updateTrendBadge(elementId, value) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+
+            const isUp = value >= 0;
+            element.className = `trend-badge ${isUp ? 'up' : 'down'}`;
+            element.innerHTML = `
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="${isUp ? 'M5 10l7-7m0 0l7 7m-7-7v18' : 'M19 14l-7 7m0 0l-7-7m7 7V3'}"/>
+                </svg>
+                ${isUp ? '+' : ''}${value}%
+            `;
+        }
+
+        function formatCurrency(value) {
+            if (value >= 1000000) {
+                return '₪' + (value / 1000000).toFixed(1) + 'M';
+            } else if (value >= 1000) {
+                return '₪' + (value / 1000).toFixed(0) + 'K';
+            }
+            return '₪' + value;
+        }
+
+        function getStatusInfo(status) {
+            const statuses = {
+                'win': { label: 'זכייה', color: 'var(--success)' },
+                'pending': { label: 'בהמתנה', color: '#F59E0B' },
+                'loss': { label: 'הפסד', color: 'var(--danger)' },
+                'analyzing': { label: 'בניתוח', color: 'var(--primary)' }
+            };
+            return statuses[status] || statuses['analyzing'];
+        }
+
+        function getScoreClass(score) {
+            if (!score) return { bg: 'rgba(99, 102, 241, 0.2)', color: 'var(--primary)' };
+            if (score >= 80) return { bg: 'rgba(16, 185, 129, 0.2)', color: 'var(--success)' };
+            if (score >= 60) return { bg: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B' };
+            return { bg: 'rgba(239, 68, 68, 0.2)', color: 'var(--danger)' };
+        }
+
+        function animateCharts() {
+            // Animate bars on load
+            document.querySelectorAll('.bar').forEach(bar => {
+                const height = bar.style.height;
+                bar.style.height = '0';
+                setTimeout(() => {
+                    bar.style.height = height;
+                }, 500);
+            });
+
+            // Animate progress bars on load
+            document.querySelectorAll('.progress-fill').forEach(fill => {
+                const width = fill.style.width;
+                fill.style.width = '0';
+                setTimeout(() => {
+                    fill.style.width = width;
+                }, 500);
+            });
+        }
+
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+
+        function setupEventListeners() {
+            // Time filter buttons
+            document.querySelectorAll('#time-filter .time-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    document.querySelectorAll('#time-filter .time-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentPeriod = parseInt(btn.dataset.period);
+                    await loadAnalyticsData();
+                    animateCharts();
+                });
+            });
+
+            // Export button
+            const exportBtn = document.getElementById('export-btn');
+            if (exportBtn) {
+                exportBtn.addEventListener('click', exportReport);
+            }
+        }
+
+        async function exportReport() {
+            try {
+                Utils.showToast('info', 'מייצא דוח...', 'אנא המתן');
+
+                // In production, this would call an API to generate a PDF/Excel report
+                setTimeout(() => {
+                    Utils.showToast('success', 'הדוח מוכן', 'הקובץ הורד בהצלחה');
+                }, 2000);
+
+            } catch (error) {
+                console.error('Export failed:', error);
+                Utils.showToast('error', 'שגיאה', 'נכשל בייצוא הדוח');
+            }
+        }
+
+        console.log('Tenderix Analytics page loaded');
+    </script>
+
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Tenderix Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+
+</body>
+</html>

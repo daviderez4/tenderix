@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>התראות | Tenderix</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="tenderix-styles.css">
+    <link rel="stylesheet" href="tenderix-animations.css">
+    <style>
+        body {
+            font-family: 'Heebo', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .filter-tab {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid transparent;
+        }
+
+        .filter-tab:hover {
+            background: var(--glass-bg);
+            color: var(--text-primary);
+        }
+
+        .filter-tab.active {
+            background: var(--gradient-primary);
+            color: white;
+            border-color: transparent;
+        }
+
+        .notification-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1.25rem;
+            border-radius: 16px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .notification-item:hover {
+            border-color: var(--primary);
+            transform: translateX(-4px);
+        }
+
+        .notification-item.unread {
+            background: rgba(99, 102, 241, 0.05);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .notification-item.unread::before {
+            content: '';
+            position: absolute;
+            right: -4px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        .notification-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .notification-icon.win {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .notification-icon.deadline {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .notification-icon.analysis {
+            background: rgba(139, 92, 246, 0.2);
+            color: var(--accent);
+        }
+
+        .notification-icon.system {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--primary);
+        }
+
+        .notification-icon.new-tender {
+            background: rgba(245, 158, 11, 0.2);
+            color: #F59E0B;
+        }
+
+        .notification-icon.team {
+            background: rgba(6, 182, 212, 0.2);
+            color: #06B6D4;
+        }
+
+        .notification-icon.billing {
+            background: rgba(236, 72, 153, 0.2);
+            color: #EC4899;
+        }
+
+        .notification-actions {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .notification-item:hover .notification-actions {
+            opacity: 1;
+        }
+
+        .action-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .action-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .action-btn.delete:hover {
+            background: var(--danger);
+        }
+
+        .date-divider {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .date-divider::before,
+        .date-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border-subtle);
+        }
+
+        .date-divider span {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            white-space: nowrap;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .empty-state-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--glass-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+        }
+
+        .notification-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-urgent {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .badge-new {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .badge-info {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--primary);
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 2rem;
+            padding: 1rem 1.5rem;
+            background: var(--glass-bg);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stat-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="fixed top-0 right-0 h-full w-64 bg-glass-bg backdrop-blur-xl border-l border-glass-border z-50 p-6 flex flex-col" style="background: var(--glass-bg); border-color: var(--glass-border);">
+        <!-- Logo -->
+        <div class="flex items-center gap-3 mb-8">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: var(--gradient-primary);">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+            </div>
+            <span class="text-xl font-bold">Tenderix</span>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 space-y-2">
+            <a href="tenderix-dashboard.html" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl transition-all" style="color: var(--text-secondary);">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                </svg>
+                דשבורד
+            </a>
+            <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl transition-all" style="color: var(--text-secondary);">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                מכרזים
+            </a>
+            <a href="tenderix-notifications.html" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl transition-all" style="background: var(--glass-bg); color: var(--primary); border: 1px solid var(--primary);">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                </svg>
+                התראות
+                <span id="nav-badge" class="mr-auto px-2 py-0.5 rounded-full text-xs font-medium" style="background: var(--danger); color: white;">0</span>
+            </a>
+            <a href="tenderix-settings.html" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl transition-all" style="color: var(--text-secondary);">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                הגדרות
+            </a>
+        </nav>
+
+        <!-- User Profile -->
+        <div class="pt-4 border-t" style="border-color: var(--border-subtle);">
+            <a href="tenderix-profile.html" class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-glass-bg">
+                <div id="sidebar-avatar" class="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-white font-bold" style="border: 2px solid var(--glass-border); background: linear-gradient(135deg, #6366f1, #8b5cf6);">
+                    ד
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div id="sidebar-name" class="font-medium truncate">דוד כהן</div>
+                    <div id="sidebar-role" class="text-xs truncate" style="color: var(--text-muted);">מנכ"ל</div>
+                </div>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="mr-64 p-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-3xl font-bold mb-2">התראות</h1>
+                <p style="color: var(--text-secondary);">עקוב אחר עדכונים, מכרזים חדשים ומועדים קריטיים</p>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button id="mark-all-read-btn" class="px-4 py-2 rounded-xl font-medium transition-all flex items-center gap-2" style="background: var(--glass-bg); border: 1px solid var(--border-subtle); color: var(--text-secondary);">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    סמן הכל כנקרא
+                </button>
+                <a href="tenderix-settings.html" class="px-4 py-2 rounded-xl font-medium transition-all flex items-center gap-2" style="background: var(--glass-bg); border: 1px solid var(--border-subtle); color: var(--text-secondary);">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    הגדרות התראות
+                </a>
+            </div>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar mb-6 animate-fade-in">
+            <div class="stat-item">
+                <div class="stat-dot" style="background: var(--primary);"></div>
+                <span id="stat-unread" class="text-sm" style="color: var(--text-secondary);">0 לא נקראו</span>
+            </div>
+            <div class="stat-item">
+                <div class="stat-dot" style="background: var(--danger);"></div>
+                <span id="stat-urgent" class="text-sm" style="color: var(--text-secondary);">0 דחופים</span>
+            </div>
+            <div class="stat-item">
+                <div class="stat-dot" style="background: var(--success);"></div>
+                <span id="stat-wins" class="text-sm" style="color: var(--text-secondary);">0 זכיות החודש</span>
+            </div>
+            <div class="stat-item">
+                <div class="stat-dot" style="background: #F59E0B;"></div>
+                <span id="stat-new-tenders" class="text-sm" style="color: var(--text-secondary);">0 מכרזים חדשים</span>
+            </div>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="flex items-center gap-2 mb-6 animate-fade-in" style="animation-delay: 0.1s;">
+            <button class="filter-tab active" data-filter="all">הכל</button>
+            <button class="filter-tab" data-filter="unread">לא נקראו</button>
+            <button class="filter-tab" data-filter="wins">זכיות</button>
+            <button class="filter-tab" data-filter="deadlines">מועדים</button>
+            <button class="filter-tab" data-filter="analysis">ניתוחים</button>
+            <button class="filter-tab" data-filter="new-tenders">מכרזים חדשים</button>
+            <button class="filter-tab" data-filter="system">מערכת</button>
+        </div>
+
+        <!-- Notifications List -->
+        <div class="space-y-4" id="notifications-list">
+            <!-- Today -->
+            <div class="date-divider">
+                <span>היום</span>
+            </div>
+
+            <!-- Urgent Deadline -->
+            <div class="notification-item unread animate-fade-in" style="animation-delay: 0.15s;">
+                <div class="notification-icon deadline">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="font-semibold">מועד הגשה מתקרב!</span>
+                        <span class="notification-badge badge-urgent">דחוף</span>
+                    </div>
+                    <p class="text-sm mb-2" style="color: var(--text-secondary);">
+                        מכרז מערכות IT למשרד הפנים - נותרו 48 שעות להגשה. וודא שכל המסמכים מוכנים.
+                    </p>
+                    <div class="flex items-center gap-4 text-xs" style="color: var(--text-muted);">
+                        <span>לפני 2 שעות</span>
+                        <a href="#" style="color: var(--primary);">צפה במכרז →</a>
+                    </div>
+                </div>
+                <div class="notification-actions flex gap-2">
+                    <button class="action-btn" title="סמן כנקרא">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </button>
+                    <button class="action-btn delete" title="מחק">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Analysis Complete -->
+            <div class="notification-item unread animate-fade-in" style="animation-delay: 0.2s;">
+                <div class="notification-icon analysis">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="font-semibold">ניתוח AI הושלם</span>
+                        <span class="notification-badge badge-new">חדש</span>
+                    </div>
+                    <p class="text-sm mb-2" style="color: var(--text-secondary);">
+                        הניתוח למכרז "פיתוח מערכת CRM לרשות המסים" הושלם. ציון התאמה: 87%. המלצה: GO
+                    </p>
+                    <div class="flex items-center gap-4 text-xs" style="color: var(--text-muted);">
+                        <span>לפני 3 שעות</span>
+                        <a href="#" style="color: var(--primary);">צפה בניתוח →</a>
+                    </div>
+                </div>
+                <div class="notification-actions flex gap-2">
+                    <button class="action-btn" title="סמן כנקרא">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </button>
+                    <button class="action-btn delete" title="מחק">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- New Tender -->
+            <div class="notification-item unread animate-fade-in" style="animation-delay: 0.25s;">
+                <div class="notification-icon new-tender">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="font-semibold">מכרז חדש תואם לפרופיל שלך</span>
+                    </div>
+                    <p class="text-sm mb-2" style="color: var(--text-secondary);">
+                        "אספקת שירותי פיתוח תוכנה לבנק ישראל" - תקציב: ₪2.5M, מועד הגשה: 28 בינואר
+                    </p>
+                    <div class="flex items-center gap-4 text-xs" style="color: var(--text-muted);">
+                        <span>לפני 5 שעות</span>
+                        <a href="#" style="color: var(--primary);">התחל ניתוח →</a>
+                    </div>
+                </div>
+                <div class="notification-actions flex gap-2">
+                    <button class="action-btn" title="סמן כנקרא">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </button>
+                    <button class="action-btn delete" title="מחק">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Yesterday -->
+            <div class="date-divider">
+                <span>אתמול</span>
+            </div>
+
+            <!-- Win Notification -->
+            <div class="notification-item unread animate-fade-in" style="animation-delay: 0.3s;">
+                <div class="notification-icon win">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="font-semibold">מזל טוב! זכית במכרז! 🎉</span>
+                        <span class="notification-badge badge-new">זכייה</span>
+                    </div>
+                    <p class="text-sm mb-2" style="color: var(--text-secondary);">
+                        הצעתך למכרז "שדרוג מערכת הבריאות הדיגיטלית" התקבלה! סכום הזכייה: ₪1.2M
+                    </p>
+                    <div class="flex items-center gap-4 text-xs" style="color: var(--text-muted);">
+                        <span>אתמול ב-14:30</span>
+                        <a href="#" style="color: var(--primary);">צפה בפרטים →</a>
+                    </div>
+                </div>
+                <div class="notification-actions flex gap-2">
+                    <button class="action-btn" title="סמן כנקרא">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </button>
+                    <button class="action-btn delete" title="מחק">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Team Notification -->
+            <div class="notification-item animate-fade-in" style="animation-delay: 0.35s;">
+                <div class="notification-icon team">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="font-semibold">חבר צוות חדש הצטרף</span>
+                    </div>
+                    <p class="text-sm mb-2" style="color: var(--text-secondary);">
+                        יעל לוי הצטרפה לחשבון שלך כמנהלת פרויקטים. הוגדרו לה הרשאות Editor.
+                    </p>
+                    <div class="flex items-center gap-4 text-xs" style="color: var(--text-muted);">
+                        <span>אתמול ב-10:15</span>
+                        <a href="tenderix-settings.html" style="color: var(--primary);">נהל צוות →</a>
+                    </div>
+                </div>
+                <div class="notification-actions flex gap-2">
+                    <button class="action-btn" title="סמן כנקרא">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </button>
+                    <button class="action-btn delete" title="מחק">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- This Week -->
+            <div class="date-divider">
+                <span>השבוע</span>
+            </div>
+
+            <!-- Deadline Reminder -->
+            <div class="notification-item unread animate-fade-in" style="animation-delay: 0.4s;">
+                <div class="notification-icon deadline">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="font-semibold">תזכורת: שבוע להגשה</span>
+                        <span class="notification-badge badge-urgent">דחוף</span>
+                    </div>
+                    <p class="text-sm mb-2" style="color: var(--text-secondary);">
+                        למכרז "שירותי אבטחת סייבר למשרד הביטחון" נותר שבוע להגשה. סטטוס הכנה: 65%
+                    </p>
+                    <div class="flex items-center gap-4 text-xs" style="color: var(--text-muted);">
+                        <span>לפני 3 ימים</span>
+                        <a href="#" style="color: var(--primary);">המשך הכנה →</a>
+                    </div>
+                </div>
+                <div class="notification-actions flex gap-2">
+                    <button class="action-btn" title="סמן כנקרא">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </button>
+                    <button class="action-btn delete" title="מחק">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- System Update -->
+            <div class="notification-item animate-fade-in" style="animation-delay: 0.45s;">
+                <div class="notification-icon system">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="font-semibold">עדכון מערכת</span>
+                        <span class="notification-badge badge-info">מערכת</span>
+                    </div>
+                    <p class="text-sm mb-2" style="color: var(--text-secondary);">
+                        גרסה 2.5 של Tenderix AI שוחררה! תכונות חדשות: ניתוח מתחרים משופר, דוחות אוטומטיים, ועוד.
+                    </p>
+                    <div class="flex items-center gap-4 text-xs" style="color: var(--text-muted);">
+                        <span>לפני 4 ימים</span>
+                        <a href="#" style="color: var(--primary);">קרא עוד →</a>
+                    </div>
+                </div>
+                <div class="notification-actions flex gap-2">
+                    <button class="action-btn" title="סמן כנקרא">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </button>
+                    <button class="action-btn delete" title="מחק">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Billing -->
+            <div class="notification-item unread animate-fade-in" style="animation-delay: 0.5s;">
+                <div class="notification-icon billing">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="font-semibold">חשבונית חודשית</span>
+                    </div>
+                    <p class="text-sm mb-2" style="color: var(--text-secondary);">
+                        החשבונית לחודש דצמבר 2025 מוכנה להורדה. סכום: ₪999 + מע"מ
+                    </p>
+                    <div class="flex items-center gap-4 text-xs" style="color: var(--text-muted);">
+                        <span>לפני 5 ימים</span>
+                        <a href="#" style="color: var(--primary);">הורד חשבונית →</a>
+                    </div>
+                </div>
+                <div class="notification-actions flex gap-2">
+                    <button class="action-btn" title="סמן כנקרא">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </button>
+                    <button class="action-btn delete" title="מחק">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- New Tender Match -->
+            <div class="notification-item animate-fade-in" style="animation-delay: 0.55s;">
+                <div class="notification-icon new-tender">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="font-semibold">3 מכרזים חדשים בתחום שלך</span>
+                    </div>
+                    <p class="text-sm mb-2" style="color: var(--text-secondary);">
+                        נמצאו 3 מכרזים חדשים בתחומי טכנולוגיה ומידע ופיתוח תוכנה שמתאימים לפרופיל שלך.
+                    </p>
+                    <div class="flex items-center gap-4 text-xs" style="color: var(--text-muted);">
+                        <span>לפני שבוע</span>
+                        <a href="tenderix-dashboard.html" style="color: var(--primary);">צפה במכרזים →</a>
+                    </div>
+                </div>
+                <div class="notification-actions flex gap-2">
+                    <button class="action-btn" title="סמן כנקרא">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </button>
+                    <button class="action-btn delete" title="מחק">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Load More -->
+            <div id="load-more-container" class="text-center py-8">
+                <button id="load-more-btn" class="px-6 py-3 rounded-xl font-medium transition-all" style="background: var(--glass-bg); border: 1px solid var(--border-subtle); color: var(--text-secondary);">
+                    טען עוד התראות
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ============================================
+        // NOTIFICATIONS PAGE
+        // ============================================
+
+        let notifications = [];
+        let currentFilter = 'all';
+        let currentPage = 1;
+        const PAGE_SIZE = 10;
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await Auth.requireAuth('tenderix-login.html');
+                await initNotificationsPage();
+            } catch (error) {
+                console.error('Auth check failed:', error);
+            }
+        });
+
+        async function initNotificationsPage() {
+            try {
+                // Load user info for sidebar
+                await loadUserInfo();
+
+                // Load notifications
+                await loadNotifications();
+
+                // Setup event listeners
+                setupEventListeners();
+
+            } catch (error) {
+                console.error('Failed to initialize notifications page:', error);
+                Utils.showToast('error', 'שגיאה', 'נכשל בטעינת ההתראות');
+            }
+        }
+
+        // ============================================
+        // USER INFO
+        // ============================================
+
+        async function loadUserInfo() {
+            try {
+                const user = await Auth.getCurrentUser();
+                if (!user) return;
+
+                const metadata = user.user_metadata || {};
+                const displayName = metadata.full_name || metadata.name || user.email?.split('@')[0] || 'משתמש';
+                const initial = displayName.charAt(0).toUpperCase();
+
+                // Update sidebar avatar
+                const sidebarAvatar = document.getElementById('sidebar-avatar');
+                if (sidebarAvatar) {
+                    if (metadata.avatar_url) {
+                        sidebarAvatar.innerHTML = `<img src="${metadata.avatar_url}" alt="Avatar" class="w-full h-full object-cover">`;
+                    } else {
+                        sidebarAvatar.textContent = initial;
+                    }
+                }
+
+                // Update sidebar name and role
+                const sidebarName = document.getElementById('sidebar-name');
+                const sidebarRole = document.getElementById('sidebar-role');
+                if (sidebarName) sidebarName.textContent = displayName;
+                if (sidebarRole) sidebarRole.textContent = metadata.role || 'משתמש';
+
+            } catch (error) {
+                console.error('Failed to load user info:', error);
+            }
+        }
+
+        // ============================================
+        // NOTIFICATIONS
+        // ============================================
+
+        async function loadNotifications() {
+            try {
+                // Try to load from API, fall back to sample data
+                try {
+                    const response = await API.Notifications.getAll({
+                        page: currentPage,
+                        limit: PAGE_SIZE
+                    });
+                    notifications = response?.data || [];
+                } catch (e) {
+                    // Use sample data if API not available
+                    notifications = getSampleNotifications();
+                }
+
+                // Update stats
+                updateStats();
+
+                // Render notifications
+                renderNotifications();
+
+            } catch (error) {
+                console.error('Failed to load notifications:', error);
+                notifications = getSampleNotifications();
+                updateStats();
+                renderNotifications();
+            }
+        }
+
+        function getSampleNotifications() {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+            const threeDaysAgo = new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000);
+
+            return [
+                {
+                    id: '1',
+                    type: 'deadline',
+                    title: 'מועד הגשה מתקרב!',
+                    message: 'מכרז מערכות IT למשרד הפנים - נותרו 48 שעות להגשה. וודא שכל המסמכים מוכנים.',
+                    is_read: false,
+                    is_urgent: true,
+                    tender_id: 'tender-1',
+                    created_at: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString()
+                },
+                {
+                    id: '2',
+                    type: 'analysis',
+                    title: 'ניתוח AI הושלם',
+                    message: 'הניתוח למכרז "פיתוח מערכת CRM לרשות המסים" הושלם. ציון התאמה: 87%. המלצה: GO',
+                    is_read: false,
+                    is_urgent: false,
+                    tender_id: 'tender-2',
+                    created_at: new Date(now.getTime() - 3 * 60 * 60 * 1000).toISOString()
+                },
+                {
+                    id: '3',
+                    type: 'new-tender',
+                    title: 'מכרז חדש תואם לפרופיל שלך',
+                    message: '"אספקת שירותי פיתוח תוכנה לבנק ישראל" - תקציב: ₪2.5M, מועד הגשה: 28 בינואר',
+                    is_read: false,
+                    is_urgent: false,
+                    tender_id: 'tender-3',
+                    created_at: new Date(now.getTime() - 5 * 60 * 60 * 1000).toISOString()
+                },
+                {
+                    id: '4',
+                    type: 'win',
+                    title: 'מזל טוב! זכית במכרז! 🎉',
+                    message: 'הצעתך למכרז "שדרוג מערכת הבריאות הדיגיטלית" התקבלה! סכום הזכייה: ₪1.2M',
+                    is_read: false,
+                    is_urgent: false,
+                    tender_id: 'tender-4',
+                    created_at: new Date(yesterday.getTime() + 14.5 * 60 * 60 * 1000).toISOString()
+                },
+                {
+                    id: '5',
+                    type: 'team',
+                    title: 'חבר צוות חדש הצטרף',
+                    message: 'יעל לוי הצטרפה לחשבון שלך כמנהלת פרויקטים. הוגדרו לה הרשאות Editor.',
+                    is_read: true,
+                    is_urgent: false,
+                    created_at: new Date(yesterday.getTime() + 10.25 * 60 * 60 * 1000).toISOString()
+                },
+                {
+                    id: '6',
+                    type: 'deadline',
+                    title: 'תזכורת: שבוע להגשה',
+                    message: 'למכרז "שירותי אבטחת סייבר למשרד הביטחון" נותר שבוע להגשה. סטטוס הכנה: 65%',
+                    is_read: false,
+                    is_urgent: true,
+                    tender_id: 'tender-5',
+                    created_at: threeDaysAgo.toISOString()
+                },
+                {
+                    id: '7',
+                    type: 'system',
+                    title: 'עדכון מערכת',
+                    message: 'גרסה 2.5 של Tenderix AI שוחררה! תכונות חדשות: ניתוח מתחרים משופר, דוחות אוטומטיים, ועוד.',
+                    is_read: true,
+                    is_urgent: false,
+                    created_at: new Date(today.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString()
+                },
+                {
+                    id: '8',
+                    type: 'billing',
+                    title: 'חשבונית חודשית',
+                    message: 'החשבונית לחודש דצמבר 2025 מוכנה להורדה. סכום: ₪999 + מע"מ',
+                    is_read: false,
+                    is_urgent: false,
+                    created_at: new Date(today.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString()
+                },
+                {
+                    id: '9',
+                    type: 'new-tender',
+                    title: '3 מכרזים חדשים בתחום שלך',
+                    message: 'נמצאו 3 מכרזים חדשים בתחומי טכנולוגיה ומידע ופיתוח תוכנה שמתאימים לפרופיל שלך.',
+                    is_read: true,
+                    is_urgent: false,
+                    created_at: new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
+                }
+            ];
+        }
+
+        function updateStats() {
+            const unreadCount = notifications.filter(n => !n.is_read).length;
+            const urgentCount = notifications.filter(n => n.is_urgent && !n.is_read).length;
+            const winsCount = notifications.filter(n => n.type === 'win').length;
+            const newTendersCount = notifications.filter(n => n.type === 'new-tender').length;
+
+            // Update stats
+            const statUnread = document.getElementById('stat-unread');
+            const statUrgent = document.getElementById('stat-urgent');
+            const statWins = document.getElementById('stat-wins');
+            const statNewTenders = document.getElementById('stat-new-tenders');
+            const navBadge = document.getElementById('nav-badge');
+
+            if (statUnread) statUnread.textContent = `${unreadCount} לא נקראו`;
+            if (statUrgent) statUrgent.textContent = `${urgentCount} דחופים`;
+            if (statWins) statWins.textContent = `${winsCount} זכיות החודש`;
+            if (statNewTenders) statNewTenders.textContent = `${newTendersCount} מכרזים חדשים`;
+            if (navBadge) {
+                navBadge.textContent = unreadCount;
+                navBadge.style.display = unreadCount > 0 ? 'inline' : 'none';
+            }
+        }
+
+        function renderNotifications() {
+            const container = document.getElementById('notifications-list');
+            if (!container) return;
+
+            // Filter notifications
+            let filtered = notifications;
+            if (currentFilter !== 'all') {
+                if (currentFilter === 'unread') {
+                    filtered = notifications.filter(n => !n.is_read);
+                } else if (currentFilter === 'wins') {
+                    filtered = notifications.filter(n => n.type === 'win');
+                } else if (currentFilter === 'deadlines') {
+                    filtered = notifications.filter(n => n.type === 'deadline');
+                } else if (currentFilter === 'analysis') {
+                    filtered = notifications.filter(n => n.type === 'analysis');
+                } else if (currentFilter === 'new-tenders') {
+                    filtered = notifications.filter(n => n.type === 'new-tender');
+                } else if (currentFilter === 'system') {
+                    filtered = notifications.filter(n => n.type === 'system' || n.type === 'billing' || n.type === 'team');
+                }
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">
+                            <svg class="w-10 h-10" style="color: var(--text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-medium mb-2">אין התראות</h3>
+                        <p style="color: var(--text-muted);">לא נמצאו התראות בקטגוריה זו</p>
+                    </div>
+                `;
+                document.getElementById('load-more-container').style.display = 'none';
+                return;
+            }
+
+            // Group by date
+            const grouped = groupByDate(filtered);
+
+            let html = '';
+            for (const [dateLabel, items] of Object.entries(grouped)) {
+                html += `<div class="date-divider"><span>${dateLabel}</span></div>`;
+                items.forEach((notification, index) => {
+                    html += renderNotificationItem(notification, index * 0.05);
+                });
+            }
+
+            // Add load more button
+            html += `
+                <div id="load-more-container" class="text-center py-8">
+                    <button id="load-more-btn" class="px-6 py-3 rounded-xl font-medium transition-all" style="background: var(--glass-bg); border: 1px solid var(--border-subtle); color: var(--text-secondary);">
+                        טען עוד התראות
+                    </button>
+                </div>
+            `;
+
+            container.innerHTML = html;
+
+            // Re-attach event listeners
+            attachNotificationListeners();
+        }
+
+        function groupByDate(notifications) {
+            const groups = {};
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+            const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+            notifications.forEach(n => {
+                const date = new Date(n.created_at);
+                const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+                let label;
+                if (dateOnly.getTime() === today.getTime()) {
+                    label = 'היום';
+                } else if (dateOnly.getTime() === yesterday.getTime()) {
+                    label = 'אתמול';
+                } else if (dateOnly.getTime() > weekAgo.getTime()) {
+                    label = 'השבוע';
+                } else {
+                    label = 'קודם';
+                }
+
+                if (!groups[label]) groups[label] = [];
+                groups[label].push(n);
+            });
+
+            return groups;
+        }
+
+        function renderNotificationItem(notification, delay = 0) {
+            const timeAgo = formatTimeAgo(notification.created_at);
+            const iconHtml = getNotificationIcon(notification.type);
+            const badgeHtml = notification.is_urgent
+                ? '<span class="notification-badge badge-urgent">דחוף</span>'
+                : (notification.type === 'win' ? '<span class="notification-badge badge-new">זכייה</span>' :
+                   (!notification.is_read ? '<span class="notification-badge badge-new">חדש</span>' : ''));
+
+            const actionLink = notification.tender_id
+                ? `<a href="tenderix-tender-detail.html?id=${notification.tender_id}" style="color: var(--primary);">צפה בפרטים →</a>`
+                : '';
+
+            return `
+                <div class="notification-item ${notification.is_read ? '' : 'unread'} animate-fade-in"
+                     style="animation-delay: ${delay}s;"
+                     data-id="${notification.id}"
+                     data-type="${notification.type}">
+                    <div class="notification-icon ${notification.type}">
+                        ${iconHtml}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="font-semibold">${notification.title}</span>
+                            ${badgeHtml}
+                        </div>
+                        <p class="text-sm mb-2" style="color: var(--text-secondary);">
+                            ${notification.message}
+                        </p>
+                        <div class="flex items-center gap-4 text-xs" style="color: var(--text-muted);">
+                            <span>${timeAgo}</span>
+                            ${actionLink}
+                        </div>
+                    </div>
+                    <div class="notification-actions flex gap-2">
+                        <button class="action-btn mark-read-btn" title="סמן כנקרא" data-id="${notification.id}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                        </button>
+                        <button class="action-btn delete delete-btn" title="מחק" data-id="${notification.id}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getNotificationIcon(type) {
+            const icons = {
+                'deadline': '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+                'analysis': '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>',
+                'new-tender': '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>',
+                'win': '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>',
+                'team': '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>',
+                'system': '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+                'billing': '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>'
+            };
+            return icons[type] || icons['system'];
+        }
+
+        function formatTimeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / (1000 * 60));
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+            if (diffMins < 60) {
+                return `לפני ${diffMins} דקות`;
+            } else if (diffHours < 24) {
+                return `לפני ${diffHours} שעות`;
+            } else if (diffDays === 1) {
+                return 'אתמול';
+            } else if (diffDays < 7) {
+                return `לפני ${diffDays} ימים`;
+            } else {
+                return `לפני שבוע`;
+            }
+        }
+
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+
+        function setupEventListeners() {
+            // Filter tabs
+            document.querySelectorAll('.filter-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    currentFilter = tab.dataset.filter;
+                    renderNotifications();
+                });
+            });
+
+            // Mark all as read
+            const markAllBtn = document.getElementById('mark-all-read-btn');
+            if (markAllBtn) {
+                markAllBtn.addEventListener('click', markAllAsRead);
+            }
+        }
+
+        function attachNotificationListeners() {
+            // Mark as read buttons
+            document.querySelectorAll('.mark-read-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = btn.dataset.id;
+                    markAsRead(id);
+                });
+            });
+
+            // Delete buttons
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = btn.dataset.id;
+                    deleteNotification(id);
+                });
+            });
+
+            // Load more
+            const loadMoreBtn = document.getElementById('load-more-btn');
+            if (loadMoreBtn) {
+                loadMoreBtn.addEventListener('click', loadMore);
+            }
+        }
+
+        // ============================================
+        // ACTIONS
+        // ============================================
+
+        async function markAsRead(id) {
+            const notification = notifications.find(n => n.id === id);
+            if (notification) {
+                notification.is_read = true;
+
+                // Try to update on server
+                try {
+                    await API.Notifications.markAsRead(id);
+                } catch (e) {
+                    console.log('API not available, updating locally');
+                }
+
+                // Update UI
+                const item = document.querySelector(`.notification-item[data-id="${id}"]`);
+                if (item) {
+                    item.classList.remove('unread');
+                }
+                updateStats();
+            }
+        }
+
+        async function markAllAsRead() {
+            notifications.forEach(n => n.is_read = true);
+
+            // Try to update on server
+            try {
+                await API.Notifications.markAllAsRead();
+            } catch (e) {
+                console.log('API not available, updating locally');
+            }
+
+            // Update UI
+            document.querySelectorAll('.notification-item.unread').forEach(item => {
+                item.classList.remove('unread');
+            });
+            updateStats();
+            Utils.showToast('success', 'הצלחה', 'כל ההתראות סומנו כנקראו');
+        }
+
+        async function deleteNotification(id) {
+            // Remove from array
+            notifications = notifications.filter(n => n.id !== id);
+
+            // Try to delete on server
+            try {
+                await API.Notifications.delete(id);
+            } catch (e) {
+                console.log('API not available, deleting locally');
+            }
+
+            // Animate and remove from UI
+            const item = document.querySelector(`.notification-item[data-id="${id}"]`);
+            if (item) {
+                item.style.opacity = '0';
+                item.style.transform = 'translateX(20px)';
+                setTimeout(() => {
+                    item.remove();
+                    updateStats();
+                    // Re-render if list is empty after delete
+                    if (document.querySelectorAll('.notification-item').length === 0) {
+                        renderNotifications();
+                    }
+                }, 300);
+            }
+        }
+
+        async function loadMore() {
+            currentPage++;
+            const btn = document.getElementById('load-more-btn');
+            if (btn) {
+                btn.textContent = 'טוען...';
+                btn.disabled = true;
+            }
+
+            // Simulate loading more (in production, this would fetch from API)
+            setTimeout(() => {
+                if (btn) {
+                    btn.textContent = 'טען עוד התראות';
+                    btn.disabled = false;
+                }
+                Utils.showToast('info', 'מידע', 'אין עוד התראות להצגה');
+            }, 1000);
+        }
+
+        console.log('Tenderix Notifications page loaded');
+    </script>
+
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Tenderix Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+
+</body>
+</html>

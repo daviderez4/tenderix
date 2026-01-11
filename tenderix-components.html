@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tenderix | ספריית רכיבים - Component Library</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="tenderix-styles.css">
+  <link rel="stylesheet" href="tenderix-animations.css">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            'hebrew': ['Heebo', 'Rubik', 'Assistant', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Heebo', sans-serif;
+      background: #0a0a0f;
+    }
+    .component-section {
+      padding: 2rem;
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 1rem;
+      margin-bottom: 2rem;
+      background: rgba(255,255,255,0.02);
+    }
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .component-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+  </style>
+</head>
+<body class="text-white antialiased p-8">
+  <!-- SVG Definitions -->
+  <svg class="hidden">
+    <defs>
+      <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#6366f1"/>
+        <stop offset="100%" stop-color="#00d4ff"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <!-- Header -->
+  <header class="mb-12">
+    <div class="flex items-center gap-4 mb-4">
+      <a href="tenderix-dashboard.html" class="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors">
+        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+      </a>
+      <div>
+        <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
+          ספריית רכיבים
+        </h1>
+        <p class="text-gray-400 mt-2">Tenderix Design System Components</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Buttons Section -->
+  <section class="component-section">
+    <h2 class="section-title text-white">כפתורים / Buttons</h2>
+
+    <div class="space-y-6">
+      <!-- Primary Buttons -->
+      <div>
+        <h3 class="text-sm font-medium text-gray-400 mb-4">Primary Buttons</h3>
+        <div class="flex flex-wrap gap-4">
+          <button class="px-6 py-3 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 text-white font-semibold text-sm rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            התחל ניתוח
+          </button>
+
+          <button class="px-6 py-3 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 text-white font-semibold text-sm rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:-translate-y-0.5 transition-all duration-300">
+            שמור שינויים
+          </button>
+
+          <button class="px-6 py-3 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 text-white font-semibold text-sm rounded-xl opacity-50 cursor-not-allowed">
+            לא זמין
+          </button>
+        </div>
+      </div>
+
+      <!-- Secondary Buttons -->
+      <div>
+        <h3 class="text-sm font-medium text-gray-400 mb-4">Secondary Buttons</h3>
+        <div class="flex flex-wrap gap-4">
+          <button class="px-6 py-3 bg-white/5 backdrop-blur-xl border border-white/10 text-white font-medium text-sm rounded-xl hover:bg-white/10 hover:border-white/20 transition-all duration-300">
+            צפה בפרטים
+          </button>
+
+          <button class="px-6 py-3 bg-white/5 backdrop-blur-xl border border-white/10 text-white font-medium text-sm rounded-xl hover:bg-white/10 hover:border-white/20 transition-all duration-300 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            הורד דוח
+          </button>
+        </div>
+      </div>
+
+      <!-- Ghost Buttons -->
+      <div>
+        <h3 class="text-sm font-medium text-gray-400 mb-4">Ghost Buttons</h3>
+        <div class="flex flex-wrap gap-4">
+          <button class="px-4 py-2 text-gray-400 font-medium text-sm rounded-lg hover:text-white hover:bg-white/5 transition-all duration-300">
+            ביטול
+          </button>
+
+          <button class="px-4 py-2 text-gray-400 font-medium text-sm rounded-lg hover:text-white hover:bg-white/5 transition-all duration-300 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+            </svg>
+            ערוך
+          </button>
+        </div>
+      </div>
+
+      <!-- Danger Buttons -->
+      <div>
+        <h3 class="text-sm font-medium text-gray-400 mb-4">Danger Buttons</h3>
+        <div class="flex flex-wrap gap-4">
+          <button class="px-6 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white font-semibold text-sm rounded-xl shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/30 transition-all duration-300">
+            מחק מכרז
+          </button>
+
+          <button class="px-6 py-3 bg-red-500/10 border border-red-500/30 text-red-400 font-medium text-sm rounded-xl hover:bg-red-500/20 transition-all duration-300">
+            הסר מהרשימה
+          </button>
+        </div>
+      </div>
+
+      <!-- Icon Buttons -->
+      <div>
+        <h3 class="text-sm font-medium text-gray-400 mb-4">Icon Buttons</h3>
+        <div class="flex flex-wrap gap-4">
+          <button class="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-300">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+          </button>
+
+          <button class="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-300">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </button>
+
+          <button class="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-300">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+          </button>
+
+          <button class="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:scale-110 transition-all duration-300">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Badges Section -->
+  <section class="component-section">
+    <h2 class="section-title text-white">תגיות סטטוס / Status Badges</h2>
+
+    <div class="flex flex-wrap gap-4">
+      <!-- Success -->
+      <span class="px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
+        עבר בהצלחה
+      </span>
+
+      <!-- Warning -->
+      <span class="px-3 py-1 rounded-full text-xs font-medium bg-orange-500/20 text-orange-400 border border-orange-500/30">
+        דורש תשומת לב
+      </span>
+
+      <!-- Error -->
+      <span class="px-3 py-1 rounded-full text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/30">
+        נכשל
+      </span>
+
+      <!-- Info / Processing -->
+      <span class="px-3 py-1 rounded-full text-xs font-medium bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+        בניתוח
+      </span>
+
+      <!-- Neutral -->
+      <span class="px-3 py-1 rounded-full text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/30">
+        טיוטה
+      </span>
+
+      <!-- GO -->
+      <span class="px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
+        GO - מומלץ
+      </span>
+
+      <!-- NO-GO -->
+      <span class="px-3 py-1 rounded-full text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/30">
+        NO-GO
+      </span>
+
+      <!-- Pending -->
+      <span class="px-3 py-1 rounded-full text-xs font-medium bg-purple-500/20 text-purple-400 border border-purple-500/30">
+        ממתין לבדיקה
+      </span>
+
+      <!-- New -->
+      <span class="px-3 py-1 rounded-full text-xs font-medium bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 animate-pulse">
+        חדש
+      </span>
+    </div>
+  </section>
+
+  <!-- Inputs Section -->
+  <section class="component-section">
+    <h2 class="section-title text-white">שדות קלט / Input Fields</h2>
+
+    <div class="grid grid-cols-2 gap-8">
+      <!-- Text Input -->
+      <div class="space-y-2">
+        <label class="block text-sm font-medium text-gray-300">שם החברה</label>
+        <input type="text" class="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-300" placeholder="הכנס שם חברה">
+      </div>
+
+      <!-- Email Input -->
+      <div class="space-y-2">
+        <label class="block text-sm font-medium text-gray-300">אימייל</label>
+        <input type="email" class="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-300" placeholder="example@company.com" dir="ltr">
+      </div>
+
+      <!-- Search Input -->
+      <div class="space-y-2">
+        <label class="block text-sm font-medium text-gray-300">חיפוש</label>
+        <div class="relative">
+          <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <input type="search" class="w-full pr-12 pl-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-300" placeholder="חפש מכרזים...">
+        </div>
+      </div>
+
+      <!-- Select -->
+      <div class="space-y-2">
+        <label class="block text-sm font-medium text-gray-300">סטטוס</label>
+        <select class="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-300 appearance-none cursor-pointer">
+          <option value="">כל הסטטוסים</option>
+          <option value="active">פעיל</option>
+          <option value="analysis">בניתוח</option>
+          <option value="completed">הושלם</option>
+        </select>
+      </div>
+
+      <!-- Textarea -->
+      <div class="space-y-2 col-span-2">
+        <label class="block text-sm font-medium text-gray-300">הערות</label>
+        <textarea class="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-300 min-h-[120px] resize-y" placeholder="הוסף הערות..."></textarea>
+      </div>
+
+      <!-- Input with Error -->
+      <div class="space-y-2">
+        <label class="block text-sm font-medium text-gray-300">שדה עם שגיאה</label>
+        <input type="text" class="w-full px-4 py-3 bg-black/50 border border-red-500/50 rounded-xl text-white placeholder-gray-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all duration-300" value="ערך לא תקין">
+        <p class="text-sm text-red-400">שדה זה חובה</p>
+      </div>
+
+      <!-- Input with Success -->
+      <div class="space-y-2">
+        <label class="block text-sm font-medium text-gray-300">שדה תקין</label>
+        <div class="relative">
+          <input type="text" class="w-full px-4 py-3 bg-black/50 border border-green-500/50 rounded-xl text-white placeholder-gray-500 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all duration-300" value="ערך תקין">
+          <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Cards Section -->
+  <section class="component-section">
+    <h2 class="section-title text-white">כרטיסים / Cards</h2>
+
+    <div class="grid grid-cols-3 gap-6">
+      <!-- Glass Card -->
+      <div class="p-6 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-xl hover:border-white/20 transition-all duration-300">
+        <h3 class="text-xl font-semibold text-white mb-2">כרטיס זכוכית</h3>
+        <p class="text-gray-400 leading-relaxed">כרטיס עם אפקט glassmorphism מודרני ויפה</p>
+      </div>
+
+      <!-- Stat Card -->
+      <div class="relative overflow-hidden p-6 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
+        <div class="absolute -top-1/2 -right-1/2 w-full h-full bg-indigo-500/20 rounded-full blur-3xl"></div>
+        <div class="relative">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+              <svg class="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+            </div>
+            <span class="text-sm text-gray-400">מכרזים פעילים</span>
+          </div>
+          <div class="text-4xl font-bold text-white mb-1">17</div>
+          <div class="flex items-center gap-1 text-sm text-green-400">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+            </svg>
+            <span>+23% החודש</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Card -->
+      <div class="p-6 rounded-2xl bg-gray-900/50 backdrop-blur-xl border border-white/5 hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-300 cursor-pointer group">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+          <svg class="w-6 h-6 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-white mb-2 group-hover:text-cyan-400 transition-colors">הוסף מכרז חדש</h3>
+        <p class="text-sm text-gray-400">לחץ כאן להעלאת מסמכי מכרז</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Progress & Loading Section -->
+  <section class="component-section">
+    <h2 class="section-title text-white">התקדמות וטעינה / Progress & Loading</h2>
+
+    <div class="space-y-8">
+      <!-- Progress Bars -->
+      <div class="space-y-4">
+        <h3 class="text-sm font-medium text-gray-400">Progress Bars</h3>
+
+        <div>
+          <div class="flex items-center justify-between text-sm mb-2">
+            <span class="text-gray-400">התקדמות ניתוח</span>
+            <span class="text-white font-medium">75%</span>
+          </div>
+          <div class="h-2 bg-gray-800 rounded-full overflow-hidden">
+            <div class="h-full bg-gradient-to-r from-indigo-500 to-cyan-500 rounded-full" style="width: 75%"></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between text-sm mb-2">
+            <span class="text-gray-400">תנאי סף</span>
+            <span class="text-white font-medium">100%</span>
+          </div>
+          <div class="h-2 bg-gray-800 rounded-full overflow-hidden">
+            <div class="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full" style="width: 100%"></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between text-sm mb-2">
+            <span class="text-gray-400">ניתוח מתחרים</span>
+            <span class="text-white font-medium">30%</span>
+          </div>
+          <div class="h-2 bg-gray-800 rounded-full overflow-hidden">
+            <div class="h-full bg-gradient-to-r from-orange-500 to-yellow-500 rounded-full" style="width: 30%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Score Rings -->
+      <div class="space-y-4">
+        <h3 class="text-sm font-medium text-gray-400">Score Rings</h3>
+        <div class="flex gap-8">
+          <!-- High Score -->
+          <div class="text-center">
+            <div class="relative w-20 h-20 mx-auto mb-2">
+              <svg class="w-full h-full -rotate-90" viewBox="0 0 64 64">
+                <circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" class="text-gray-800" stroke-width="4"/>
+                <circle cx="32" cy="32" r="28" fill="none" stroke="#00ff88" stroke-width="4" stroke-dasharray="167 176" stroke-linecap="round"/>
+              </svg>
+              <div class="absolute inset-0 flex items-center justify-center">
+                <span class="text-2xl font-bold text-green-400">95</span>
+              </div>
+            </div>
+            <span class="text-sm text-gray-400">ציון גבוה</span>
+          </div>
+
+          <!-- Medium Score -->
+          <div class="text-center">
+            <div class="relative w-20 h-20 mx-auto mb-2">
+              <svg class="w-full h-full -rotate-90" viewBox="0 0 64 64">
+                <circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" class="text-gray-800" stroke-width="4"/>
+                <circle cx="32" cy="32" r="28" fill="none" stroke="#ff9500" stroke-width="4" stroke-dasharray="114 176" stroke-linecap="round"/>
+              </svg>
+              <div class="absolute inset-0 flex items-center justify-center">
+                <span class="text-2xl font-bold text-orange-400">65</span>
+              </div>
+            </div>
+            <span class="text-sm text-gray-400">ציון בינוני</span>
+          </div>
+
+          <!-- Low Score -->
+          <div class="text-center">
+            <div class="relative w-20 h-20 mx-auto mb-2">
+              <svg class="w-full h-full -rotate-90" viewBox="0 0 64 64">
+                <circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" class="text-gray-800" stroke-width="4"/>
+                <circle cx="32" cy="32" r="28" fill="none" stroke="#ff006e" stroke-width="4" stroke-dasharray="53 176" stroke-linecap="round"/>
+              </svg>
+              <div class="absolute inset-0 flex items-center justify-center">
+                <span class="text-2xl font-bold text-red-400">30</span>
+              </div>
+            </div>
+            <span class="text-sm text-gray-400">ציון נמוך</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading Spinners -->
+      <div class="space-y-4">
+        <h3 class="text-sm font-medium text-gray-400">Loading Spinners</h3>
+        <div class="flex items-center gap-8">
+          <!-- Simple Spinner -->
+          <div class="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin"></div>
+
+          <!-- Dual Ring -->
+          <div class="relative w-12 h-12">
+            <div class="absolute inset-0 rounded-full border-2 border-cyan-500 border-t-transparent animate-spin"></div>
+            <div class="absolute inset-2 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" style="animation-direction: reverse;"></div>
+          </div>
+
+          <!-- Dots -->
+          <div class="flex gap-1">
+            <div class="w-2 h-2 rounded-full bg-indigo-500 animate-bounce" style="animation-delay: 0s;"></div>
+            <div class="w-2 h-2 rounded-full bg-indigo-500 animate-bounce" style="animation-delay: 0.1s;"></div>
+            <div class="w-2 h-2 rounded-full bg-indigo-500 animate-bounce" style="animation-delay: 0.2s;"></div>
+          </div>
+
+          <!-- Pulse -->
+          <div class="w-10 h-10 rounded-full bg-indigo-500/30 animate-ping"></div>
+        </div>
+      </div>
+
+      <!-- Skeleton Loading -->
+      <div class="space-y-4">
+        <h3 class="text-sm font-medium text-gray-400">Skeleton Loading</h3>
+        <div class="p-6 rounded-2xl bg-gray-900/50 border border-white/5">
+          <div class="flex gap-4">
+            <div class="w-16 h-16 rounded-xl bg-gray-800 animate-pulse"></div>
+            <div class="flex-1 space-y-3">
+              <div class="h-4 bg-gray-800 rounded w-3/4 animate-pulse"></div>
+              <div class="h-3 bg-gray-800 rounded w-1/2 animate-pulse"></div>
+              <div class="h-3 bg-gray-800 rounded w-1/4 animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI Processing Loader -->
+  <section class="component-section">
+    <h2 class="section-title text-white">טעינת AI / AI Processing Loader</h2>
+
+    <div class="flex justify-center py-12">
+      <div class="text-center max-w-md">
+        <!-- Animated Rings -->
+        <div class="relative w-32 h-32 mx-auto mb-8">
+          <div class="absolute inset-0 rounded-full border-4 border-transparent border-t-cyan-500 animate-spin"></div>
+          <div class="absolute inset-4 rounded-full border-4 border-transparent border-t-purple-500 animate-spin" style="animation-direction: reverse; animation-duration: 1.5s;"></div>
+          <div class="absolute inset-8 rounded-full border-4 border-transparent border-t-pink-500 animate-spin" style="animation-duration: 2s;"></div>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <svg class="w-8 h-8 text-white animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+        </div>
+
+        <h2 class="text-2xl font-bold text-white mb-2">מנתח מסמכי מכרז</h2>
+        <p class="text-gray-400 mb-8">מזהה תנאי סף ודרישות טכניות</p>
+
+        <!-- Progress -->
+        <div class="w-full max-w-xs mx-auto">
+          <div class="flex justify-between text-sm text-gray-400 mb-2">
+            <span>התקדמות</span>
+            <span>67%</span>
+          </div>
+          <div class="h-2 bg-gray-800 rounded-full overflow-hidden">
+            <div class="h-full bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 rounded-full" style="width: 67%"></div>
+          </div>
+        </div>
+
+        <!-- Steps -->
+        <div class="mt-8 space-y-3 text-right">
+          <div class="flex items-center gap-3 px-4 py-2 rounded-lg text-green-400">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span class="text-sm">חילוץ טקסט מ-PDF</span>
+          </div>
+          <div class="flex items-center gap-3 px-4 py-2 rounded-lg text-cyan-400">
+            <div class="w-5 h-5 rounded-full border-2 border-current border-t-transparent animate-spin"></div>
+            <span class="text-sm">ניתוח תנאי סף</span>
+          </div>
+          <div class="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-500">
+            <div class="w-5 h-5 rounded-full border-2 border-current"></div>
+            <span class="text-sm">זיהוי דרישות טכניות</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Toasts Section -->
+  <section class="component-section">
+    <h2 class="section-title text-white">הודעות / Toast Notifications</h2>
+
+    <div class="space-y-4 max-w-md">
+      <!-- Success Toast -->
+      <div class="flex items-center gap-4 px-5 py-4 rounded-2xl bg-green-500/10 backdrop-blur-xl border border-green-500/20 shadow-xl">
+        <div class="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        <div class="flex-1">
+          <p class="font-medium text-white">ניתוח הושלם בהצלחה</p>
+          <p class="text-sm text-gray-400">המכרז מוכן לסקירה</p>
+        </div>
+        <button class="p-1 text-gray-400 hover:text-white transition-colors">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Error Toast -->
+      <div class="flex items-center gap-4 px-5 py-4 rounded-2xl bg-red-500/10 backdrop-blur-xl border border-red-500/20 shadow-xl">
+        <div class="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </div>
+        <div class="flex-1">
+          <p class="font-medium text-white">שגיאה בהעלאת הקובץ</p>
+          <p class="text-sm text-gray-400">הקובץ גדול מדי או לא תואם</p>
+        </div>
+        <button class="p-1 text-gray-400 hover:text-white transition-colors">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Warning Toast -->
+      <div class="flex items-center gap-4 px-5 py-4 rounded-2xl bg-orange-500/10 backdrop-blur-xl border border-orange-500/20 shadow-xl">
+        <div class="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        </div>
+        <div class="flex-1">
+          <p class="font-medium text-white">מועד הגשה מתקרב</p>
+          <p class="text-sm text-gray-400">נשארו 3 ימים להגשה</p>
+        </div>
+        <button class="p-1 text-gray-400 hover:text-white transition-colors">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Info Toast -->
+      <div class="flex items-center gap-4 px-5 py-4 rounded-2xl bg-cyan-500/10 backdrop-blur-xl border border-cyan-500/20 shadow-xl">
+        <div class="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div class="flex-1">
+          <p class="font-medium text-white">מכרז חדש זוהה</p>
+          <p class="text-sm text-gray-400">נוסף לרשימת המעקב שלך</p>
+        </div>
+        <button class="p-1 text-gray-400 hover:text-white transition-colors">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modal Section -->
+  <section class="component-section">
+    <h2 class="section-title text-white">חלון מודאלי / Modal Dialog</h2>
+
+    <div class="relative p-4 bg-black/50 rounded-2xl">
+      <!-- Modal Preview -->
+      <div class="relative w-full max-w-lg mx-auto bg-gray-900 rounded-2xl border border-white/10 shadow-2xl">
+        <!-- Header -->
+        <div class="flex items-center justify-between p-6 border-b border-white/5">
+          <h2 class="text-xl font-semibold text-white">הוסף מכרז חדש</h2>
+          <button class="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="p-6">
+          <p class="text-gray-400 mb-6">העלה את מסמכי המכרז או הזן את מספר המכרז ידנית</p>
+
+          <div class="space-y-4">
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-gray-300">מספר מכרז</label>
+              <input type="text" class="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all" placeholder="לדוגמה: 722109">
+            </div>
+
+            <div class="text-center text-gray-500 text-sm">או</div>
+
+            <div class="p-4 border-2 border-dashed border-white/10 rounded-xl text-center hover:border-indigo-500/50 transition-colors cursor-pointer">
+              <svg class="w-8 h-8 mx-auto text-gray-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+              </svg>
+              <p class="text-sm text-gray-400">לחץ להעלאת קבצים</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="flex items-center justify-end gap-3 p-6 border-t border-white/5">
+          <button class="px-4 py-2 rounded-xl text-gray-400 hover:text-white transition-colors">
+            ביטול
+          </button>
+          <button class="px-6 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium hover:shadow-lg hover:shadow-indigo-500/25 transition-all">
+            המשך
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Navigation Section -->
+  <section class="component-section">
+    <h2 class="section-title text-white">ניווט / Navigation</h2>
+
+    <div class="flex gap-8">
+      <!-- Sidebar Preview -->
+      <div class="w-72 bg-black/50 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+        <!-- Logo -->
+        <div class="flex items-center gap-3 mb-8">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold text-white">Tenderix</h1>
+            <p class="text-xs text-gray-500">AI Intelligence</p>
+          </div>
+        </div>
+
+        <!-- Nav Items -->
+        <nav class="space-y-2">
+          <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-500/20 to-purple-500/10 border border-indigo-500/30 text-white">
+            <svg class="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/>
+            </svg>
+            <span class="font-medium">לוח בקרה</span>
+          </a>
+
+          <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-white/5 hover:text-white transition-all">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <span>מכרזים</span>
+          </a>
+
+          <a href="#" class="flex items-center justify-between px-4 py-3 rounded-xl text-gray-400 hover:bg-white/5 hover:text-white transition-all">
+            <div class="flex items-center gap-3">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+              </svg>
+              <span>התראות</span>
+            </div>
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500 text-white">5</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Tabs -->
+      <div class="flex-1">
+        <h3 class="text-sm font-medium text-gray-400 mb-4">Tabs</h3>
+        <div class="flex gap-1 p-1 bg-gray-900/50 rounded-xl w-fit">
+          <button class="px-4 py-2 rounded-lg bg-white/10 text-white font-medium text-sm">תנאי סף</button>
+          <button class="px-4 py-2 rounded-lg text-gray-400 hover:text-white text-sm transition-colors">מפרט</button>
+          <button class="px-4 py-2 rounded-lg text-gray-400 hover:text-white text-sm transition-colors">מתחרים</button>
+          <button class="px-4 py-2 rounded-lg text-gray-400 hover:text-white text-sm transition-colors">החלטה</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Upload Zone -->
+  <section class="component-section">
+    <h2 class="section-title text-white">אזור העלאה / Upload Zone</h2>
+
+    <div class="relative p-8 border-2 border-dashed border-white/10 rounded-2xl bg-gradient-to-br from-white/[0.02] to-transparent hover:border-indigo-500/50 hover:bg-indigo-500/[0.02] transition-all duration-500 cursor-pointer group">
+      <div class="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-cyan-500/10 pointer-events-none"></div>
+
+      <div class="relative text-center">
+        <div class="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/20 flex items-center justify-center group-hover:scale-110 group-hover:shadow-xl group-hover:shadow-indigo-500/20 transition-all duration-500">
+          <svg class="w-10 h-10 text-indigo-400 group-hover:text-indigo-300 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+        </div>
+
+        <h3 class="text-xl font-semibold text-white mb-2">גרור מסמכי מכרז לכאן</h3>
+        <p class="text-gray-400 mb-6">או לחץ לבחירת קבצים מהמחשב</p>
+
+        <div class="flex items-center justify-center gap-2">
+          <span class="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-400">PDF</span>
+          <span class="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-400">DOCX</span>
+          <span class="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-400">XLSX</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Color Palette -->
+  <section class="component-section">
+    <h2 class="section-title text-white">פלטת צבעים / Color Palette</h2>
+
+    <div class="space-y-6">
+      <!-- Backgrounds -->
+      <div>
+        <h3 class="text-sm font-medium text-gray-400 mb-4">Backgrounds</h3>
+        <div class="flex gap-4">
+          <div class="text-center">
+            <div class="w-20 h-20 rounded-xl bg-[#0a0a0f] border border-white/10"></div>
+            <p class="text-xs text-gray-500 mt-2">Primary</p>
+            <p class="text-xs text-gray-600">#0a0a0f</p>
+          </div>
+          <div class="text-center">
+            <div class="w-20 h-20 rounded-xl bg-[#12121a] border border-white/10"></div>
+            <p class="text-xs text-gray-500 mt-2">Secondary</p>
+            <p class="text-xs text-gray-600">#12121a</p>
+          </div>
+          <div class="text-center">
+            <div class="w-20 h-20 rounded-xl bg-[#1a1a25] border border-white/10"></div>
+            <p class="text-xs text-gray-500 mt-2">Tertiary</p>
+            <p class="text-xs text-gray-600">#1a1a25</p>
+          </div>
+          <div class="text-center">
+            <div class="w-20 h-20 rounded-xl bg-[#222230] border border-white/10"></div>
+            <p class="text-xs text-gray-500 mt-2">Quaternary</p>
+            <p class="text-xs text-gray-600">#222230</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Accents -->
+      <div>
+        <h3 class="text-sm font-medium text-gray-400 mb-4">Accent Colors</h3>
+        <div class="flex gap-4">
+          <div class="text-center">
+            <div class="w-20 h-20 rounded-xl bg-[#6366f1]"></div>
+            <p class="text-xs text-gray-500 mt-2">Indigo</p>
+            <p class="text-xs text-gray-600">#6366f1</p>
+          </div>
+          <div class="text-center">
+            <div class="w-20 h-20 rounded-xl bg-[#8b5cf6]"></div>
+            <p class="text-xs text-gray-500 mt-2">Violet</p>
+            <p class="text-xs text-gray-600">#8b5cf6</p>
+          </div>
+          <div class="text-center">
+            <div class="w-20 h-20 rounded-xl bg-[#a855f7]"></div>
+            <p class="text-xs text-gray-500 mt-2">Purple</p>
+            <p class="text-xs text-gray-600">#a855f7</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Neons -->
+      <div>
+        <h3 class="text-sm font-medium text-gray-400 mb-4">Neon Colors</h3>
+        <div class="flex gap-4">
+          <div class="text-center">
+            <div class="w-20 h-20 rounded-xl bg-[#00d4ff] shadow-lg shadow-cyan-500/30"></div>
+            <p class="text-xs text-gray-500 mt-2">Cyan</p>
+            <p class="text-xs text-gray-600">#00d4ff</p>
+          </div>
+          <div class="text-center">
+            <div class="w-20 h-20 rounded-xl bg-[#b14eff] shadow-lg shadow-purple-500/30"></div>
+            <p class="text-xs text-gray-500 mt-2">Purple</p>
+            <p class="text-xs text-gray-600">#b14eff</p>
+          </div>
+          <div class="text-center">
+            <div class="w-20 h-20 rounded-xl bg-[#ff006e] shadow-lg shadow-pink-500/30"></div>
+            <p class="text-xs text-gray-500 mt-2">Pink</p>
+            <p class="text-xs text-gray-600">#ff006e</p>
+          </div>
+          <div class="text-center">
+            <div class="w-20 h-20 rounded-xl bg-[#00ff88] shadow-lg shadow-green-500/30"></div>
+            <p class="text-xs text-gray-500 mt-2">Green</p>
+            <p class="text-xs text-gray-600">#00ff88</p>
+          </div>
+          <div class="text-center">
+            <div class="w-20 h-20 rounded-xl bg-[#ff9500] shadow-lg shadow-orange-500/30"></div>
+            <p class="text-xs text-gray-500 mt-2">Orange</p>
+            <p class="text-xs text-gray-600">#ff9500</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gradients -->
+      <div>
+        <h3 class="text-sm font-medium text-gray-400 mb-4">Gradients</h3>
+        <div class="flex gap-4">
+          <div class="text-center">
+            <div class="w-32 h-20 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600"></div>
+            <p class="text-xs text-gray-500 mt-2">Primary</p>
+          </div>
+          <div class="text-center">
+            <div class="w-32 h-20 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-500"></div>
+            <p class="text-xs text-gray-500 mt-2">Glow</p>
+          </div>
+          <div class="text-center">
+            <div class="w-32 h-20 rounded-xl bg-gradient-to-r from-green-400 to-cyan-500"></div>
+            <p class="text-xs text-gray-500 mt-2">Success</p>
+          </div>
+          <div class="text-center">
+            <div class="w-32 h-20 rounded-xl bg-gradient-to-r from-pink-500 to-orange-500"></div>
+            <p class="text-xs text-gray-500 mt-2">Danger</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Typography -->
+  <section class="component-section">
+    <h2 class="section-title text-white">טיפוגרפיה / Typography</h2>
+
+    <div class="space-y-8">
+      <!-- Hebrew -->
+      <div>
+        <h3 class="text-sm font-medium text-gray-400 mb-4">Hebrew (Heebo)</h3>
+        <div class="space-y-4">
+          <p class="text-5xl font-bold text-white">כותרת ראשית - H1</p>
+          <p class="text-4xl font-bold text-white">כותרת משנית - H2</p>
+          <p class="text-3xl font-semibold text-white">כותרת שלישית - H3</p>
+          <p class="text-2xl font-semibold text-white">כותרת רביעית - H4</p>
+          <p class="text-xl font-medium text-white">כותרת חמישית - H5</p>
+          <p class="text-lg text-white">טקסט גדול - Large Text</p>
+          <p class="text-base text-gray-300">טקסט רגיל - Body Text. זוהי דוגמה לטקסט גוף בעברית עם קריאות מצוינת.</p>
+          <p class="text-sm text-gray-400">טקסט קטן - Small Text. מתאים להערות ומידע משני.</p>
+          <p class="text-xs text-gray-500">טקסט קטן מאוד - Extra Small. לתוויות ומטא-דאטה.</p>
+        </div>
+      </div>
+
+      <!-- Numbers -->
+      <div>
+        <h3 class="text-sm font-medium text-gray-400 mb-4">Numbers (LTR)</h3>
+        <div class="space-y-2">
+          <p class="text-3xl font-bold text-white font-mono" dir="ltr">₪12,500,000</p>
+          <p class="text-xl text-gray-300 font-mono" dir="ltr">15.01.2026</p>
+          <p class="text-lg text-gray-400 font-mono" dir="ltr">+972-50-123-4567</p>
+          <p class="text-base text-cyan-400 font-mono" dir="ltr">87.5%</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</body>
+</html>
