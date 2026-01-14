@@ -315,15 +315,42 @@
                     (tender.issuing_body || 'גורם לא ידוע') + ' | ' +
                     'מועד הגשה: ' + (tender.submission_deadline ? new Date(tender.submission_deadline).toLocaleDateString('he-IL') : 'לא צוין');
 
-                // Update details
+                // Update details - Enhanced display with all metadata
+                const scoringInfo = tender.quality_weight || tender.price_weight
+                    ? `<div style="background: rgba(59, 130, 246, 0.1); padding: 12px; border-radius: 8px; margin-top: 15px;">
+                        <div style="font-weight: bold; margin-bottom: 8px; color: #3b82f6;">שיטת ניקוד</div>
+                        <div style="display: flex; gap: 20px;">
+                            <div>איכות: <strong>${tender.quality_weight || 0}%</strong></div>
+                            <div>מחיר: <strong>${tender.price_weight || 0}%</strong></div>
+                        </div>
+                       </div>`
+                    : '';
+
+                const categoryLabels = {
+                    'VIDEO_CCTV': '📹 וידאו/מצלמות',
+                    'COMMUNICATIONS': '📡 תקשורת',
+                    'SOFTWARE': '💻 תוכנה',
+                    'ACCESS_CONTROL': '🚪 בקרת כניסה',
+                    'INFRASTRUCTURE': '🔧 תשתיות',
+                    'CONSULTING': '📋 ייעוץ',
+                    'MAINTENANCE': '🔧 תחזוקה',
+                    'COMBINED': '🔀 משולב',
+                    'OTHER': '📁 אחר'
+                };
+
                 document.getElementById('tenderDetails').innerHTML = `
                     <table style="width: 100%; border-collapse: collapse;">
-                        <tr><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); color: #888;">מספר מכרז:</td><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">${tender.tender_number || '-'}</td></tr>
+                        <tr><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); color: #888; width: 35%;">מספר מכרז:</td><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">${tender.tender_number || '-'}</td></tr>
                         <tr><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); color: #888;">גורם מזמין:</td><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">${tender.issuing_body || '-'}</td></tr>
+                        <tr><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); color: #888;">קטגוריה:</td><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">${categoryLabels[tender.category] || tender.category || '-'}</td></tr>
                         <tr><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); color: #888;">סטטוס:</td><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">${tender.status || '-'}</td></tr>
-                        <tr><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); color: #888;">שווי משוער:</td><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">₪${(tender.estimated_value || 0).toLocaleString()}</td></tr>
-                        <tr><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); color: #888;">ציון תנאי סף:</td><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">${tender.gate_score || '-'}/100</td></tr>
+                        <tr><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); color: #888;">שווי משוער:</td><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">${tender.estimated_value ? '₪' + tender.estimated_value.toLocaleString() : '-'}</td></tr>
+                        <tr><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); color: #888;">ערבות:</td><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">${tender.guarantee_amount ? '₪' + tender.guarantee_amount.toLocaleString() : '-'}</td></tr>
+                        <tr><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); color: #888;">מועד הגשה:</td><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">${tender.submission_deadline ? new Date(tender.submission_deadline).toLocaleDateString('he-IL') : '-'}</td></tr>
+                        <tr><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); color: #888;">מועד הבהרות:</td><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">${tender.clarification_deadline ? new Date(tender.clarification_deadline).toLocaleDateString('he-IL') : '-'}</td></tr>
+                        <tr><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); color: #888;">תקופת התקשרות:</td><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">${tender.contract_duration_months ? tender.contract_duration_months + ' חודשים' : '-'}</td></tr>
                     </table>
+                    ${scoringInfo}
                 `;
 
                 // Load documents
@@ -398,22 +425,75 @@
 
                 document.getElementById('gateConditions').innerHTML = gates.map(gate => {
                     const status = gate.company_status || gate.status || 'pending';
-                    const statusClass = status === 'pass' ? 'pass' :
-                                       status === 'risk' ? 'risk' :
-                                       status === 'fail' ? 'fail' : 'pending';
-                    const statusText = status === 'pass' ? 'עומד' :
+                    const statusClass = status === 'MEETS' ? 'pass' :
+                                       status === 'PARTIALLY_MEETS' || status === 'risk' ? 'risk' :
+                                       status === 'DOES_NOT_MEET' || status === 'fail' ? 'fail' : 'pending';
+                    const statusText = status === 'MEETS' ? 'עומד' :
+                                      status === 'PARTIALLY_MEETS' ? 'עומד חלקית' :
+                                      status === 'DOES_NOT_MEET' ? 'לא עומד' :
+                                      status === 'pass' ? 'עומד' :
                                       status === 'risk' ? 'סיכון' :
                                       status === 'fail' ? 'לא עומד' : 'ממתין';
 
+                    // Type badge - mandatory vs advantage
+                    const typeBadge = gate.condition_type === 'ADVANTAGE'
+                        ? '<span style="background: rgba(168, 85, 247, 0.2); color: #a855f7; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; margin-left: 8px;">יתרון</span>'
+                        : gate.is_mandatory
+                        ? '<span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; margin-left: 8px;">חובה</span>'
+                        : '';
+
+                    // Requirement type badge
+                    const reqTypes = {
+                        'EXPERIENCE': { label: 'ניסיון', color: '#3b82f6' },
+                        'FINANCIAL': { label: 'פיננסי', color: '#22c55e' },
+                        'CERTIFICATION': { label: 'הסמכה', color: '#f59e0b' },
+                        'PERSONNEL': { label: 'כ"א', color: '#8b5cf6' },
+                        'EQUIPMENT': { label: 'ציוד', color: '#ec4899' }
+                    };
+                    const reqType = reqTypes[gate.requirement_type];
+                    const reqBadge = reqType
+                        ? `<span style="background: rgba(${reqType.color === '#3b82f6' ? '59, 130, 246' : reqType.color === '#22c55e' ? '34, 197, 94' : reqType.color === '#f59e0b' ? '245, 158, 11' : '139, 92, 246'}, 0.2); color: ${reqType.color}; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; margin-left: 8px;">${reqType.label}</span>`
+                        : '';
+
+                    // Quantitative data
+                    const quantData = [];
+                    if (gate.required_amount) quantData.push(`₪${(gate.required_amount / 1000000).toFixed(1)}M`);
+                    if (gate.required_count) quantData.push(`${gate.required_count} פרויקטים`);
+                    if (gate.required_years) quantData.push(`${gate.required_years} שנים`);
+
                     return `
-                        <div class="gate-item ${statusClass}">
-                            <div style="display: flex; justify-content: space-between; align-items: start;">
-                                <div class="gate-text">${gate.condition_text || '-'}</div>
+                        <div class="gate-item ${statusClass}" style="border-right: 3px solid ${statusClass === 'pass' ? '#22c55e' : statusClass === 'risk' ? '#f59e0b' : statusClass === 'fail' ? '#ef4444' : '#3b82f6'};">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                <div>
+                                    <span style="font-weight: bold; color: #00d4ff;">#${gate.condition_number || ''}</span>
+                                    ${typeBadge}${reqBadge}
+                                </div>
                                 <span class="gate-status ${statusClass}">${statusText}</span>
                             </div>
-                            ${gate.evidence_source || gate.source_file ? `
-                                <div class="gate-source">
-                                    📄 ${gate.evidence_source || gate.source_file} ${gate.source_page ? '| עמ\' ' + gate.source_page : ''} ${gate.source_section ? '| סעיף ' + gate.source_section : ''}
+                            <div class="gate-text" style="margin-bottom: 10px;">${gate.condition_text || '-'}</div>
+                            ${quantData.length > 0 ? `
+                                <div style="font-size: 0.85rem; color: #a0aec0; margin-bottom: 8px;">
+                                    📊 דרישות: ${quantData.join(' | ')}
+                                </div>
+                            ` : ''}
+                            ${gate.entity_type ? `
+                                <div style="font-size: 0.85rem; color: #a0aec0; margin-bottom: 8px;">
+                                    👤 נושא הדרישה: ${gate.entity_type === 'BIDDER_ONLY' ? 'המציע בלבד' : gate.entity_type === 'SUBCONTRACTOR_ALLOWED' ? 'מותר קבלן משנה' : gate.entity_type === 'PARTNER_ALLOWED' ? 'מותר שותף' : 'המציע'}
+                                </div>
+                            ` : ''}
+                            ${gate.source_page || gate.source_section ? `
+                                <div class="gate-source" style="font-size: 0.8rem; color: #718096;">
+                                    📄 ${gate.source_page ? 'עמוד ' + gate.source_page : ''} ${gate.source_section ? '| סעיף ' + gate.source_section : ''}
+                                </div>
+                            ` : ''}
+                            ${gate.evidence ? `
+                                <div style="font-size: 0.85rem; color: #22c55e; margin-top: 8px; padding: 8px; background: rgba(34, 197, 94, 0.1); border-radius: 6px;">
+                                    ✅ ${gate.evidence}
+                                </div>
+                            ` : ''}
+                            ${gate.gap_description ? `
+                                <div style="font-size: 0.85rem; color: #f59e0b; margin-top: 8px; padding: 8px; background: rgba(245, 158, 11, 0.1); border-radius: 6px;">
+                                    ⚠️ פער: ${gate.gap_description}
                                 </div>
                             ` : ''}
                         </div>

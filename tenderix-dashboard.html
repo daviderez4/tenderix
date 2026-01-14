@@ -1205,6 +1205,418 @@
         }
 
         // ============================================
+        // MODULE 1.3: HEBREW TEXT NORMALIZATION
+        // ============================================
+        function normalizeHebrewText(text) {
+            console.log('[Normalize] Normalizing Hebrew text...');
+
+            let normalized = text;
+
+            // Fix common typos
+            const typoFixes = {
+                'יכולצ': 'יכולת',
+                'מסוגולת': 'מסוגלות',
+                'הצאה': 'הצעה',
+                'מכרזז': 'מכרז',
+                'תנאיי': 'תנאי',
+                'פרויקטט': 'פרויקט',
+            };
+            for (const [typo, fix] of Object.entries(typoFixes)) {
+                normalized = normalized.replace(new RegExp(typo, 'g'), fix);
+            }
+
+            // Normalize synonyms to standard terms
+            const synonyms = {
+                'מסוגלות': 'יכולת',
+                'כשירות': 'יכולת',
+                'הסתייגות': 'הבהרה',
+                'ק.משנה': 'קבלן משנה',
+                'ק"מ': 'קבלן משנה',
+            };
+            for (const [synonym, standard] of Object.entries(synonyms)) {
+                normalized = normalized.replace(new RegExp(synonym, 'g'), standard);
+            }
+
+            // Normalize numbers: "50 מלש"ח" -> "50000000"
+            normalized = normalized.replace(/(\d+)\s*מלש"ח/g, (match, num) => (parseInt(num) * 1000000).toString());
+            normalized = normalized.replace(/(\d+)\s*מליון/g, (match, num) => (parseInt(num) * 1000000).toString());
+            normalized = normalized.replace(/(\d+)\s*אלף/g, (match, num) => (parseInt(num) * 1000).toString());
+
+            // Normalize currency symbols
+            normalized = normalized.replace(/ש"ח/g, '₪');
+            normalized = normalized.replace(/שקל/g, '₪');
+
+            return normalized;
+        }
+
+        // ============================================
+        // MODULE 1.4: DEFINITIONS EXTRACTION
+        // ============================================
+        function extractDefinitions(text) {
+            console.log('[Definitions] Extracting tender definitions...');
+
+            const definitions = [];
+
+            // Pattern 1: "מונח" - הגדרה
+            const pattern1 = /["״]([^"״]+)["״]\s*[-–:]\s*([^\n]{10,200})/g;
+            let match;
+            while ((match = pattern1.exec(text)) !== null) {
+                definitions.push({
+                    term: match[1].trim(),
+                    definition: match[2].trim(),
+                    source: 'quoted_definition'
+                });
+            }
+
+            // Pattern 2: Look for "הגדרות" section
+            const defSectionMatch = text.match(/(?:סעיף\s*)?הגדרות([\s\S]{100,5000}?)(?=סעיף\s*\d|פרק\s*\d|$)/i);
+            if (defSectionMatch) {
+                const defSection = defSectionMatch[1];
+                // Extract items from definitions section
+                const itemPattern = /(\d+\.\d*)\s*["״]?([^"״\n]+)["״]?\s*[-–:]\s*([^\n]+)/g;
+                while ((match = itemPattern.exec(defSection)) !== null) {
+                    definitions.push({
+                        term: match[2].trim(),
+                        definition: match[3].trim(),
+                        source: 'definitions_section',
+                        section_number: match[1]
+                    });
+                }
+            }
+
+            // Pattern 3: Common tender terms
+            const commonTerms = ['פרויקט דומה', 'המציע', 'המזמין', 'ניסיון קודם', 'תנאי סף'];
+            for (const term of commonTerms) {
+                const termPattern = new RegExp(`${term}\\s*[-–:]\\s*([^\\n]{10,200})`, 'i');
+                const termMatch = text.match(termPattern);
+                if (termMatch) {
+                    definitions.push({
+                        term: term,
+                        definition: termMatch[1].trim(),
+                        source: 'inline_definition'
+                    });
+                }
+            }
+
+            console.log('[Definitions] Found', definitions.length, 'definitions');
+            return definitions;
+        }
+
+        // ============================================
+        // MODULE 1.5: TENDER CATEGORIZATION
+        // ============================================
+        function categorizeTender(text) {
+            console.log('[Category] Categorizing tender...');
+
+            const categories = {
+                VIDEO_CCTV: {
+                    keywords: ['מצלמות', 'CCTV', 'וידאו', 'מעקב', 'PTZ', 'LPR', 'זיהוי לוחיות', 'אנליטיקה'],
+                    weight: 0
+                },
+                COMMUNICATIONS: {
+                    keywords: ['תקשורת', 'רשת', 'סייבר', 'WiFi', 'אלחוט', 'סיבים', 'אופטי'],
+                    weight: 0
+                },
+                SOFTWARE: {
+                    keywords: ['תוכנה', 'VMS', 'PSIM', 'אפליקציה', 'ממשק', 'API', 'מערכת ניהול'],
+                    weight: 0
+                },
+                ACCESS_CONTROL: {
+                    keywords: ['בקרת כניסה', 'שערים', 'קורא כרטיסים', 'ביומטרי', 'מנעולים'],
+                    weight: 0
+                },
+                INFRASTRUCTURE: {
+                    keywords: ['תשתית', 'חשמל', 'כבילה', 'עבודות אזרחיות', 'עמודים', 'חפירה'],
+                    weight: 0
+                },
+                CONSULTING: {
+                    keywords: ['ייעוץ', 'ניהול פרויקטים', 'פיקוח', 'תכנון', 'הנדסה'],
+                    weight: 0
+                },
+                MAINTENANCE: {
+                    keywords: ['תחזוקה', 'שירות', 'אחזקה', 'SLA', 'תיקונים', 'תמיכה'],
+                    weight: 0
+                }
+            };
+
+            const lowerText = text.toLowerCase();
+
+            for (const [category, config] of Object.entries(categories)) {
+                for (const keyword of config.keywords) {
+                    if (lowerText.includes(keyword.toLowerCase())) {
+                        config.weight += 1;
+                    }
+                }
+            }
+
+            // Find best category
+            let bestCategory = 'OTHER';
+            let maxWeight = 0;
+            const matchedCategories = [];
+
+            for (const [category, config] of Object.entries(categories)) {
+                if (config.weight > 0) {
+                    matchedCategories.push({ category, weight: config.weight });
+                }
+                if (config.weight > maxWeight) {
+                    maxWeight = config.weight;
+                    bestCategory = category;
+                }
+            }
+
+            // If multiple categories match, it's COMBINED
+            if (matchedCategories.length > 2) {
+                bestCategory = 'COMBINED';
+            }
+
+            console.log('[Category] Best category:', bestCategory, 'Matched:', matchedCategories);
+            return {
+                primary: bestCategory,
+                all: matchedCategories,
+                technical_dictionary: getTechnicalDictionary(bestCategory)
+            };
+        }
+
+        // Technical dictionary per category (Module C2)
+        function getTechnicalDictionary(category) {
+            const dictionaries = {
+                VIDEO_CCTV: {
+                    equivalents: {
+                        'מצלמת אבטחה': ['מצלמת IP', 'מצלמת רשת', 'מצלמת מעקב', 'מצלמת תנועה'],
+                        'מערכת ניהול וידאו': ['VMS', 'DVR', 'NVR', 'מערכת הקלטה'],
+                    }
+                },
+                COMMUNICATIONS: {
+                    equivalents: {
+                        'רשת תקשורת': ['LAN', 'WAN', 'רשת מקומית', 'רשת נתונים'],
+                        'ציוד תקשורת': ['מתג', 'נתב', 'switch', 'router'],
+                    }
+                },
+                SOFTWARE: {
+                    equivalents: {
+                        'מערכת ניהול': ['PSIM', 'VMS', 'BMS', 'תוכנת ניהול'],
+                    }
+                },
+                ACCESS_CONTROL: {
+                    equivalents: {
+                        'בקרת כניסה': ['קורא כרטיסים', 'מערכת שערים', 'בקרת גישה'],
+                    }
+                }
+            };
+            return dictionaries[category] || {};
+        }
+
+        // ============================================
+        // MODULE 2.1 ENHANCED: GATE CONDITIONS WITH CLASSIFICATION
+        // ============================================
+        async function extractGateConditionsEnhanced(tenderId, text, definitions) {
+            console.log('[Gates Enhanced] Extracting with classification...');
+
+            const supabase = getSupabase();
+            if (!supabase) return { success: false, conditions: [] };
+
+            // Normalize text first
+            const normalizedText = normalizeHebrewText(text);
+
+            const conditions = [];
+            let conditionNumber = 1;
+            const extractedTexts = new Set();
+
+            // Enhanced patterns for Module 2.1
+            const patterns = {
+                // תנאי סף (mandatory)
+                mandatory: [
+                    /תנאי\s*סף\s*(?:מס['׳]?|מספר)?\s*(\d+(?:\.\d+)?)\s*[-–:]\s*([^\n]+)/gi,
+                    /(\d+(?:\.\d+)?)\s*[.\)]\s*(?:על\s*המציע|נדרש|חובה)\s*([^\n]+)/gi,
+                    /על\s*המציע\s*(?:להיות|להוכיח|להציג|לצרף)\s*([^\n]{10,200})/gi,
+                    /תנאי\s*הכרחי\s*[-–:]\s*([^\n]+)/gi,
+                    /חובה\s*[-–:]\s*([^\n]+)/gi,
+                ],
+                // יתרון (advantage/scoring)
+                advantage: [
+                    /יתרון\s*(?:ל|ינתן\s*ל)?\s*([^\n]+)/gi,
+                    /עדיפות\s*(?:ל|תינתן\s*ל)?\s*([^\n]+)/gi,
+                    /ניקוד\s*(?:נוסף|עודף)\s*(?:ל|עבור)?\s*([^\n]+)/gi,
+                    /יקבל\s*ניקוד\s*([^\n]+)/gi,
+                ]
+            };
+
+            // Extract mandatory conditions
+            for (const pattern of patterns.mandatory) {
+                let match;
+                pattern.lastIndex = 0;
+                while ((match = pattern.exec(normalizedText)) !== null) {
+                    const conditionText = (match[2] || match[1]).trim();
+                    if (conditionText.length < 15 || extractedTexts.has(conditionText.substring(0, 50))) continue;
+                    extractedTexts.add(conditionText.substring(0, 50));
+
+                    // Module 2.2: Quantitative breakdown
+                    const quantitative = extractQuantitativeData(conditionText);
+
+                    // Module 2.3: Identify bearer
+                    const bearer = identifyRequirementBearer(conditionText);
+
+                    // Module 2.4: Check "similar" interpretation
+                    const similarity = checkSimilarityInterpretation(conditionText, definitions);
+
+                    conditions.push({
+                        tender_id: tenderId,
+                        condition_number: String(conditionNumber++),
+                        condition_text: conditionText,
+                        condition_type: 'MANDATORY',
+                        is_mandatory: true,
+                        requirement_type: classifyRequirementType(conditionText),
+                        // Module 2.2 data
+                        required_amount: quantitative.amount,
+                        required_count: quantitative.count,
+                        required_years: quantitative.years,
+                        // Module 2.3 data
+                        entity_type: bearer.entity,
+                        // Traceability (C1)
+                        source_page: findPageNumber(text, match[0]),
+                        source_section: findSectionNumber(text, match[0]),
+                        status: 'UNKNOWN'
+                    });
+                }
+            }
+
+            // Extract advantage conditions
+            for (const pattern of patterns.advantage) {
+                let match;
+                pattern.lastIndex = 0;
+                while ((match = pattern.exec(normalizedText)) !== null) {
+                    const conditionText = match[1].trim();
+                    if (conditionText.length < 15 || extractedTexts.has(conditionText.substring(0, 50))) continue;
+                    extractedTexts.add(conditionText.substring(0, 50));
+
+                    conditions.push({
+                        tender_id: tenderId,
+                        condition_number: String(conditionNumber++),
+                        condition_text: conditionText,
+                        condition_type: 'ADVANTAGE',
+                        is_mandatory: false,
+                        requirement_type: classifyRequirementType(conditionText),
+                        status: 'UNKNOWN'
+                    });
+                }
+            }
+
+            console.log('[Gates Enhanced] Found', conditions.length, 'conditions');
+
+            // Save to database
+            let savedCount = 0;
+            for (const condition of conditions.slice(0, 50)) {
+                try {
+                    const { error } = await supabase.from('gate_conditions').insert(condition);
+                    if (!error) savedCount++;
+                } catch (err) {
+                    console.error('[Gates] Save error:', err);
+                }
+            }
+
+            return { success: savedCount > 0, count: savedCount, conditions };
+        }
+
+        // Module 2.2: Extract quantitative requirements
+        function extractQuantitativeData(text) {
+            const result = { amount: null, count: null, years: null };
+
+            // Extract monetary amount
+            const amountMatch = text.match(/([\d,\.]+)\s*(?:₪|ש"ח|מיליון|אלף)/);
+            if (amountMatch) {
+                let value = parseFloat(amountMatch[1].replace(/,/g, ''));
+                if (text.includes('מיליון')) value *= 1000000;
+                else if (text.includes('אלף')) value *= 1000;
+                result.amount = value;
+            }
+
+            // Extract count (projects, contracts, etc.)
+            const countMatch = text.match(/(\d+)\s*(?:פרויקט|עבודות|חוזים|הסכמים)/);
+            if (countMatch) {
+                result.count = parseInt(countMatch[1]);
+            }
+
+            // Extract years
+            const yearsMatch = text.match(/(\d+)\s*שנ(?:ה|ות|ים)/);
+            if (yearsMatch) {
+                result.years = parseInt(yearsMatch[1]);
+            }
+
+            return result;
+        }
+
+        // Module 2.3: Identify who must meet the requirement
+        function identifyRequirementBearer(text) {
+            const lowerText = text.toLowerCase();
+
+            if (lowerText.includes('המציע עצמו') || lowerText.includes('המציע בלבד')) {
+                return { entity: 'BIDDER_ONLY', can_subcontract: false };
+            }
+            if (lowerText.includes('קבלן משנה') || lowerText.includes('ק.משנה')) {
+                return { entity: 'SUBCONTRACTOR_ALLOWED', can_subcontract: true };
+            }
+            if (lowerText.includes('שותף') || lowerText.includes('קונסורציום')) {
+                return { entity: 'PARTNER_ALLOWED', can_subcontract: false };
+            }
+
+            // Default - bidder (but might allow subcontractor)
+            return { entity: 'BIDDER', can_subcontract: null };
+        }
+
+        // Module 2.4: Check for "similar" interpretation
+        function checkSimilarityInterpretation(text, definitions) {
+            const similarTerms = ['דומה', 'שווה ערך', 'מקביל', 'מסוג זהה'];
+
+            for (const term of similarTerms) {
+                if (text.includes(term)) {
+                    // Check if definition exists
+                    const def = definitions.find(d => d.term.includes('דומה') || d.term.includes('שווה'));
+                    return {
+                        has_similarity_clause: true,
+                        defined_in_tender: !!def,
+                        definition: def ? def.definition : null,
+                        interpretation: def ? 'DEFINED' : 'OPEN_TO_INTERPRETATION'
+                    };
+                }
+            }
+            return { has_similarity_clause: false };
+        }
+
+        // Classify requirement type
+        function classifyRequirementType(text) {
+            if (/ניסיון|פרויקט|ביצוע|עבודה|שנ[הות]/.test(text)) return 'EXPERIENCE';
+            if (/מחזור|הכנסות|הון|כספי|פיננס|ערבות/.test(text)) return 'FINANCIAL';
+            if (/תעודה|רישיון|הסמכה|ISO|סיווג|אישור/.test(text)) return 'CERTIFICATION';
+            if (/מנהל|צוות|עובד|מהנדס|יועץ/.test(text)) return 'PERSONNEL';
+            if (/ציוד|מכונות|רכב|כלים/.test(text)) return 'EQUIPMENT';
+            return 'OTHER';
+        }
+
+        // C1: Find page number (approximate)
+        function findPageNumber(fullText, matchText) {
+            const position = fullText.indexOf(matchText);
+            if (position === -1) return null;
+            // Estimate page based on character position (rough: ~3000 chars per page)
+            return Math.ceil(position / 3000);
+        }
+
+        // C1: Find section number
+        function findSectionNumber(fullText, matchText) {
+            const position = fullText.indexOf(matchText);
+            if (position === -1) return null;
+
+            // Look backwards for section number
+            const textBefore = fullText.substring(Math.max(0, position - 500), position);
+            const sectionMatch = textBefore.match(/(?:סעיף|פרק)\s*(\d+(?:\.\d+)*)/g);
+            if (sectionMatch && sectionMatch.length > 0) {
+                const lastSection = sectionMatch[sectionMatch.length - 1];
+                const numMatch = lastSection.match(/(\d+(?:\.\d+)*)/);
+                return numMatch ? numMatch[1] : null;
+            }
+            return null;
+        }
+
+        // ============================================
         // INITIALIZATION
         // ============================================
         document.addEventListener('DOMContentLoaded', async function() {
@@ -1700,18 +2112,58 @@
                     console.log('[Upload] Document record created:', doc.id);
                 }
 
-                // Step 5: Extract gate conditions
+                // Step 5: Normalize text (Module 1.3)
                 zone.innerHTML = `
                     <div class="upload-progress">
                         <div class="spinner"></div>
-                        <p>שלב 5/5: מנתח תנאי סף...</p>
+                        <p>שלב 5/8: מנרמל טקסט...</p>
                     </div>
                 `;
-                console.log('[Upload] Step 5: Extracting gate conditions...');
+                console.log('[Upload] Step 5: Normalizing Hebrew text...');
+                const normalizedText = extractedText.length > 100 ? normalizeHebrewText(extractedText) : extractedText;
+
+                // Step 6: Extract definitions (Module 1.4)
+                zone.innerHTML = `
+                    <div class="upload-progress">
+                        <div class="spinner"></div>
+                        <p>שלב 6/8: מחלץ הגדרות...</p>
+                    </div>
+                `;
+                console.log('[Upload] Step 6: Extracting definitions...');
+                const definitions = extractedText.length > 100 ? extractDefinitions(normalizedText) : [];
+                console.log('[Upload] Found', definitions.length, 'definitions');
+
+                // Step 7: Categorize tender (Module 1.5)
+                zone.innerHTML = `
+                    <div class="upload-progress">
+                        <div class="spinner"></div>
+                        <p>שלב 7/8: מסווג מכרז...</p>
+                    </div>
+                `;
+                console.log('[Upload] Step 7: Categorizing tender...');
+                const category = extractedText.length > 100 ? categorizeTender(normalizedText) : { primary: 'OTHER' };
+                console.log('[Upload] Category:', category.primary);
+
+                // Update tender with category
+                if (category.primary !== 'OTHER') {
+                    await supabase
+                        .from('tenders')
+                        .update({ category: category.primary })
+                        .eq('id', tender.id);
+                }
+
+                // Step 8: Extract gate conditions with enhanced analysis (Module 2.1)
+                zone.innerHTML = `
+                    <div class="upload-progress">
+                        <div class="spinner"></div>
+                        <p>שלב 8/8: מנתח תנאי סף...</p>
+                    </div>
+                `;
+                console.log('[Upload] Step 8: Extracting gate conditions (enhanced)...');
 
                 let gatesResult = { success: false, count: 0 };
                 if (extractedText.length > 100) {
-                    gatesResult = await extractGateConditions(tender.id, extractedText);
+                    gatesResult = await extractGateConditionsEnhanced(tender.id, normalizedText, definitions);
                     console.log('[Upload] Gates extraction result:', gatesResult);
 
                     // Update tender status
