@@ -902,6 +902,42 @@
                 return null;
             };
 
+            // Parse percentage for scoring weights
+            const parsePercentage = (patterns) => {
+                for (const pattern of patterns) {
+                    const match = text.match(pattern);
+                    if (match && match[1]) {
+                        const value = parseInt(match[1].replace('%', ''));
+                        if (value >= 0 && value <= 100) return value;
+                    }
+                }
+                return null;
+            };
+
+            // Parse contract period in months
+            const parseContractPeriod = () => {
+                // Look for period patterns
+                const patterns = [
+                    /תקופת?\s*(?:ה)?התקשרות\s*[:\-]?\s*(\d+)\s*(?:חודש|חודשים)/i,
+                    /תקופה\s*[:\-]?\s*(\d+)\s*(?:חודש|חודשים)/i,
+                    /למשך\s*(\d+)\s*(?:חודש|חודשים)/i,
+                    /תקופת?\s*(?:ה)?התקשרות\s*[:\-]?\s*(\d+)\s*שנ/i,
+                    /למשך\s*(\d+)\s*שנ/i,
+                ];
+                for (const pattern of patterns) {
+                    const match = text.match(pattern);
+                    if (match && match[1]) {
+                        let months = parseInt(match[1]);
+                        // If matched "שנ" (years), convert to months
+                        if (pattern.toString().includes('שנ')) {
+                            months *= 12;
+                        }
+                        return months;
+                    }
+                }
+                return null;
+            };
+
             const metadata = {
                 tender_number: parseField([
                     /מכרז\s*(?:מס['׳]?|מספר|פומבי)?\s*[:\-]?\s*([\d\/\-\.]+)/i,
@@ -937,7 +973,29 @@
                     /ערבות\s*(?:הצעה|בנקאית)?\s*[:\-]?\s*([\d,\.]+)/i,
                     /סכום\s*(?:ה)?ערבות\s*[:\-]?\s*([\d,\.]+)/i,
                 ]),
+                // Module 1.2: Scoring weights (אליצח: חשוב!)
+                quality_weight: parsePercentage([
+                    /משקל\s*(?:ה)?איכות\s*[:\-]?\s*(\d+)%?/i,
+                    /איכות\s*[:\-]?\s*(\d+)%/i,
+                    /(\d+)%\s*איכות/i,
+                    /ניקוד\s*איכות\s*[:\-]?\s*(\d+)/i,
+                ]),
+                price_weight: parsePercentage([
+                    /משקל\s*(?:ה)?מחיר\s*[:\-]?\s*(\d+)%?/i,
+                    /מחיר\s*[:\-]?\s*(\d+)%/i,
+                    /(\d+)%\s*מחיר/i,
+                    /ניקוד\s*מחיר\s*[:\-]?\s*(\d+)/i,
+                ]),
+                // Contract period in months
+                contract_duration_months: parseContractPeriod(),
             };
+
+            // Calculate complementary weight if one is found
+            if (metadata.quality_weight && !metadata.price_weight) {
+                metadata.price_weight = 100 - metadata.quality_weight;
+            } else if (metadata.price_weight && !metadata.quality_weight) {
+                metadata.quality_weight = 100 - metadata.price_weight;
+            }
 
             console.log('[Parse] Extracted metadata:', metadata);
             return metadata;
@@ -1019,6 +1077,131 @@
 
             console.log('[Gates] Saved', savedCount, 'conditions to database');
             return { success: savedCount > 0, count: savedCount };
+        }
+
+        // ============================================
+        // DOCUMENT TYPE DETECTION (Module 1.1)
+        // ============================================
+        function detectDocumentType(text, fileName) {
+            console.log('[DocType] Detecting document type...');
+
+            const lowerText = text.toLowerCase();
+            const lowerFileName = fileName.toLowerCase();
+
+            // Detection patterns for each document type
+            const patterns = {
+                TENDER_INVITATION: {
+                    // הזמנה להציע הצעות - contains תנאי סף
+                    indicators: [
+                        'הזמנה להציע הצעות',
+                        'הזמנה להגיש הצעות',
+                        'מכרז פומבי',
+                        'תנאי סף',
+                        'תנאי הסף',
+                        'רשאי להשתתף',
+                        'זכאי להשתתף'
+                    ],
+                    weight: 0
+                },
+                TECHNICAL_SPECIFICATION: {
+                    // מפרט טכני
+                    indicators: [
+                        'מפרט טכני',
+                        'דרישות טכניות',
+                        'מפרט מיוחד',
+                        'תקנים',
+                        'SLA',
+                        'רמת שירות'
+                    ],
+                    weight: 0
+                },
+                BILL_OF_QUANTITIES: {
+                    // כתב כמויות BOQ
+                    indicators: [
+                        'כתב כמויות',
+                        'כתב הכמויות',
+                        'BOQ',
+                        'פריט מס\'',
+                        'יחידת מידה',
+                        'כמות',
+                        'מחיר ליחידה',
+                        'סה"כ'
+                    ],
+                    weight: 0
+                },
+                CONTRACT: {
+                    // חוזה התקשרות
+                    indicators: [
+                        'חוזה',
+                        'הסכם התקשרות',
+                        'תנאי ההתקשרות',
+                        'תנאים כלליים',
+                        'צד א\'',
+                        'צד ב\'',
+                        'הקבלן מתחייב'
+                    ],
+                    weight: 0
+                },
+                CLARIFICATIONS: {
+                    // מסמכי הבהרות
+                    indicators: [
+                        'הבהרות',
+                        'שאלות ותשובות',
+                        'מענה לשאלות',
+                        'תשובות להבהרות',
+                        'שאלה מס\'',
+                        'תשובה:'
+                    ],
+                    weight: 0
+                },
+                FORMS: {
+                    // טפסים למילוי
+                    indicators: [
+                        'טופס',
+                        'נספח',
+                        'הצהרה',
+                        'כתב התחייבות',
+                        'ערבות בנקאית',
+                        'למלא',
+                        'חתימה:'
+                    ],
+                    weight: 0
+                }
+            };
+
+            // Calculate weights based on indicator matches
+            for (const [docType, config] of Object.entries(patterns)) {
+                for (const indicator of config.indicators) {
+                    if (lowerText.includes(indicator) || lowerFileName.includes(indicator)) {
+                        config.weight += 1;
+                    }
+                }
+            }
+
+            // Find the type with highest weight
+            let bestType = 'TENDER_INVITATION'; // default
+            let maxWeight = 0;
+
+            for (const [docType, config] of Object.entries(patterns)) {
+                if (config.weight > maxWeight) {
+                    maxWeight = config.weight;
+                    bestType = docType;
+                }
+            }
+
+            // Special cases based on filename
+            if (lowerFileName.includes('boq') || lowerFileName.includes('כמויות')) {
+                bestType = 'BILL_OF_QUANTITIES';
+            } else if (lowerFileName.includes('מפרט')) {
+                bestType = 'TECHNICAL_SPECIFICATION';
+            } else if (lowerFileName.includes('הבהרות')) {
+                bestType = 'CLARIFICATIONS';
+            } else if (lowerFileName.includes('חוזה') || lowerFileName.includes('הסכם')) {
+                bestType = 'CONTRACT';
+            }
+
+            console.log('[DocType] Detected type:', bestType, 'with weight:', maxWeight);
+            return bestType;
         }
 
         // ============================================
@@ -1460,6 +1643,12 @@
                     clarification_deadline: metadata.clarification_deadline || null,
                     estimated_value: metadata.estimated_value || null,
                     guarantee_amount: metadata.guarantee_amount || null,
+                    // Module 1.2: Scoring weights
+                    quality_weight: metadata.quality_weight || null,
+                    price_weight: metadata.price_weight || null,
+                    contract_duration_months: metadata.contract_duration_months || null,
+                    // Scoring method detection
+                    scoring_method: (metadata.quality_weight || metadata.price_weight) ? 'WEIGHTED' : null,
                     status: 'INTAKE',
                     current_step: 'ANALYZING',
                     category: 'OTHER',
@@ -1481,6 +1670,12 @@
 
                 console.log('[Upload] Tender created:', tender.id);
 
+                // Detect document type based on content (Module 1.1)
+                const detectedDocType = extractedText.length > 100
+                    ? detectDocumentType(extractedText, selectedFile.name)
+                    : 'TENDER_INVITATION';
+                console.log('[Upload] Detected document type:', detectedDocType);
+
                 // Create document record
                 const { data: doc, error: docError } = await supabase
                     .from('tender_documents')
@@ -1492,7 +1687,7 @@
                         file_size: selectedFile.size,
                         storage_path: filePath,
                         file_url: fileUrl,
-                        document_type: 'TENDER_INVITATION',
+                        document_type: detectedDocType,
                         status: 'UPLOADED',
                         created_at: new Date().toISOString()
                     })
