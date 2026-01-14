@@ -6,7 +6,7 @@ const CONFIG = {
   // SUPABASE
   // ===================
   SUPABASE_URL: 'https://rerfjgjwjqodevkvhkxu.supabase.co',
-  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY1OTYxNzksImV4cCI6MjA1MjE3MjE3OX0.--tz3L5akKPzsfiP_mpuw-103LT1F3Dl5FUyffLrgxs',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0OTQzMDcsImV4cCI6MjA4MTA3MDMwN30.XE4N3ewYESrVeCMWZdJhYbgjTG_SRaYQ9zUczjVgNUM',
   
   // ===================
   // N8N WEBHOOKS
