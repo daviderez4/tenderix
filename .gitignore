@@ -20,3 +20,8 @@ backup_*/
 !frontend/package-lock.json
 !frontend/tsconfig.json
 !frontend/tsconfig.node.json
+.vercel
+
+# Claude temp files
+tmpclaude-*
+nul

@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tenderix - ניהול תנאי סף</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            color: #e2e8f0;
+        }
+
+        /* Header */
+        .page-header {
+            background: rgba(15, 23, 42, 0.95);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 20px 32px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(20px);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #94a3b8;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: #60a5fa;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #f1f5f9;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            color: white;
+        }
+
+        .btn-primary:hover { transform: translateY(-2px); }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: #e2e8f0;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .btn-secondary:hover { background: rgba(255,255,255,0.15); }
+
+        /* Main Content */
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 32px;
+        }
+
+        /* Summary Stats */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        @media (max-width: 1200px) {
+            .summary-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .summary-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .stat-card.pass { border-color: rgba(34, 197, 94, 0.3); background: rgba(34, 197, 94, 0.05); }
+        .stat-card.fail { border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); }
+        .stat-card.pending { border-color: rgba(234, 179, 8, 0.3); background: rgba(234, 179, 8, 0.05); }
+        .stat-card.partial { border-color: rgba(139, 92, 246, 0.3); background: rgba(139, 92, 246, 0.05); }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin-bottom: 8px;
+        }
+
+        .stat-value.green { color: #22c55e; }
+        .stat-value.red { color: #ef4444; }
+        .stat-value.yellow { color: #eab308; }
+        .stat-value.purple { color: #a78bfa; }
+
+        .stat-label {
+            font-size: 14px;
+            color: #94a3b8;
+        }
+
+        /* Cards */
+        .card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .card-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+
+        .card-body {
+            padding: 24px;
+        }
+
+        /* Gate Condition Cards */
+        .gate-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 16px;
+            transition: all 0.3s;
+        }
+
+        .gate-card:hover {
+            background: rgba(255,255,255,0.06);
+            border-color: rgba(96, 165, 250, 0.3);
+        }
+
+        .gate-card.pass { border-color: rgba(34, 197, 94, 0.3); }
+        .gate-card.fail { border-color: rgba(239, 68, 68, 0.3); }
+        .gate-card.pending { border-color: rgba(234, 179, 8, 0.3); }
+
+        .gate-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .gate-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: rgba(96, 165, 250, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: #60a5fa;
+            flex-shrink: 0;
+        }
+
+        .gate-info { flex: 1; }
+
+        .gate-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #f1f5f9;
+            margin-bottom: 4px;
+        }
+
+        .gate-category {
+            font-size: 13px;
+            color: #94a3b8;
+        }
+
+        .gate-status {
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .gate-status.pass { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .gate-status.fail { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .gate-status.partial { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
+        .gate-status.pending { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+
+        .gate-body {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 900px) {
+            .gate-body { grid-template-columns: 1fr; }
+        }
+
+        .gate-section {
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .gate-section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #60a5fa;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .gate-requirement {
+            font-size: 14px;
+            color: #e2e8f0;
+            line-height: 1.6;
+        }
+
+        .gate-evidence {
+            font-size: 14px;
+            color: #94a3b8;
+        }
+
+        .evidence-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .evidence-icon {
+            color: #22c55e;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .gate-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.05);
+            color: #94a3b8;
+        }
+
+        .action-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: #e2e8f0;
+        }
+
+        .action-btn.primary {
+            background: rgba(96, 165, 250, 0.2);
+            border-color: rgba(96, 165, 250, 0.3);
+            color: #60a5fa;
+        }
+
+        /* Traceability */
+        .trace-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: #60a5fa;
+            font-size: 12px;
+            text-decoration: none;
+            padding: 4px 8px;
+            background: rgba(96, 165, 250, 0.1);
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+
+        .trace-link:hover {
+            background: rgba(96, 165, 250, 0.2);
+        }
+
+        /* Optimization Panel */
+        .optimization-panel {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+        }
+
+        .optimization-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #a78bfa;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .optimization-item {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .optimization-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .optimization-label {
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+
+        .optimization-impact {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .impact-high { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .impact-medium { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+        .impact-low { background: rgba(100, 116, 139, 0.2); color: #94a3b8; }
+
+        .optimization-desc {
+            font-size: 14px;
+            color: #94a3b8;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 32px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #f1f5f9;
+        }
+
+        .modal-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #e2e8f0;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: #f1f5f9;
+            font-size: 15px;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #60a5fa;
+        }
+
+        .form-textarea { min-height: 100px; resize: vertical; }
+
+        /* Loading */
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 24px;
+            left: 24px;
+            z-index: 2000;
+        }
+
+        .toast {
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: #94a3b8;
+        }
+
+        .empty-state-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.5; }
+        .empty-state-title { font-size: 18px; color: #e2e8f0; margin-bottom: 8px; }
+        .empty-state-desc { font-size: 14px; margin-bottom: 24px; }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="page-header">
+        <div class="header-content">
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <a href="tenderix-dashboard.html" class="back-btn">
+                    <span>→</span>
+                    <span>חזרה לדשבורד</span>
+                </a>
+                <h1 class="page-title">ניהול תנאי סף - <span id="tender-name">טוען...</span></h1>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="extractGates()">
+                    <span>🔄</span> חלץ מחדש
+                </button>
+                <button class="btn btn-secondary" onclick="matchAllGates()">
+                    <span>🔗</span> התאם הכל
+                </button>
+                <button class="btn btn-primary" onclick="addGateCondition()">
+                    <span>➕</span> הוסף תנאי סף
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Summary Stats -->
+        <div class="summary-grid">
+            <div class="stat-card pass">
+                <div class="stat-value green" id="stat-pass">0</div>
+                <div class="stat-label">עוברים</div>
+            </div>
+            <div class="stat-card fail">
+                <div class="stat-value red" id="stat-fail">0</div>
+                <div class="stat-label">לא עוברים</div>
+            </div>
+            <div class="stat-card partial">
+                <div class="stat-value purple" id="stat-partial">0</div>
+                <div class="stat-label">חלקי</div>
+            </div>
+            <div class="stat-card pending">
+                <div class="stat-value yellow" id="stat-pending">0</div>
+                <div class="stat-label">בבדיקה</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-total">0</div>
+                <div class="stat-label">סה"כ תנאים</div>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+            <!-- Gate Conditions List -->
+            <div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">תנאי סף מהמכרז</h3>
+                        <select id="filter-status" onchange="filterGates()" style="padding: 8px 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #e2e8f0;">
+                            <option value="all">הכל</option>
+                            <option value="pass">עוברים</option>
+                            <option value="fail">לא עוברים</option>
+                            <option value="partial">חלקי</option>
+                            <option value="pending">בבדיקה</option>
+                        </select>
+                    </div>
+                    <div class="card-body" id="gates-container">
+                        <div class="loading-container">
+                            <div class="spinner"></div>
+                            <p style="margin-top: 16px; color: #94a3b8;">טוען תנאי סף...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Side Panel -->
+            <div>
+                <!-- Optimization Suggestions -->
+                <div class="optimization-panel">
+                    <h3 class="optimization-title">
+                        <span>💡</span>
+                        הצעות לאופטימיזציה
+                    </h3>
+                    <div id="optimization-list">
+                        <div class="optimization-item">
+                            <div class="optimization-header">
+                                <span class="optimization-label">חידוש ISO 27001</span>
+                                <span class="optimization-impact impact-high">השפעה גבוהה</span>
+                            </div>
+                            <div class="optimization-desc">
+                                התקן פג תוקף. חידושו יאפשר עמידה בתנאי סף קריטי.
+                            </div>
+                        </div>
+                        <div class="optimization-item">
+                            <div class="optimization-header">
+                                <span class="optimization-label">הוספת פרויקט נוסף</span>
+                                <span class="optimization-impact impact-medium">השפעה בינונית</span>
+                            </div>
+                            <div class="optimization-desc">
+                                הוספת פרויקט מעל 5M תשפר את עמידת דרישת הניסיון.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Eligibility Summary -->
+                <div class="card" style="margin-top: 24px;">
+                    <div class="card-header">
+                        <h3 class="card-title">סיכום כשירות</h3>
+                    </div>
+                    <div class="card-body">
+                        <div style="text-align: center; padding: 20px;">
+                            <div style="font-size: 64px; margin-bottom: 16px;" id="eligibility-emoji">🎯</div>
+                            <div style="font-size: 24px; font-weight: 700; margin-bottom: 8px;" id="eligibility-status">ממתין לניתוח</div>
+                            <div style="color: #94a3b8;" id="eligibility-desc">הרץ ניתוח לקבלת המלצה</div>
+                        </div>
+                        <button class="btn btn-primary" style="width: 100%; margin-top: 16px;" onclick="generateSummary()">
+                            📊 הפק סיכום
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card" style="margin-top: 24px;">
+                    <div class="card-header">
+                        <h3 class="card-title">פעולות מהירות</h3>
+                    </div>
+                    <div class="card-body" style="display: flex; flex-direction: column; gap: 8px;">
+                        <button class="action-btn" onclick="window.location.href='tenderix-company-profile.html'" style="width: 100%; justify-content: center;">
+                            🏢 עדכן פרופיל חברה
+                        </button>
+                        <button class="action-btn" onclick="exportToExcel()" style="width: 100%; justify-content: center;">
+                            📥 ייצא ל-Excel
+                        </button>
+                        <button class="action-btn" onclick="goToTenderDetail()" style="width: 100%; justify-content: center;">
+                            📋 חזור לדף המכרז
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Gate Modal -->
+    <div class="modal-overlay" id="add-gate-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">הוספת תנאי סף</h3>
+                <button class="modal-close" onclick="closeModal('add-gate-modal')">&times;</button>
+            </div>
+            <form id="add-gate-form" onsubmit="saveGate(event)">
+                <div class="form-group">
+                    <label class="form-label">תנאי סף</label>
+                    <input type="text" class="form-input" id="gate-condition-text" required placeholder="תאר את תנאי הסף">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">קטגוריה</label>
+                    <select class="form-select" id="gate-category">
+                        <option value="experience">ניסיון</option>
+                        <option value="certification">אישורים ותקנים</option>
+                        <option value="financial">פיננסי</option>
+                        <option value="personnel">כוח אדם</option>
+                        <option value="technical">טכני</option>
+                        <option value="legal">משפטי</option>
+                        <option value="other">אחר</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">פרטי הדרישה</label>
+                    <textarea class="form-textarea" id="gate-requirement" placeholder="פרט את הדרישה המדויקת"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">מקור (עמוד, סעיף)</label>
+                    <input type="text" class="form-input" id="gate-source" placeholder="לדוגמא: עמוד 15, סעיף 3.2.1">
+                </div>
+                <div style="display: flex; gap: 12px; margin-top: 24px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('add-gate-modal')" style="flex: 1;">ביטול</button>
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">שמור</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Match Gate Modal -->
+    <div class="modal-overlay" id="match-gate-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">התאמת תנאי סף</h3>
+                <button class="modal-close" onclick="closeModal('match-gate-modal')">&times;</button>
+            </div>
+            <div id="match-gate-content">
+                <!-- Will be populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+
+    <script>
+        // ============================================
+        // CONFIGURATION
+        // ============================================
+        const N8N_WEBHOOK = 'https://daviderez.app.n8n.cloud/webhook';
+        let tenderId = null;
+        let gatesData = [];
+        let currentFilter = 'all';
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        document.addEventListener('DOMContentLoaded', async function() {
+            const params = new URLSearchParams(window.location.search);
+            tenderId = params.get('id');
+
+            if (!tenderId) {
+                showToast('error', 'לא נמצא מזהה מכרז');
+                return;
+            }
+
+            await loadTenderInfo();
+            await loadGateConditions();
+        });
+
+        // ============================================
+        // LOAD DATA
+        // ============================================
+        async function loadTenderInfo() {
+            try {
+                const supabase = getSupabase();
+                if (!supabase) return;
+
+                const { data: tender } = await supabase
+                    .from('tenders')
+                    .select('tender_name, name')
+                    .eq('id', tenderId)
+                    .single();
+
+                if (tender) {
+                    document.getElementById('tender-name').textContent = tender.tender_name || tender.name || 'מכרז';
+                }
+            } catch (e) {
+                console.log('Error loading tender info');
+            }
+        }
+
+        async function loadGateConditions() {
+            const container = document.getElementById('gates-container');
+
+            try {
+                const supabase = getSupabase();
+                if (!supabase) {
+                    showDemoGates(container);
+                    return;
+                }
+
+                const { data: gates, error } = await supabase
+                    .from('gate_conditions')
+                    .select('*')
+                    .eq('tender_id', tenderId)
+                    .order('condition_number');
+
+                if (error) throw error;
+
+                gatesData = gates || [];
+
+                if (gatesData.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🚪</div>
+                            <div class="empty-state-title">אין תנאי סף</div>
+                            <div class="empty-state-desc">לחץ "חלץ מחדש" לחילוץ אוטומטי מהמסמכים</div>
+                            <button class="btn btn-primary" onclick="extractGates()">🔄 חלץ תנאי סף</button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                updateStats();
+                renderGates();
+
+            } catch (e) {
+                console.error('Error loading gates:', e);
+                showDemoGates(container);
+            }
+        }
+
+        function showDemoGates(container) {
+            gatesData = [
+                { id: '1', condition_number: 1, condition_text: 'ניסיון בפרויקטי IT ממשלתיים', category: 'experience', requirement_details: 'לפחות 3 פרויקטים בסדר גודל של 5M ₪ ומעלה', company_status: 'pass', evidence_source: 'עמוד 12, סעיף 2.1', ai_analysis: 'זוהו 5 פרויקטים רלוונטיים בפרופיל החברה' },
+                { id: '2', condition_number: 2, condition_text: 'תקן ISO 9001:2015', category: 'certification', requirement_details: 'תעודת ISO 9001:2015 בתוקף', company_status: 'pass', evidence_source: 'עמוד 13, סעיף 2.2' },
+                { id: '3', condition_number: 3, condition_text: 'מחזור כספי שנתי', category: 'financial', requirement_details: 'מינימום 20M ₪ בממוצע ב-3 שנים', company_status: 'pass', evidence_source: 'עמוד 13, סעיף 2.3' },
+                { id: '4', condition_number: 4, condition_text: 'צוות מקצועי מוסמך', category: 'personnel', requirement_details: '2 ארכיטקטי ענן ו-3 מהנדסי DevOps', company_status: 'pass', evidence_source: 'עמוד 14, סעיף 2.4' },
+                { id: '5', condition_number: 5, condition_text: 'תקן ISO 27001 - אבטחת מידע', category: 'certification', requirement_details: 'תעודת ISO 27001 בתוקף', company_status: 'fail', evidence_source: 'עמוד 15, סעיף 2.5', ai_analysis: 'התקן פג תוקף ב-06/2025. נדרש חידוש דחוף.' }
+            ];
+            updateStats();
+            renderGates();
+        }
+
+        // ============================================
+        // RENDER
+        // ============================================
+        function updateStats() {
+            const stats = { pass: 0, fail: 0, partial: 0, pending: 0 };
+
+            gatesData.forEach(gate => {
+                const status = gate.company_status || 'pending';
+                if (stats[status] !== undefined) stats[status]++;
+            });
+
+            document.getElementById('stat-pass').textContent = stats.pass;
+            document.getElementById('stat-fail').textContent = stats.fail;
+            document.getElementById('stat-partial').textContent = stats.partial;
+            document.getElementById('stat-pending').textContent = stats.pending;
+            document.getElementById('stat-total').textContent = gatesData.length;
+
+            // Update eligibility summary
+            const passRate = gatesData.length > 0 ? (stats.pass / gatesData.length) * 100 : 0;
+            updateEligibilitySummary(passRate, stats);
+        }
+
+        function updateEligibilitySummary(passRate, stats) {
+            const emoji = document.getElementById('eligibility-emoji');
+            const status = document.getElementById('eligibility-status');
+            const desc = document.getElementById('eligibility-desc');
+
+            if (stats.fail > 0) {
+                emoji.textContent = '❌';
+                status.textContent = 'לא כשיר';
+                status.style.color = '#ef4444';
+                desc.textContent = `${stats.fail} תנאי סף לא מתקיימים`;
+            } else if (stats.pending > 0) {
+                emoji.textContent = '⏳';
+                status.textContent = 'בבדיקה';
+                status.style.color = '#eab308';
+                desc.textContent = `${stats.pending} תנאים ממתינים לבדיקה`;
+            } else if (passRate === 100) {
+                emoji.textContent = '✅';
+                status.textContent = 'כשיר להגשה';
+                status.style.color = '#22c55e';
+                desc.textContent = 'כל תנאי הסף מתקיימים';
+            } else {
+                emoji.textContent = '⚠️';
+                status.textContent = 'כשיר חלקית';
+                status.style.color = '#a78bfa';
+                desc.textContent = `${Math.round(passRate)}% עמידה בתנאים`;
+            }
+        }
+
+        function renderGates() {
+            const container = document.getElementById('gates-container');
+            const filtered = currentFilter === 'all'
+                ? gatesData
+                : gatesData.filter(g => (g.company_status || 'pending') === currentFilter);
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔍</div>
+                        <div class="empty-state-title">אין תוצאות</div>
+                        <div class="empty-state-desc">לא נמצאו תנאים עבור הסינון הנבחר</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(gate => {
+                const status = gate.company_status || 'pending';
+                const categoryLabels = {
+                    experience: 'ניסיון',
+                    certification: 'אישורים ותקנים',
+                    financial: 'פיננסי',
+                    personnel: 'כוח אדם',
+                    technical: 'טכני',
+                    legal: 'משפטי',
+                    other: 'אחר'
+                };
+
+                const statusLabels = {
+                    pass: 'עובר',
+                    fail: 'לא עובר',
+                    partial: 'חלקי',
+                    pending: 'בבדיקה'
+                };
+
+                return `
+                    <div class="gate-card ${status}" data-gate-id="${gate.id}">
+                        <div class="gate-header">
+                            <div class="gate-number">${gate.condition_number || '?'}</div>
+                            <div class="gate-info">
+                                <div class="gate-title">${gate.condition_text || 'תנאי סף'}</div>
+                                <div class="gate-category">${categoryLabels[gate.category] || gate.category || 'לא מוגדר'}</div>
+                            </div>
+                            <div class="gate-status ${status}">${statusLabels[status]}</div>
+                        </div>
+
+                        <div class="gate-body">
+                            <div class="gate-section">
+                                <div class="gate-section-title">
+                                    <span>📋</span> דרישת המכרז
+                                </div>
+                                <div class="gate-requirement">${gate.requirement_details || 'לא פורט'}</div>
+                                ${gate.evidence_source ? `
+                                    <a href="#" class="trace-link" onclick="showSource('${gate.evidence_source}')">
+                                        <span>📍</span> ${gate.evidence_source}
+                                    </a>
+                                ` : ''}
+                            </div>
+
+                            <div class="gate-section">
+                                <div class="gate-section-title">
+                                    <span>🏢</span> עמידת החברה
+                                </div>
+                                <div class="gate-evidence">
+                                    ${gate.ai_analysis ? `
+                                        <div class="evidence-item">
+                                            <span class="evidence-icon">${status === 'pass' ? '✓' : status === 'fail' ? '✗' : '?'}</span>
+                                            <span>${gate.ai_analysis}</span>
+                                        </div>
+                                    ` : '<span style="color: #94a3b8;">טרם נבדק</span>'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="gate-actions">
+                            <button class="action-btn" onclick="editGate('${gate.id}')">✏️ ערוך</button>
+                            <button class="action-btn primary" onclick="matchGate('${gate.id}')">🔗 התאם</button>
+                            <button class="action-btn" onclick="updateGateStatus('${gate.id}', 'pass')">✓ עובר</button>
+                            <button class="action-btn" onclick="updateGateStatus('${gate.id}', 'fail')">✗ לא עובר</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterGates() {
+            currentFilter = document.getElementById('filter-status').value;
+            renderGates();
+        }
+
+        // ============================================
+        // ACTIONS
+        // ============================================
+        async function extractGates() {
+            showToast('info', 'מחלץ תנאי סף מהמסמכים...');
+
+            try {
+                const response = await fetch(N8N_WEBHOOK + '/tdx-extract-gates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tender_id: tenderId })
+                });
+
+                const result = await response.json();
+
+                if (result.success || result.gates_count) {
+                    showToast('success', `חולצו ${result.gates_count || 'תנאי'} סף`);
+                    await loadGateConditions();
+                } else {
+                    showToast('error', 'חילוץ נכשל');
+                }
+            } catch (e) {
+                console.error('Extract gates error:', e);
+                showToast('error', 'שגיאה בחילוץ');
+            }
+        }
+
+        async function matchAllGates() {
+            showToast('info', 'מתאים תנאי סף לפרופיל החברה...');
+
+            try {
+                const response = await fetch(N8N_WEBHOOK + '/tdx-match-gates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tender_id: tenderId })
+                });
+
+                const result = await response.json();
+                showToast('success', 'התאמה הושלמה');
+                await loadGateConditions();
+            } catch (e) {
+                console.error('Match gates error:', e);
+                showToast('error', 'שגיאה בהתאמה');
+            }
+        }
+
+        async function updateGateStatus(gateId, status) {
+            try {
+                const supabase = getSupabase();
+                if (!supabase) {
+                    // Update in local data for demo
+                    const gate = gatesData.find(g => g.id === gateId);
+                    if (gate) {
+                        gate.company_status = status;
+                        updateStats();
+                        renderGates();
+                        showToast('success', 'סטטוס עודכן');
+                    }
+                    return;
+                }
+
+                const { error } = await supabase
+                    .from('gate_conditions')
+                    .update({ company_status: status, updated_at: new Date().toISOString() })
+                    .eq('id', gateId);
+
+                if (error) throw error;
+
+                showToast('success', 'סטטוס עודכן');
+                await loadGateConditions();
+
+            } catch (e) {
+                console.error('Update status error:', e);
+                showToast('error', 'שגיאה בעדכון');
+            }
+        }
+
+        function addGateCondition() {
+            document.getElementById('add-gate-form').reset();
+            document.getElementById('add-gate-modal').classList.add('active');
+        }
+
+        async function saveGate(event) {
+            event.preventDefault();
+
+            const gateData = {
+                tender_id: tenderId,
+                condition_text: document.getElementById('gate-condition-text').value,
+                category: document.getElementById('gate-category').value,
+                requirement_details: document.getElementById('gate-requirement').value,
+                evidence_source: document.getElementById('gate-source').value,
+                company_status: 'pending',
+                condition_number: gatesData.length + 1
+            };
+
+            try {
+                const supabase = getSupabase();
+                if (supabase) {
+                    const { error } = await supabase
+                        .from('gate_conditions')
+                        .insert([gateData]);
+
+                    if (error) throw error;
+                }
+
+                showToast('success', 'תנאי סף נוסף');
+                closeModal('add-gate-modal');
+                await loadGateConditions();
+
+            } catch (e) {
+                console.error('Save gate error:', e);
+                showToast('error', 'שגיאה בשמירה');
+            }
+        }
+
+        function matchGate(gateId) {
+            const gate = gatesData.find(g => g.id === gateId);
+            if (!gate) return;
+
+            const content = document.getElementById('match-gate-content');
+            content.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    <div style="font-weight: 600; color: #f1f5f9; margin-bottom: 8px;">תנאי סף:</div>
+                    <div style="color: #94a3b8;">${gate.condition_text}</div>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <div style="font-weight: 600; color: #f1f5f9; margin-bottom: 8px;">דרישה:</div>
+                    <div style="color: #94a3b8;">${gate.requirement_details || 'לא פורט'}</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">בחר ראיה מפרופיל החברה</label>
+                    <select class="form-select" id="match-evidence">
+                        <option value="">בחר...</option>
+                        <option value="project">פרויקט מרשימת הפרויקטים</option>
+                        <option value="cert">אישור/תעודה</option>
+                        <option value="personnel">איש צוות</option>
+                        <option value="financial">נתון פיננסי</option>
+                        <option value="manual">הזנה ידנית</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">פרטי הראיה</label>
+                    <textarea class="form-textarea" id="match-details" placeholder="תאר את הראיה שמוכיחה עמידה בתנאי"></textarea>
+                </div>
+                <div style="display: flex; gap: 12px; margin-top: 24px;">
+                    <button class="btn btn-secondary" onclick="closeModal('match-gate-modal')" style="flex: 1;">ביטול</button>
+                    <button class="btn btn-primary" onclick="saveMatch('${gateId}')" style="flex: 1;">שמור התאמה</button>
+                </div>
+            `;
+
+            document.getElementById('match-gate-modal').classList.add('active');
+        }
+
+        async function saveMatch(gateId) {
+            const details = document.getElementById('match-details').value;
+            if (!details) {
+                showToast('error', 'נא להזין פרטי ראיה');
+                return;
+            }
+
+            try {
+                const supabase = getSupabase();
+                if (supabase) {
+                    await supabase
+                        .from('gate_conditions')
+                        .update({
+                            ai_analysis: details,
+                            company_status: 'pass',
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', gateId);
+                }
+
+                showToast('success', 'התאמה נשמרה');
+                closeModal('match-gate-modal');
+                await loadGateConditions();
+
+            } catch (e) {
+                console.error('Save match error:', e);
+                showToast('error', 'שגיאה בשמירה');
+            }
+        }
+
+        function editGate(gateId) {
+            showToast('info', 'עריכה בקרוב...');
+        }
+
+        function generateSummary() {
+            showToast('info', 'מפיק סיכום...');
+        }
+
+        function exportToExcel() {
+            showToast('info', 'מייצא...');
+        }
+
+        function goToTenderDetail() {
+            window.location.href = `tenderix-tender-detail.html?id=${tenderId}`;
+        }
+
+        function showSource(source) {
+            showToast('info', `מקור: ${source}`);
+        }
+
+        // ============================================
+        // MODALS
+        // ============================================
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // Close modal on backdrop click
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('active');
+                }
+            });
+        });
+
+        // ============================================
+        // UTILITIES
+        // ============================================
+        function showToast(type, message) {
+            const container = document.getElementById('toast-container');
+            const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span style="color: #e2e8f0;">${message}</span>`;
+
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+    </script>
+</body>
+</html>

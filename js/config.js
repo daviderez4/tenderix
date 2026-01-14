@@ -6,7 +6,7 @@ const CONFIG = {
   // SUPABASE
   // ===================
   SUPABASE_URL: 'https://rerfjgjwjqodevkvhkxu.supabase.co',
-  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0OTQzMDcsImV4cCI6MjA4MTA3MDMwN30.XE4N3ewYESrVeCMWZdJhYbgjTG_SRaYQ9zUczjVgNUM',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY1OTYxNzksImV4cCI6MjA1MjE3MjE3OX0.--tz3L5akKPzsfiP_mpuw-103LT1F3Dl5FUyffLrgxs',
   
   // ===================
   // N8N WEBHOOKS
@@ -15,29 +15,40 @@ const CONFIG = {
   
   WEBHOOKS: {
     // Document Processing
-    UPLOAD_TENDER: '/upload-tender',
-    ANALYZE_DOCUMENT: '/analyze-document',
-    
+    UPLOAD_TENDER: '/tdx-upload-v2',
+    ANALYZE_DOCUMENT: '/tdx-analyze-doc-v3',
+    PARSE_DOCUMENT: '/tdx-intake',
+
     // Analysis Workflows
-    ANALYZE_GATES: '/analyze-gates',
-    ANALYZE_SPEC: '/analyze-spec',
-    ANALYZE_BOQ: '/analyze-boq',
-    
+    ANALYZE_GATES: '/gate-conditions',
+    ANALYZE_SPEC: '/sow-analysis',
+    ANALYZE_BOQ: '/boq-analysis',
+    ANALYZE_PRICING: '/tdx-pricing-intel',
+
+    // Clarifications
+    CLARIFICATION_QUESTIONS: '/clarification-questions',
+    PROCESS_CLARIFICATIONS: '/process-clarifications',
+    STRATEGIC_QUESTIONS: '/tdx-strategic-v3',
+
     // Competitor Intelligence
-    GET_COMPETITORS: '/get-competitors',
-    ANALYZE_COMPETITOR: '/analyze-competitor',
-    
-    // Decision & Pricing
-    GENERATE_DECISION: '/generate-decision',
-    CALCULATE_PRICING: '/calculate-pricing',
-    
-    // Reports
-    EXPORT_REPORT: '/export-report',
-    GENERATE_SUMMARY: '/generate-summary',
-    
-    // AI Chat
-    AI_CHAT: '/ai-chat',
-    ASK_QUESTION: '/ask-question'
+    GET_COMPETITORS: '/tdx-competitors',
+    COMPETITOR_HISTORY: '/tdx-competitive-intel',
+    COMPETITOR_MAPPING: '/tdx-competitor-mapping',
+
+    // Decision & Scoring
+    GENERATE_DECISION: '/tdx-final-decision',
+    CALCULATE_SCORE: '/quality-scoring',
+
+    // Contract & Reports
+    CONTRACT_ANALYSIS: '/contract-analysis',
+    EXPORT_REPORT: '/tenderix/generate-report',
+
+    // Full Pipeline
+    FULL_ANALYSIS: '/tdx-full-analysis',
+
+    // AI Features
+    AI_CHAT: '/tdx-clarify-simple',
+    AI_SUMMARIZE: '/tdx-analyze-doc-v3'
   },
   
   // ===================
@@ -174,8 +185,33 @@ const CONFIG = {
   // ===================
   ROUTES: {
     DASHBOARD: 'tenderix-dashboard.html',
-    TENDER_DETAIL: 'tenderix-tender.html',
+    TENDER_DETAIL: 'tenderix-tender-detail.html',
     LOGIN: 'tenderix-login.html'
+  },
+
+  // ===================
+  // TIMEOUTS (ms)
+  // ===================
+  TIMEOUTS: {
+    DEFAULT: 30000,      // 30 seconds
+    UPLOAD: 120000,      // 2 minutes for file upload
+    ANALYSIS: 180000,    // 3 minutes for AI analysis
+    EXPORT: 60000        // 1 minute for export
+  },
+
+  // ===================
+  // UPLOAD SETTINGS
+  // ===================
+  UPLOAD: {
+    MAX_FILE_SIZE: 50 * 1024 * 1024,  // 50MB
+    ALLOWED_TYPES: [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ],
+    ALLOWED_EXTENSIONS: ['.pdf', '.doc', '.docx', '.xls', '.xlsx']
   }
 };
 

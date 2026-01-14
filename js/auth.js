@@ -80,10 +80,18 @@ const Auth = {
     const supabase = getSupabase();
     if (!supabase) throw new Error('Supabase not initialized');
 
+    // Use current origin for redirect (works for localhost and production)
+    const redirectUrl = window.location.origin + '/tenderix-login.html';
+    console.log('[Auth] Google redirect URL:', redirectUrl);
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin + '/tenderix-dashboard.html'
+        redirectTo: redirectUrl,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent'
+        }
       }
     });
 
@@ -148,8 +156,12 @@ const Auth = {
     const supabase = getSupabase();
     if (!supabase) throw new Error('Supabase not initialized');
 
+    // Use current origin for redirect (works for localhost and production)
+    const redirectUrl = window.location.origin + '/tenderix-reset-password.html';
+    console.log('[Auth] Reset password redirect URL:', redirectUrl);
+
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + '/tenderix-reset-password.html'
+      redirectTo: redirectUrl
     });
 
     if (error) {

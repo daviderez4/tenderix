@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tenderix - פרופיל חברה</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            color: #e2e8f0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 32px;
+        }
+
+        /* Header */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .page-title {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: #e2e8f0;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 16px;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            border-radius: 12px 12px 0 0;
+            background: transparent;
+            color: rgba(255,255,255,0.5);
+            border: none;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .tab:hover { color: rgba(255,255,255,0.8); }
+
+        .tab.active {
+            background: rgba(96, 165, 250, 0.2);
+            color: #60a5fa;
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            border-bottom: none;
+        }
+
+        /* Cards */
+        .card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+
+        /* Form Elements */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #94a3b8;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: #f1f5f9;
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #60a5fa;
+            background: rgba(255,255,255,0.08);
+        }
+
+        .form-textarea { min-height: 100px; resize: vertical; }
+
+        /* Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th, .data-table td {
+            padding: 14px 16px;
+            text-align: right;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .data-table th {
+            color: #94a3b8;
+            font-weight: 500;
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+
+        .data-table tr:hover td {
+            background: rgba(255,255,255,0.03);
+        }
+
+        .data-table .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: #94a3b8;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .icon-btn:hover { background: rgba(255,255,255,0.2); color: #f1f5f9; }
+        .icon-btn.delete:hover { background: rgba(239, 68, 68, 0.3); color: #f87171; }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-badge.valid { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .status-badge.expiring { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+        .status-badge.expired { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 32px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-title { font-size: 20px; font-weight: 600; }
+
+        .modal-close {
+            width: 36px; height: 36px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        .modal-close:hover { background: rgba(239, 68, 68, 0.3); color: #f87171; }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+
+        /* Tab Content */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 40px;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 24px;
+            left: 24px;
+            z-index: 2000;
+        }
+
+        .toast {
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.success { border-color: rgba(34, 197, 94, 0.5); }
+        .toast.error { border-color: rgba(239, 68, 68, 0.5); }
+
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Back Link */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #60a5fa;
+            text-decoration: none;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+
+        .back-link:hover { color: #93c5fd; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="tenderix-dashboard.html" class="back-link">→ חזרה ללוח בקרה</a>
+
+        <div class="page-header">
+            <h1 class="page-title">פרופיל חברה</h1>
+            <button class="btn btn-primary" onclick="saveProfile()">💾 שמור שינויים</button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" data-tab="basic">פרטי חברה</button>
+            <button class="tab" data-tab="certifications">אישורים ורישיונות</button>
+            <button class="tab" data-tab="personnel">צוות מפתח</button>
+            <button class="tab" data-tab="projects">פרויקטים</button>
+            <button class="tab" data-tab="tangent">פרויקטים משיקים</button>
+        </div>
+
+        <!-- Tab: Basic Info -->
+        <div id="tab-basic" class="tab-content active">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">פרטים בסיסיים</h3>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>שם החברה *</label>
+                        <input type="text" class="form-input" id="company_name" placeholder="שם החברה המלא">
+                    </div>
+                    <div class="form-group">
+                        <label>ח.פ. / ע.מ.</label>
+                        <input type="text" class="form-input" id="bn_number" placeholder="מספר חברה">
+                    </div>
+                    <div class="form-group">
+                        <label>שנת הקמה</label>
+                        <input type="number" class="form-input" id="year_founded" placeholder="2000">
+                    </div>
+                    <div class="form-group">
+                        <label>מספר עובדים</label>
+                        <input type="number" class="form-input" id="employee_count" placeholder="50">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">מחזור כספי שנתי</h3>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>2024</label>
+                        <input type="number" class="form-input" id="revenue_2024" placeholder="₪">
+                    </div>
+                    <div class="form-group">
+                        <label>2023</label>
+                        <input type="number" class="form-input" id="revenue_2023" placeholder="₪">
+                    </div>
+                    <div class="form-group">
+                        <label>2022</label>
+                        <input type="number" class="form-input" id="revenue_2022" placeholder="₪">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">תחומי פעילות וסיווגים</h3>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>תחומי פעילות (מופרד בפסיקים)</label>
+                        <input type="text" class="form-input" id="business_sectors" placeholder="אבטחה, מצלמות, בקרת גישה">
+                    </div>
+                    <div class="form-group">
+                        <label>סיווגי קבלן רשום</label>
+                        <input type="text" class="form-input" id="contractor_classifications" placeholder="100 ג-1, 260 ב-2">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">חברות קשורות (קבוצה)</h3>
+                </div>
+                <div class="form-group">
+                    <label>חברות אם / בנות / אחיות</label>
+                    <textarea class="form-textarea" id="parent_subsidiary" placeholder="רשום כל חברה בשורה נפרדת עם תיאור הקשר"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Certifications -->
+        <div id="tab-certifications" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">אישורים ורישיונות</h3>
+                    <button class="btn btn-secondary" onclick="openCertModal()">➕ הוסף אישור</button>
+                </div>
+                <table class="data-table" id="certifications-table">
+                    <thead>
+                        <tr>
+                            <th>סוג</th>
+                            <th>שם האישור</th>
+                            <th>גורם מנפיק</th>
+                            <th>תוקף</th>
+                            <th>סטטוס</th>
+                            <th>פעולות</th>
+                        </tr>
+                    </thead>
+                    <tbody id="certifications-body">
+                        <tr>
+                            <td colspan="6">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">📜</div>
+                                    <p>אין אישורים עדיין</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab: Personnel -->
+        <div id="tab-personnel" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">צוות מפתח</h3>
+                    <button class="btn btn-secondary" onclick="openPersonnelModal()">➕ הוסף איש צוות</button>
+                </div>
+                <table class="data-table" id="personnel-table">
+                    <thead>
+                        <tr>
+                            <th>שם</th>
+                            <th>תפקיד</th>
+                            <th>השכלה</th>
+                            <th>שנות ניסיון</th>
+                            <th>הסמכות</th>
+                            <th>פעולות</th>
+                        </tr>
+                    </thead>
+                    <tbody id="personnel-body">
+                        <tr>
+                            <td colspan="6">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">👥</div>
+                                    <p>אין אנשי צוות עדיין</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab: Projects -->
+        <div id="tab-projects" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">פרויקטים שבוצעו</h3>
+                    <button class="btn btn-secondary" onclick="openProjectModal()">➕ הוסף פרויקט</button>
+                </div>
+                <table class="data-table" id="projects-table">
+                    <thead>
+                        <tr>
+                            <th>שם הפרויקט</th>
+                            <th>לקוח</th>
+                            <th>היקף</th>
+                            <th>סוג</th>
+                            <th>תאריכים</th>
+                            <th>פעולות</th>
+                        </tr>
+                    </thead>
+                    <tbody id="projects-body">
+                        <tr>
+                            <td colspan="6">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">🏗️</div>
+                                    <p>אין פרויקטים עדיין</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab: Tangent Projects -->
+        <div id="tab-tangent" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">פרויקטים משיקים (חברות קבוצה)</h3>
+                    <button class="btn btn-secondary" onclick="openTangentModal()">➕ הוסף פרויקט משיק</button>
+                </div>
+                <p style="color: #94a3b8; margin-bottom: 16px; font-size: 14px;">
+                    פרויקטים מחברות אם/בנות/אחיות שניתן לחתום עליהם הסכם ולהציג כניסיון
+                </p>
+                <table class="data-table" id="tangent-table">
+                    <thead>
+                        <tr>
+                            <th>תיאור</th>
+                            <th>חברה קשורה</th>
+                            <th>סוג קשר</th>
+                            <th>ניתן לחתום הסכם</th>
+                            <th>פעולות</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tangent-body">
+                        <tr>
+                            <td colspan="5">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">🤝</div>
+                                    <p>אין פרויקטים משיקים עדיין</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Certification Modal -->
+    <div class="modal-overlay" id="cert-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">הוספת אישור</h3>
+                <button class="modal-close" onclick="closeCertModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>סוג אישור</label>
+                <select class="form-select" id="cert_type">
+                    <option value="iso">ISO</option>
+                    <option value="license">רישיון</option>
+                    <option value="security_clearance">סיווג ביטחוני</option>
+                    <option value="contractor_registration">רישום קבלנים</option>
+                    <option value="tax">אישור ניהול ספרים / ניכוי מס</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>שם האישור *</label>
+                <input type="text" class="form-input" id="cert_name" placeholder="ISO 9001:2015">
+            </div>
+            <div class="form-group">
+                <label>גורם מנפיק</label>
+                <input type="text" class="form-input" id="cert_issuer" placeholder="מכון התקנים">
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>תוקף מ-</label>
+                    <input type="date" class="form-input" id="cert_from">
+                </div>
+                <div class="form-group">
+                    <label>תוקף עד</label>
+                    <input type="date" class="form-input" id="cert_until">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeCertModal()">ביטול</button>
+                <button class="btn btn-primary" onclick="saveCertification()">💾 שמור</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Personnel Modal -->
+    <div class="modal-overlay" id="personnel-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">הוספת איש צוות</h3>
+                <button class="modal-close" onclick="closePersonnelModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>שם מלא *</label>
+                <input type="text" class="form-input" id="person_name" placeholder="ישראל ישראלי">
+            </div>
+            <div class="form-group">
+                <label>תפקיד</label>
+                <input type="text" class="form-input" id="person_role" placeholder="מנהל פרויקטים">
+            </div>
+            <div class="form-group">
+                <label>השכלה</label>
+                <input type="text" class="form-input" id="person_education" placeholder="מהנדס חשמל">
+            </div>
+            <div class="form-group">
+                <label>שנות ניסיון</label>
+                <input type="number" class="form-input" id="person_experience" placeholder="10">
+            </div>
+            <div class="form-group">
+                <label>הסמכות (מופרד בפסיקים)</label>
+                <input type="text" class="form-input" id="person_certs" placeholder="PMP, CISM">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closePersonnelModal()">ביטול</button>
+                <button class="btn btn-primary" onclick="savePersonnel()">💾 שמור</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Modal -->
+    <div class="modal-overlay" id="project-modal">
+        <div class="modal" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 class="modal-title">הוספת פרויקט</h3>
+                <button class="modal-close" onclick="closeProjectModal()">&times;</button>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>שם הפרויקט *</label>
+                    <input type="text" class="form-input" id="proj_name" placeholder="מערכת אבטחה - משרד הביטחון">
+                </div>
+                <div class="form-group">
+                    <label>לקוח</label>
+                    <input type="text" class="form-input" id="proj_client" placeholder="שם הלקוח">
+                </div>
+                <div class="form-group">
+                    <label>תאריך התחלה</label>
+                    <input type="date" class="form-input" id="proj_start">
+                </div>
+                <div class="form-group">
+                    <label>תאריך סיום</label>
+                    <input type="date" class="form-input" id="proj_end">
+                </div>
+                <div class="form-group">
+                    <label>היקף כספי כולל (₪)</label>
+                    <input type="number" class="form-input" id="proj_value" placeholder="5000000">
+                </div>
+                <div class="form-group">
+                    <label>אחוז חלקנו (%)</label>
+                    <input type="number" class="form-input" id="proj_share" placeholder="100">
+                </div>
+                <div class="form-group">
+                    <label>תפקיד בפרויקט</label>
+                    <select class="form-select" id="proj_role">
+                        <option value="primary">קבלן ראשי</option>
+                        <option value="subcontractor">קבלן משנה</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>סוג פרויקט</label>
+                    <select class="form-select" id="proj_type">
+                        <option value="construction">ביצוע/הקמה</option>
+                        <option value="maintenance">תחזוקה</option>
+                        <option value="combined">משולב</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-grid" id="combined-fields" style="display: none;">
+                <div class="form-group">
+                    <label>היקף ביצוע (₪)</label>
+                    <input type="number" class="form-input" id="proj_construction_value">
+                </div>
+                <div class="form-group">
+                    <label>היקף תחזוקה (₪)</label>
+                    <input type="number" class="form-input" id="proj_maintenance_value">
+                </div>
+                <div class="form-group">
+                    <label>חודשי תחזוקה</label>
+                    <input type="number" class="form-input" id="proj_maintenance_months">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>סוג השלמה</label>
+                <select class="form-select" id="proj_completion">
+                    <option value="delivery">מסירה</option>
+                    <option value="final_invoice">חשבונית סופית</option>
+                    <option value="warranty_end">סיום אחריות</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>טכנולוגיות (JSON)</label>
+                <input type="text" class="form-input" id="proj_tech" placeholder='{"cameras": "Axis", "vms": "Milestone"}'>
+            </div>
+            <div class="form-group">
+                <label>כמויות (JSON)</label>
+                <input type="text" class="form-input" id="proj_quantities" placeholder='{"cameras": 150, "doors": 30}'>
+            </div>
+            <div class="form-group">
+                <label>מזהה ייחודי *</label>
+                <input type="text" class="form-input" id="proj_unique_id" placeholder="PROJ-2024-001">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeProjectModal()">ביטול</button>
+                <button class="btn btn-primary" onclick="saveProject()">💾 שמור</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tangent Project Modal -->
+    <div class="modal-overlay" id="tangent-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">הוספת פרויקט משיק</h3>
+                <button class="modal-close" onclick="closeTangentModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>תיאור הפרויקט</label>
+                <textarea class="form-textarea" id="tangent_desc" placeholder="תאר את הפרויקט והרלוונטיות שלו"></textarea>
+            </div>
+            <div class="form-group">
+                <label>חברה קשורה</label>
+                <input type="text" class="form-input" id="tangent_company" placeholder="שם החברה הקשורה">
+            </div>
+            <div class="form-group">
+                <label>סוג קשר</label>
+                <select class="form-select" id="tangent_type">
+                    <option value="parent_subsidiary">חברת אם/בת</option>
+                    <option value="service_provided">שירות שסופק</option>
+                    <option value="related_domain">תחום קשור</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="tangent_can_sign"> ניתן לחתום הסכם לניצול הניסיון
+                </label>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeTangentModal()">ביטול</button>
+                <button class="btn btn-primary" onclick="saveTangent()">💾 שמור</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+
+    <script>
+        let companyProfile = null;
+        let certifications = [];
+        let personnel = [];
+        let projects = [];
+        let tangentProjects = [];
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        // Project type toggle
+        document.getElementById('proj_type').addEventListener('change', (e) => {
+            document.getElementById('combined-fields').style.display =
+                e.target.value === 'combined' ? 'grid' : 'none';
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadProfile();
+        });
+
+        async function loadProfile() {
+            const supabase = getSupabase();
+            if (!supabase) return;
+
+            try {
+                // Load company profile
+                const { data: profiles } = await supabase
+                    .from('company_profiles')
+                    .select('*')
+                    .limit(1);
+
+                if (profiles && profiles.length > 0) {
+                    companyProfile = profiles[0];
+                    populateForm(companyProfile);
+                }
+
+                // Load related data
+                if (companyProfile) {
+                    const companyId = companyProfile.id;
+
+                    const [certsRes, personnelRes, projectsRes, tangentRes] = await Promise.all([
+                        supabase.from('company_certifications').select('*').eq('company_id', companyId),
+                        supabase.from('company_personnel').select('*').eq('company_id', companyId),
+                        supabase.from('company_projects').select('*').eq('company_id', companyId),
+                        supabase.from('tangent_projects').select('*').eq('company_id', companyId)
+                    ]);
+
+                    certifications = certsRes.data || [];
+                    personnel = personnelRes.data || [];
+                    projects = projectsRes.data || [];
+                    tangentProjects = tangentRes.data || [];
+
+                    renderCertifications();
+                    renderPersonnel();
+                    renderProjects();
+                    renderTangent();
+                }
+            } catch (e) {
+                console.error('Error loading profile:', e);
+            }
+        }
+
+        function populateForm(profile) {
+            document.getElementById('company_name').value = profile.company_name || '';
+            document.getElementById('bn_number').value = profile.bn_number || '';
+            document.getElementById('year_founded').value = profile.year_founded || '';
+            document.getElementById('employee_count').value = profile.employee_count || '';
+
+            if (profile.annual_revenue) {
+                document.getElementById('revenue_2024').value = profile.annual_revenue['2024'] || '';
+                document.getElementById('revenue_2023').value = profile.annual_revenue['2023'] || '';
+                document.getElementById('revenue_2022').value = profile.annual_revenue['2022'] || '';
+            }
+
+            document.getElementById('business_sectors').value =
+                (profile.business_sectors || []).join(', ');
+            document.getElementById('contractor_classifications').value =
+                (profile.contractor_classifications || []).join(', ');
+
+            if (profile.parent_subsidiary_companies) {
+                document.getElementById('parent_subsidiary').value =
+                    JSON.stringify(profile.parent_subsidiary_companies, null, 2);
+            }
+        }
+
+        async function saveProfile() {
+            const supabase = getSupabase();
+            if (!supabase) {
+                showToast('error', 'לא מחובר לדאטאבייס');
+                return;
+            }
+
+            const profileData = {
+                company_name: document.getElementById('company_name').value,
+                bn_number: document.getElementById('bn_number').value,
+                year_founded: parseInt(document.getElementById('year_founded').value) || null,
+                employee_count: parseInt(document.getElementById('employee_count').value) || null,
+                annual_revenue: {
+                    '2024': parseFloat(document.getElementById('revenue_2024').value) || null,
+                    '2023': parseFloat(document.getElementById('revenue_2023').value) || null,
+                    '2022': parseFloat(document.getElementById('revenue_2022').value) || null
+                },
+                business_sectors: document.getElementById('business_sectors').value.split(',').map(s => s.trim()).filter(Boolean),
+                contractor_classifications: document.getElementById('contractor_classifications').value.split(',').map(s => s.trim()).filter(Boolean),
+                updated_at: new Date().toISOString()
+            };
+
+            try {
+                const parentSub = document.getElementById('parent_subsidiary').value;
+                if (parentSub) {
+                    profileData.parent_subsidiary_companies = JSON.parse(parentSub);
+                }
+            } catch (e) {
+                // Not valid JSON, store as array
+                profileData.parent_subsidiary_companies = document.getElementById('parent_subsidiary').value.split('\n').filter(Boolean);
+            }
+
+            try {
+                if (companyProfile) {
+                    await supabase.from('company_profiles').update(profileData).eq('id', companyProfile.id);
+                } else {
+                    const { data } = await supabase.from('company_profiles').insert(profileData).select().single();
+                    companyProfile = data;
+                }
+                showToast('success', 'הפרופיל נשמר בהצלחה');
+            } catch (e) {
+                showToast('error', 'שגיאה בשמירה: ' + e.message);
+            }
+        }
+
+        // Certification functions
+        function openCertModal() { document.getElementById('cert-modal').classList.add('active'); }
+        function closeCertModal() { document.getElementById('cert-modal').classList.remove('active'); }
+
+        async function saveCertification() {
+            const supabase = getSupabase();
+            if (!supabase || !companyProfile) {
+                showToast('error', 'יש לשמור קודם את פרטי החברה');
+                return;
+            }
+
+            const certData = {
+                company_id: companyProfile.id,
+                cert_type: document.getElementById('cert_type').value,
+                cert_name: document.getElementById('cert_name').value,
+                issuing_body: document.getElementById('cert_issuer').value,
+                valid_from: document.getElementById('cert_from').value || null,
+                valid_until: document.getElementById('cert_until').value || null
+            };
+
+            try {
+                await supabase.from('company_certifications').insert(certData);
+                closeCertModal();
+                await loadProfile();
+                showToast('success', 'האישור נוסף בהצלחה');
+            } catch (e) {
+                showToast('error', 'שגיאה: ' + e.message);
+            }
+        }
+
+        function renderCertifications() {
+            const tbody = document.getElementById('certifications-body');
+            if (certifications.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">📜</div><p>אין אישורים עדיין</p></div></td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = certifications.map(cert => {
+                const status = getCertStatus(cert.valid_until);
+                return `
+                    <tr>
+                        <td>${getCertTypeLabel(cert.cert_type)}</td>
+                        <td>${cert.cert_name}</td>
+                        <td>${cert.issuing_body || '-'}</td>
+                        <td>${cert.valid_until || '-'}</td>
+                        <td><span class="status-badge ${status.class}">${status.label}</span></td>
+                        <td class="actions">
+                            <button class="icon-btn delete" onclick="deleteCert('${cert.id}')">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function getCertStatus(validUntil) {
+            if (!validUntil) return { class: 'valid', label: 'תקף' };
+            const until = new Date(validUntil);
+            const now = new Date();
+            const daysLeft = Math.ceil((until - now) / (1000 * 60 * 60 * 24));
+
+            if (daysLeft < 0) return { class: 'expired', label: 'פג תוקף' };
+            if (daysLeft < 30) return { class: 'expiring', label: 'עומד לפוג' };
+            return { class: 'valid', label: 'תקף' };
+        }
+
+        function getCertTypeLabel(type) {
+            const labels = {
+                iso: 'ISO',
+                license: 'רישיון',
+                security_clearance: 'סיווג ביטחוני',
+                contractor_registration: 'רישום קבלנים',
+                tax: 'מס/ניהול ספרים'
+            };
+            return labels[type] || type;
+        }
+
+        async function deleteCert(id) {
+            if (!confirm('למחוק את האישור?')) return;
+            const supabase = getSupabase();
+            await supabase.from('company_certifications').delete().eq('id', id);
+            await loadProfile();
+            showToast('success', 'האישור נמחק');
+        }
+
+        // Personnel functions
+        function openPersonnelModal() { document.getElementById('personnel-modal').classList.add('active'); }
+        function closePersonnelModal() { document.getElementById('personnel-modal').classList.remove('active'); }
+
+        async function savePersonnel() {
+            const supabase = getSupabase();
+            if (!supabase || !companyProfile) {
+                showToast('error', 'יש לשמור קודם את פרטי החברה');
+                return;
+            }
+
+            const personData = {
+                company_id: companyProfile.id,
+                full_name: document.getElementById('person_name').value,
+                role: document.getElementById('person_role').value,
+                education: document.getElementById('person_education').value,
+                years_experience: parseInt(document.getElementById('person_experience').value) || null,
+                certifications: document.getElementById('person_certs').value.split(',').map(s => s.trim()).filter(Boolean)
+            };
+
+            try {
+                await supabase.from('company_personnel').insert(personData);
+                closePersonnelModal();
+                await loadProfile();
+                showToast('success', 'איש הצוות נוסף בהצלחה');
+            } catch (e) {
+                showToast('error', 'שגיאה: ' + e.message);
+            }
+        }
+
+        function renderPersonnel() {
+            const tbody = document.getElementById('personnel-body');
+            if (personnel.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">👥</div><p>אין אנשי צוות עדיין</p></div></td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = personnel.map(p => `
+                <tr>
+                    <td>${p.full_name}</td>
+                    <td>${p.role || '-'}</td>
+                    <td>${p.education || '-'}</td>
+                    <td>${p.years_experience || '-'}</td>
+                    <td>${(p.certifications || []).join(', ') || '-'}</td>
+                    <td class="actions">
+                        <button class="icon-btn delete" onclick="deletePersonnel('${p.id}')">🗑️</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function deletePersonnel(id) {
+            if (!confirm('למחוק את איש הצוות?')) return;
+            const supabase = getSupabase();
+            await supabase.from('company_personnel').delete().eq('id', id);
+            await loadProfile();
+            showToast('success', 'איש הצוות נמחק');
+        }
+
+        // Project functions
+        function openProjectModal() { document.getElementById('project-modal').classList.add('active'); }
+        function closeProjectModal() { document.getElementById('project-modal').classList.remove('active'); }
+
+        async function saveProject() {
+            const supabase = getSupabase();
+            if (!supabase || !companyProfile) {
+                showToast('error', 'יש לשמור קודם את פרטי החברה');
+                return;
+            }
+
+            let technologies = null;
+            let quantities = null;
+
+            try {
+                const techVal = document.getElementById('proj_tech').value;
+                if (techVal) technologies = JSON.parse(techVal);
+            } catch (e) {}
+
+            try {
+                const qtyVal = document.getElementById('proj_quantities').value;
+                if (qtyVal) quantities = JSON.parse(qtyVal);
+            } catch (e) {}
+
+            const projectData = {
+                company_id: companyProfile.id,
+                project_name: document.getElementById('proj_name').value,
+                client_name: document.getElementById('proj_client').value,
+                start_date: document.getElementById('proj_start').value || null,
+                end_date: document.getElementById('proj_end').value || null,
+                total_value: parseFloat(document.getElementById('proj_value').value) || null,
+                our_share_percent: parseFloat(document.getElementById('proj_share').value) || null,
+                role: document.getElementById('proj_role').value,
+                project_type: document.getElementById('proj_type').value,
+                construction_value: parseFloat(document.getElementById('proj_construction_value').value) || null,
+                maintenance_value: parseFloat(document.getElementById('proj_maintenance_value').value) || null,
+                maintenance_months: parseInt(document.getElementById('proj_maintenance_months').value) || null,
+                completion_type: document.getElementById('proj_completion').value,
+                technologies,
+                quantities,
+                unique_identifier: document.getElementById('proj_unique_id').value
+            };
+
+            try {
+                await supabase.from('company_projects').insert(projectData);
+                closeProjectModal();
+                await loadProfile();
+                showToast('success', 'הפרויקט נוסף בהצלחה');
+            } catch (e) {
+                showToast('error', 'שגיאה: ' + e.message);
+            }
+        }
+
+        function renderProjects() {
+            const tbody = document.getElementById('projects-body');
+            if (projects.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">🏗️</div><p>אין פרויקטים עדיין</p></div></td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = projects.map(p => `
+                <tr>
+                    <td>${p.project_name}</td>
+                    <td>${p.client_name || '-'}</td>
+                    <td>${formatCurrency(p.total_value)}</td>
+                    <td>${getProjectTypeLabel(p.project_type)}</td>
+                    <td>${p.start_date || '-'} - ${p.end_date || '-'}</td>
+                    <td class="actions">
+                        <button class="icon-btn delete" onclick="deleteProject('${p.id}')">🗑️</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function getProjectTypeLabel(type) {
+            const labels = { construction: 'ביצוע', maintenance: 'תחזוקה', combined: 'משולב' };
+            return labels[type] || type;
+        }
+
+        async function deleteProject(id) {
+            if (!confirm('למחוק את הפרויקט?')) return;
+            const supabase = getSupabase();
+            await supabase.from('company_projects').delete().eq('id', id);
+            await loadProfile();
+            showToast('success', 'הפרויקט נמחק');
+        }
+
+        // Tangent functions
+        function openTangentModal() { document.getElementById('tangent-modal').classList.add('active'); }
+        function closeTangentModal() { document.getElementById('tangent-modal').classList.remove('active'); }
+
+        async function saveTangent() {
+            const supabase = getSupabase();
+            if (!supabase || !companyProfile) {
+                showToast('error', 'יש לשמור קודם את פרטי החברה');
+                return;
+            }
+
+            const tangentData = {
+                company_id: companyProfile.id,
+                description: document.getElementById('tangent_desc').value,
+                related_company: document.getElementById('tangent_company').value,
+                source_type: document.getElementById('tangent_type').value,
+                can_sign_agreement: document.getElementById('tangent_can_sign').checked
+            };
+
+            try {
+                await supabase.from('tangent_projects').insert(tangentData);
+                closeTangentModal();
+                await loadProfile();
+                showToast('success', 'הפרויקט המשיק נוסף בהצלחה');
+            } catch (e) {
+                showToast('error', 'שגיאה: ' + e.message);
+            }
+        }
+
+        function renderTangent() {
+            const tbody = document.getElementById('tangent-body');
+            if (tangentProjects.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="empty-state-icon">🤝</div><p>אין פרויקטים משיקים עדיין</p></div></td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = tangentProjects.map(t => `
+                <tr>
+                    <td>${t.description || '-'}</td>
+                    <td>${t.related_company || '-'}</td>
+                    <td>${getTangentTypeLabel(t.source_type)}</td>
+                    <td>${t.can_sign_agreement ? '✅ כן' : '❌ לא'}</td>
+                    <td class="actions">
+                        <button class="icon-btn delete" onclick="deleteTangent('${t.id}')">🗑️</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function getTangentTypeLabel(type) {
+            const labels = { parent_subsidiary: 'חברת אם/בת', service_provided: 'שירות שסופק', related_domain: 'תחום קשור' };
+            return labels[type] || type;
+        }
+
+        async function deleteTangent(id) {
+            if (!confirm('למחוק את הפרויקט המשיק?')) return;
+            const supabase = getSupabase();
+            await supabase.from('tangent_projects').delete().eq('id', id);
+            await loadProfile();
+            showToast('success', 'הפרויקט המשיק נמחק');
+        }
+
+        // Utilities
+        function formatCurrency(value) {
+            if (!value) return '-';
+            if (value >= 1000000) return '₪' + (value / 1000000).toFixed(1) + 'M';
+            if (value >= 1000) return '₪' + (value / 1000).toFixed(0) + 'K';
+            return '₪' + value.toLocaleString();
+        }
+
+        function showToast(type, message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<span>${type === 'success' ? '✅' : '❌'}</span><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+    </script>
+</body>
+</html>

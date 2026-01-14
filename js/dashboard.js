@@ -6,42 +6,65 @@
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Check authentication - redirect to login if not authenticated
-  try {
-    await Auth.requireAuth('tenderix-login.html');
-  } catch (error) {
-    console.error('Auth check failed:', error);
+  console.log('[Dashboard] Initializing...');
+
+  // Check authentication status
+  const user = await Auth.getCurrentUser();
+
+  if (!user) {
+    console.log('[Dashboard] No user session - showing login prompt');
+    showLoginPrompt();
     return;
   }
 
-  // Initialize dashboard
+  console.log('[Dashboard] User authenticated:', user.email);
   await initDashboard();
 });
+
+function showLoginPrompt() {
+  Utils.showLoading(false);
+  const mainContent = document.querySelector('.main-content') || document.body;
+  mainContent.innerHTML = `
+    <div class="flex items-center justify-center min-h-screen">
+      <div class="glass-card p-8 text-center max-w-md">
+        <div class="text-6xl mb-4">🔒</div>
+        <h2 class="text-2xl font-bold text-white mb-4">נדרשת התחברות</h2>
+        <p class="text-gray-300 mb-6">כדי לראות את הדשבורד ואת המכרזים שלך, יש להתחבר למערכת</p>
+        <a href="tenderix-login.html" class="btn-primary inline-flex items-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
+          </svg>
+          התחבר עכשיו
+        </a>
+      </div>
+    </div>
+  `;
+}
 
 async function initDashboard() {
   try {
     Utils.showLoading(true, 'טוען דשבורד...');
 
-    // Load user data
-    await loadUserInfo();
+    // Load user data (don't fail if no user)
+    try { await loadUserInfo(); } catch(e) { console.log('No user info:', e.message); }
 
-    // Load all dashboard data in parallel
-    await Promise.all([
-      loadDashboardStats(),
-      loadTenderList(),
-      loadUpcomingDeadlines(),
-      loadAIRecommendations(),
-      loadRecentActivity()
+    // Load all dashboard data in parallel (each wrapped to prevent cascade failures)
+    await Promise.allSettled([
+      loadDashboardStats().catch(e => console.log('Stats error:', e.message)),
+      loadTenderList().catch(e => console.log('Tenders error:', e.message)),
+      loadUpcomingDeadlines().catch(e => console.log('Deadlines error:', e.message)),
+      loadAIRecommendations().catch(e => console.log('Recommendations error:', e.message)),
+      loadRecentActivity().catch(e => console.log('Activity error:', e.message))
     ]);
 
     // Setup event listeners
-    setupEventListeners();
+    try { setupEventListeners(); } catch(e) { console.log('Events error:', e.message); }
 
     // Setup real-time updates
-    setupRealtimeUpdates();
+    try { setupRealtimeUpdates(); } catch(e) { console.log('Realtime error:', e.message); }
 
     // Setup file upload
-    setupFileUpload();
+    try { setupFileUpload(); } catch(e) { console.log('Upload setup error:', e.message); }
 
   } catch (error) {
     console.error('Dashboard init failed:', error);
@@ -59,7 +82,10 @@ async function loadUserInfo() {
   try {
     const user = await Auth.getCurrentUser();
     if (!user) {
-      window.location.href = 'tenderix-login.html';
+      console.log('[Dashboard] No user logged in - showing demo mode');
+      // Set demo user info instead of redirecting
+      const headerGreeting = document.getElementById('header-greeting');
+      if (headerGreeting) headerGreeting.textContent = 'שלום, אורח 👋';
       return;
     }
 
@@ -108,8 +134,8 @@ async function loadUserInfo() {
 
   } catch (error) {
     console.error('Failed to load user info:', error);
-    // Redirect to login on auth error
-    window.location.href = 'tenderix-login.html';
+    // Don't redirect - just show demo mode
+    console.log('[Dashboard] Auth error - showing demo mode');
   }
 }
 

@@ -10,15 +10,24 @@ const API = {
       const supabase = getSupabase();
       if (!supabase) return { data: [], error: 'Supabase not initialized' };
 
-      let query = supabase.from('tenders').select('*, organizations(name)').order('created_at', { ascending: false });
+      let query = supabase.from('tenders').select('*').order('created_at', { ascending: false });
       if (options.status) query = query.eq('status', options.status);
-      if (options.search) query = query.ilike('name', '%' + options.search + '%');
+      if (options.search) query = query.ilike('tender_name', '%' + options.search + '%');
       if (options.limit) query = query.limit(options.limit);
 
       const { data, error } = await query;
       if (error) { console.error('[API] Error:', error.message); return { data: [], error: error.message }; }
-      console.log('[API] Fetched ' + (data ? data.length : 0) + ' tenders');
-      return { data: data || [], error: null };
+
+      // Map to expected format
+      const mapped = (data || []).map(t => ({
+        ...t,
+        name: t.tender_name,
+        deadline: t.submission_deadline,
+        organization: t.issuing_body
+      }));
+
+      console.log('[API] Fetched ' + mapped.length + ' tenders');
+      return { data: mapped, error: null };
     },
 
     async getById(id) {
@@ -35,11 +44,12 @@ const API = {
       const now = new Date();
       const future = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
       const { data, error } = await supabase.from('tenders')
-        .select('id, name, deadline, ai_score, status')
-        .gte('deadline', now.toISOString())
-        .lte('deadline', future.toISOString())
-        .order('deadline', { ascending: true }).limit(10);
-      return error ? [] : (data || []);
+        .select('id, tender_name, submission_deadline, status')
+        .gte('submission_deadline', now.toISOString())
+        .lte('submission_deadline', future.toISOString())
+        .order('submission_deadline', { ascending: true }).limit(10);
+      const mapped = (data || []).map(t => ({ ...t, name: t.tender_name, deadline: t.submission_deadline }));
+      return error ? [] : mapped;
     },
 
     async getGateConditions(id) {
@@ -81,7 +91,7 @@ const API = {
       const empty = { total: 0, activeTenders: 0, analyzing: 0, go: 0, upcoming: 0, pendingDecisions: 0, totalValue: 0, winRate: 0, urgentDeadlines: 0 };
       if (!supabase) return empty;
 
-      const { data: tenders, error } = await supabase.from('tenders').select('id, status, deadline, estimated_value');
+      const { data: tenders, error } = await supabase.from('tenders').select('id, status, submission_deadline, estimated_value');
       if (error || !tenders || tenders.length === 0) {
         console.log('[API] No tenders found or error');
         return empty;
@@ -97,8 +107,8 @@ const API = {
         analyzing: tenders.filter(t => ['GATES_EXTRACTED','analyzing'].includes(t.status)).length,
         go: tenders.filter(t => ['GO','go'].includes(t.status)).length,
         pendingDecisions: tenders.filter(t => ['pending_decision','PENDING','ready_for_decision'].includes(t.status)).length,
-        upcoming: tenders.filter(t => t.deadline && new Date(t.deadline) >= now && new Date(t.deadline) <= week).length,
-        urgentDeadlines: tenders.filter(t => t.deadline && new Date(t.deadline) >= now && new Date(t.deadline) <= urgent).length,
+        upcoming: tenders.filter(t => t.submission_deadline && new Date(t.submission_deadline) >= now && new Date(t.submission_deadline) <= week).length,
+        urgentDeadlines: tenders.filter(t => t.submission_deadline && new Date(t.submission_deadline) >= now && new Date(t.submission_deadline) <= urgent).length,
         totalValue: tenders.reduce((s, t) => s + (t.estimated_value || 0), 0),
         winRate: 0
       };

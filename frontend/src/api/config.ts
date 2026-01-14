@@ -14,6 +14,14 @@ export const TEST_IDS = {
   ORG_ID: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
 };
 
+// Default organization data (created automatically if doesn't exist)
+export const DEFAULT_ORG = {
+  id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  name: 'ארגון ראשי',
+  company_number: '000000000',
+  settings: { default_currency: 'ILS', language: 'he' },
+};
+
 // Get current tender ID from localStorage or use default
 export function getCurrentTenderId(): string {
   return localStorage.getItem('currentTenderId') || TEST_IDS.TENDER_ID;

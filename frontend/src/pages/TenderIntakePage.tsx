@@ -19,7 +19,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { api } from '../api/tenderix';
-import { setCurrentTender, setTenderExtractedText } from '../api/config';
+import { setCurrentTender, setTenderExtractedText, DEFAULT_ORG } from '../api/config';
 import * as pdfjsLib from 'pdfjs-dist';
 // @ts-ignore - Vite handles this URL import specially
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -379,8 +379,18 @@ export function TenderIntakePage() {
     setError(null);
 
     try {
+      // CRITICAL: Ensure organization exists before creating tender
+      console.log('Ensuring organization exists...');
+      await api.organizations.ensureExists(DEFAULT_ORG.id, {
+        name: DEFAULT_ORG.name,
+        company_number: DEFAULT_ORG.company_number,
+        settings: DEFAULT_ORG.settings,
+      });
+      console.log('Organization check complete');
+
       // Create tender in database
       // Note: issuing_body is required (NOT NULL) in the DB, so we use a default value
+      console.log('Creating tender...');
       const tender = await api.tenders.create({
         tender_name: metadata.tenderName !== 'לא זוהה' ? metadata.tenderName : documents[0]?.name || 'מכרז חדש',
         tender_number: metadata.tenderNumber !== 'לא זוהה' ? metadata.tenderNumber : undefined,
@@ -392,15 +402,18 @@ export function TenderIntakePage() {
         category: metadata.category !== 'לא זוהה' ? metadata.category : undefined,
         quality_weight: metadata.qualityWeight !== 'לא זוהה' ? parseFloat(metadata.qualityWeight) || undefined : undefined,
         price_weight: metadata.priceWeight !== 'לא זוהה' ? parseFloat(metadata.priceWeight) || undefined : undefined,
-        org_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', // Default org
+        org_id: DEFAULT_ORG.id,
         status: 'ACTIVE',
         current_step: 'INTAKE',
       });
+      console.log('Tender created:', tender);
 
-      // Note: Document save skipped - schema mismatch between SQL file and actual Supabase DB
-      // The tender_documents table in Supabase doesn't have the expected columns
-      // For now, just save the tender metadata
-      console.log('Tender created successfully, documents will be added later when schema is fixed');
+      // Verify tender was actually created
+      if (!tender || !tender.id) {
+        throw new Error('Tender creation failed - no ID returned from database');
+      }
+
+      console.log('Tender created successfully with ID:', tender.id);
 
       const tenderName = metadata.tenderName !== 'לא זוהה' ? metadata.tenderName : documents[0]?.name || 'מכרז חדש';
 

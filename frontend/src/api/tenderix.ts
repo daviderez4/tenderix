@@ -793,6 +793,48 @@ export const api = {
     },
   },
 
+  // ==================== ORGANIZATIONS ====================
+  organizations: {
+    get: (id: string) => supabaseFetch<Organization[]>(`organizations?id=eq.${id}`).then(r => r[0] || null),
+
+    create: (data: Partial<Organization>) => supabaseFetch<Organization[]>('organizations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }).then(r => r[0]),
+
+    exists: async (id: string): Promise<boolean> => {
+      try {
+        const org = await supabaseFetch<Organization[]>(`organizations?id=eq.${id}&select=id`);
+        return org && org.length > 0;
+      } catch {
+        return false;
+      }
+    },
+
+    ensureExists: async (id: string, defaultData: Partial<Organization>): Promise<Organization> => {
+      try {
+        // Check if organization exists
+        const existing = await supabaseFetch<Organization[]>(`organizations?id=eq.${id}`);
+        if (existing && existing.length > 0) {
+          console.log(`Organization ${id} already exists`);
+          return existing[0];
+        }
+
+        // Create organization if it doesn't exist
+        console.log(`Creating organization ${id}...`);
+        const created = await supabaseFetch<Organization[]>('organizations', {
+          method: 'POST',
+          body: JSON.stringify({ id, ...defaultData }),
+        });
+        console.log(`Organization ${id} created successfully`);
+        return created[0];
+      } catch (error) {
+        console.error('Error ensuring organization exists:', error);
+        throw error;
+      }
+    },
+  },
+
   // ==================== LEGACY (backward compatibility) ====================
   getTenders: () => supabaseFetch<Tender[]>('tenders?select=*&order=created_at.desc'),
   getTender: (id: string) => supabaseFetch<Tender[]>(`tenders?id=eq.${id}`).then(r => r[0]),
