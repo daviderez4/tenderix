@@ -1407,114 +1407,627 @@
         }
 
         // ============================================
-        // MODULE 2.1 ENHANCED: GATE CONDITIONS WITH CLASSIFICATION
+        // MODULE 2.1 REBUILT: DEEP SENTENCE ANALYSIS FOR GATE CONDITIONS
+        // High-quality extraction with semantic understanding
         // ============================================
         async function extractGateConditionsEnhanced(tenderId, text, definitions) {
-            console.log('[Gates Enhanced] Extracting with classification...');
+            console.log('[Gates Deep Analysis] Starting high-quality extraction...');
 
             const supabase = getSupabase();
             if (!supabase) return { success: false, conditions: [] };
 
-            // Normalize text first
-            const normalizedText = normalizeHebrewText(text);
+            // Step 1: Pre-process text with page markers
+            const textWithPages = addPageMarkers(text);
 
+            // Step 2: Find gate conditions section(s)
+            const gateSections = findGateSections(textWithPages);
+            console.log('[Gates Deep Analysis] Found', gateSections.length, 'gate sections');
+
+            // Step 3: Deep sentence analysis
             const conditions = [];
             let conditionNumber = 1;
-            const extractedTexts = new Set();
+            const extractedSignatures = new Set(); // For deduplication
 
-            // Enhanced patterns for Module 2.1
-            const patterns = {
-                // תנאי סף (mandatory)
-                mandatory: [
-                    /תנאי\s*סף\s*(?:מס['׳]?|מספר)?\s*(\d+(?:\.\d+)?)\s*[-–:]\s*([^\n]+)/gi,
-                    /(\d+(?:\.\d+)?)\s*[.\)]\s*(?:על\s*המציע|נדרש|חובה)\s*([^\n]+)/gi,
-                    /על\s*המציע\s*(?:להיות|להוכיח|להציג|לצרף)\s*([^\n]{10,200})/gi,
-                    /תנאי\s*הכרחי\s*[-–:]\s*([^\n]+)/gi,
-                    /חובה\s*[-–:]\s*([^\n]+)/gi,
-                ],
-                // יתרון (advantage/scoring)
-                advantage: [
-                    /יתרון\s*(?:ל|ינתן\s*ל)?\s*([^\n]+)/gi,
-                    /עדיפות\s*(?:ל|תינתן\s*ל)?\s*([^\n]+)/gi,
-                    /ניקוד\s*(?:נוסף|עודף)\s*(?:ל|עבור)?\s*([^\n]+)/gi,
-                    /יקבל\s*ניקוד\s*([^\n]+)/gi,
-                ]
+            // Process each gate section
+            for (const section of gateSections) {
+                const sectionConditions = analyzeGateSectionDeeply(
+                    section,
+                    conditionNumber,
+                    tenderId,
+                    definitions,
+                    extractedSignatures
+                );
+                conditionNumber += sectionConditions.length;
+                conditions.push(...sectionConditions);
+            }
+
+            // Step 4: Also scan full text for scattered requirements
+            const scatteredConditions = scanForScatteredRequirements(
+                textWithPages,
+                conditionNumber,
+                tenderId,
+                definitions,
+                extractedSignatures
+            );
+            conditions.push(...scatteredConditions);
+
+            // Step 5: Extract advantage/scoring conditions
+            const advantageConditions = extractAdvantageConditions(
+                textWithPages,
+                conditions.length + 1,
+                tenderId,
+                extractedSignatures
+            );
+            conditions.push(...advantageConditions);
+
+            console.log('[Gates Deep Analysis] Total conditions found:', conditions.length);
+            console.log('[Gates Deep Analysis] Mandatory:', conditions.filter(c => c.is_mandatory).length);
+            console.log('[Gates Deep Analysis] Advantages:', conditions.filter(c => !c.is_mandatory).length);
+
+            // Save to database with error handling
+            let savedCount = 0;
+            const errors = [];
+
+            for (const condition of conditions) {
+                try {
+                    const { error } = await supabase.from('gate_conditions').insert(condition);
+                    if (!error) {
+                        savedCount++;
+                    } else {
+                        errors.push({ condition: condition.condition_number, error: error.message });
+                    }
+                } catch (err) {
+                    errors.push({ condition: condition.condition_number, error: err.message });
+                }
+            }
+
+            if (errors.length > 0) {
+                console.warn('[Gates Deep Analysis] Save errors:', errors.slice(0, 5));
+            }
+
+            return {
+                success: savedCount > 0,
+                count: savedCount,
+                total: conditions.length,
+                conditions
             };
+        }
 
-            // Extract mandatory conditions
-            for (const pattern of patterns.mandatory) {
-                let match;
+        // Add page markers to text for traceability
+        function addPageMarkers(text) {
+            // If text already has page markers, return as-is
+            if (text.includes('[[PAGE:')) return text;
+
+            // Estimate pages based on character count (~2500 chars per page for Hebrew)
+            const CHARS_PER_PAGE = 2500;
+            let result = '';
+            let currentPage = 1;
+
+            for (let i = 0; i < text.length; i++) {
+                if (i > 0 && i % CHARS_PER_PAGE === 0) {
+                    currentPage++;
+                    result += `\n[[PAGE:${currentPage}]]\n`;
+                }
+                result += text[i];
+            }
+
+            return `[[PAGE:1]]\n${result}`;
+        }
+
+        // Find sections that contain gate conditions
+        function findGateSections(text) {
+            const sections = [];
+
+            // Patterns to find gate condition sections
+            const sectionPatterns = [
+                /(?:פרק|סעיף)[\s\S]{0,30}תנאי\s*סף[\s\S]{0,5000}?(?=(?:פרק|סעיף)[\s\S]{0,30}(?!תנאי\s*סף)|$)/gi,
+                /תנאי\s*סף\s*(?:להשתתפות|למכרז|חובה)[\s\S]{0,8000}?(?=(?:פרק|סעיף)[\s\S]{0,20}(?!תנאי)|$)/gi,
+                /(?:^|\n)[\d\.]+\s*[-–]?\s*תנאי\s*סף[\s\S]{0,6000}?(?=\n[\d\.]+\s*[-–]?\s*(?!תנאי)|$)/gim
+            ];
+
+            for (const pattern of sectionPatterns) {
                 pattern.lastIndex = 0;
-                while ((match = pattern.exec(normalizedText)) !== null) {
-                    const conditionText = (match[2] || match[1]).trim();
-                    if (conditionText.length < 15 || extractedTexts.has(conditionText.substring(0, 50))) continue;
-                    extractedTexts.add(conditionText.substring(0, 50));
+                let match;
+                while ((match = pattern.exec(text)) !== null) {
+                    const sectionText = match[0];
+                    // Avoid duplicates
+                    const isDuplicate = sections.some(s =>
+                        s.text.includes(sectionText.substring(0, 100)) ||
+                        sectionText.includes(s.text.substring(0, 100))
+                    );
+                    if (!isDuplicate && sectionText.length > 100) {
+                        sections.push({
+                            text: sectionText,
+                            startIndex: match.index,
+                            page: extractPageFromPosition(text, match.index)
+                        });
+                    }
+                }
+            }
 
-                    // Module 2.2: Quantitative breakdown
-                    const quantitative = extractQuantitativeData(conditionText);
+            // If no sections found, treat entire text as potential source
+            if (sections.length === 0) {
+                sections.push({
+                    text: text,
+                    startIndex: 0,
+                    page: 1
+                });
+            }
 
-                    // Module 2.3: Identify bearer
-                    const bearer = identifyRequirementBearer(conditionText);
+            return sections;
+        }
 
-                    // Module 2.4: Check "similar" interpretation
-                    const similarity = checkSimilarityInterpretation(conditionText, definitions);
+        // Extract page number from position in text
+        function extractPageFromPosition(text, position) {
+            const textBefore = text.substring(0, position);
+            const pageMatches = textBefore.match(/\[\[PAGE:(\d+)\]\]/g);
+            if (pageMatches && pageMatches.length > 0) {
+                const lastMatch = pageMatches[pageMatches.length - 1];
+                const num = lastMatch.match(/\d+/);
+                return num ? parseInt(num[0]) : 1;
+            }
+            return Math.ceil(position / 2500) || 1;
+        }
 
-                    conditions.push({
+        // Deep analysis of a gate section - sentence by sentence
+        function analyzeGateSectionDeeply(section, startNumber, tenderId, definitions, extractedSignatures) {
+            const conditions = [];
+            let conditionNumber = startNumber;
+
+            // Split into meaningful segments (sentences/paragraphs)
+            const segments = splitIntoSegments(section.text);
+
+            let currentCondition = null;
+            let currentPage = section.page;
+
+            for (let i = 0; i < segments.length; i++) {
+                const segment = segments[i];
+                const segmentText = segment.text.trim();
+
+                // Update page if marker found
+                const pageMatch = segmentText.match(/\[\[PAGE:(\d+)\]\]/);
+                if (pageMatch) {
+                    currentPage = parseInt(pageMatch[1]);
+                    continue;
+                }
+
+                // Skip very short or header-only segments
+                if (segmentText.length < 10) continue;
+
+                // Analyze if this is a new requirement or continuation
+                const analysis = analyzeSegmentSemantics(segmentText, currentCondition);
+
+                if (analysis.isNewRequirement) {
+                    // Save previous condition if exists
+                    if (currentCondition && currentCondition.condition_text.length >= 20) {
+                        const signature = createConditionSignature(currentCondition.condition_text);
+                        if (!extractedSignatures.has(signature)) {
+                            extractedSignatures.add(signature);
+                            conditions.push(currentCondition);
+                        }
+                    }
+
+                    // Start new condition
+                    const quantitative = extractQuantitativeDataDeep(segmentText);
+                    const bearer = identifyRequirementBearer(segmentText);
+
+                    currentCondition = {
                         tender_id: tenderId,
                         condition_number: String(conditionNumber++),
-                        condition_text: conditionText,
+                        condition_text: cleanConditionText(segmentText),
+                        original_quote: segmentText.substring(0, 500),
                         condition_type: 'MANDATORY',
                         is_mandatory: true,
-                        requirement_type: classifyRequirementType(conditionText),
-                        // Module 2.2 data
+                        requirement_type: classifyRequirementTypeDeep(segmentText),
                         required_amount: quantitative.amount,
                         required_count: quantitative.count,
                         required_years: quantitative.years,
-                        // Module 2.3 data
+                        required_turnover: quantitative.turnover,
                         entity_type: bearer.entity,
-                        // Traceability (C1)
-                        source_page: findPageNumber(text, match[0]),
-                        source_section: findSectionNumber(text, match[0]),
-                        status: 'UNKNOWN'
-                    });
+                        source_page: currentPage,
+                        source_section: extractSectionNumber(segmentText) || section.sectionNumber,
+                        keywords: analysis.keywords,
+                        status: 'PENDING'
+                    };
+                } else if (analysis.isContinuation && currentCondition) {
+                    // Append to current condition
+                    currentCondition.condition_text += ' ' + cleanConditionText(segmentText);
+
+                    // Re-extract quantitative data with fuller text
+                    const quantitative = extractQuantitativeDataDeep(currentCondition.condition_text);
+                    if (quantitative.amount) currentCondition.required_amount = quantitative.amount;
+                    if (quantitative.count) currentCondition.required_count = quantitative.count;
+                    if (quantitative.years) currentCondition.required_years = quantitative.years;
+                    if (quantitative.turnover) currentCondition.required_turnover = quantitative.turnover;
                 }
             }
 
-            // Extract advantage conditions
-            for (const pattern of patterns.advantage) {
-                let match;
+            // Don't forget last condition
+            if (currentCondition && currentCondition.condition_text.length >= 20) {
+                const signature = createConditionSignature(currentCondition.condition_text);
+                if (!extractedSignatures.has(signature)) {
+                    extractedSignatures.add(signature);
+                    conditions.push(currentCondition);
+                }
+            }
+
+            return conditions;
+        }
+
+        // Split text into meaningful segments
+        function splitIntoSegments(text) {
+            const segments = [];
+
+            // Split by numbered items first
+            const numberedPattern = /(?:^|\n)\s*(?:(\d+(?:\.\d+)*)[.\)\-–]\s*|([א-ת])[.\)\-]\s*)/gm;
+            let lastIndex = 0;
+            let match;
+
+            numberedPattern.lastIndex = 0;
+            while ((match = numberedPattern.exec(text)) !== null) {
+                if (match.index > lastIndex) {
+                    const prevText = text.substring(lastIndex, match.index).trim();
+                    if (prevText.length > 0) {
+                        segments.push({ text: prevText, numbered: false });
+                    }
+                }
+                lastIndex = match.index;
+            }
+
+            // Add remaining text
+            if (lastIndex < text.length) {
+                segments.push({ text: text.substring(lastIndex).trim(), numbered: false });
+            }
+
+            // If no numbered items found, split by sentences
+            if (segments.length <= 1) {
+                const sentences = text.split(/(?<=[.!?:]\s)|(?=\n\s*[-•])/);
+                return sentences.map(s => ({ text: s.trim(), numbered: false })).filter(s => s.text.length > 0);
+            }
+
+            return segments;
+        }
+
+        // Analyze segment semantics - is it a new requirement or continuation?
+        function analyzeSegmentSemantics(text, currentCondition) {
+            const result = {
+                isNewRequirement: false,
+                isContinuation: false,
+                keywords: []
+            };
+
+            const normalizedText = text.toLowerCase();
+
+            // Strong indicators of NEW requirement
+            const newRequirementIndicators = [
+                { pattern: /תנאי\s*סף/, weight: 10, keyword: 'תנאי סף' },
+                { pattern: /על\s*המציע\s*(?:להיות|להוכיח|להציג|לצרף|להמציא)/, weight: 9, keyword: 'על המציע' },
+                { pattern: /נדרש\s*(?:כי|ש|ל)/, weight: 8, keyword: 'נדרש' },
+                { pattern: /חובה\s*(?:להציג|לצרף|להוכיח)/, weight: 9, keyword: 'חובה' },
+                { pattern: /המציע\s*יציג/, weight: 8, keyword: 'המציע יציג' },
+                { pattern: /יש\s*להוכיח/, weight: 7, keyword: 'יש להוכיח' },
+                { pattern: /(?:^|\n)\s*\d+[.\)]\s*/, weight: 6, keyword: 'מספור' },
+                { pattern: /ניסיון\s*(?:ב|של|מוכח)/, weight: 7, keyword: 'ניסיון' },
+                { pattern: /רישיון|היתר|אישור/, weight: 7, keyword: 'רישיון/אישור' },
+                { pattern: /מחזור\s*(?:כספי|שנתי|עסקי)/, weight: 8, keyword: 'מחזור' },
+                { pattern: /הסמכה|תקן|ISO/, weight: 7, keyword: 'הסמכה' },
+                { pattern: /ערבות\s*(?:בנקאית|מכרז|ביצוע)/, weight: 8, keyword: 'ערבות' },
+                { pattern: /צוות\s*(?:מקצועי|מינימלי)/, weight: 6, keyword: 'צוות' },
+                { pattern: /מהנדס|יועץ|מנהל\s*פרויקט/, weight: 6, keyword: 'כוח אדם' }
+            ];
+
+            // Continuation indicators
+            const continuationIndicators = [
+                { pattern: /^(?:ו|או|כולל|לרבות|וכן|בנוסף)/, weight: 5 },
+                { pattern: /^(?:את|של|עבור|ב|מ|ל)/, weight: 3 },
+                { pattern: /^[-–•]\s/, weight: 4 }
+            ];
+
+            let newScore = 0;
+            let continueScore = 0;
+
+            // Check new requirement indicators
+            for (const indicator of newRequirementIndicators) {
+                if (indicator.pattern.test(text)) {
+                    newScore += indicator.weight;
+                    result.keywords.push(indicator.keyword);
+                }
+            }
+
+            // Check continuation indicators
+            for (const indicator of continuationIndicators) {
+                if (indicator.pattern.test(text)) {
+                    continueScore += indicator.weight;
+                }
+            }
+
+            // Decision logic
+            if (newScore >= 6) {
+                result.isNewRequirement = true;
+            } else if (continueScore > newScore && currentCondition) {
+                result.isContinuation = true;
+            } else if (newScore > 0) {
+                result.isNewRequirement = true;
+            } else if (text.length > 30 && currentCondition) {
+                // Longer text without clear indicators - likely continuation
+                result.isContinuation = true;
+            }
+
+            return result;
+        }
+
+        // Create signature for deduplication
+        function createConditionSignature(text) {
+            // Use first 100 chars normalized
+            return text.substring(0, 100)
+                .replace(/\s+/g, ' ')
+                .replace(/[\d,.]+/g, 'N')
+                .trim()
+                .toLowerCase();
+        }
+
+        // Clean condition text
+        function cleanConditionText(text) {
+            return text
+                .replace(/\[\[PAGE:\d+\]\]/g, '')
+                .replace(/\s+/g, ' ')
+                .replace(/^[\d\.]+[.\)\-–]\s*/, '')
+                .replace(/^[א-ת][.\)\-]\s*/, '')
+                .trim();
+        }
+
+        // Extract section number from text
+        function extractSectionNumber(text) {
+            const patterns = [
+                /(?:סעיף|פרק)\s*(\d+(?:\.\d+)*)/,
+                /^(\d+(?:\.\d+)*)[.\)\-]/
+            ];
+
+            for (const pattern of patterns) {
+                const match = text.match(pattern);
+                if (match) return match[1];
+            }
+            return null;
+        }
+
+        // Deep quantitative data extraction
+        function extractQuantitativeDataDeep(text) {
+            const result = {
+                amount: null,
+                count: null,
+                years: null,
+                turnover: null,
+                raw: {}
+            };
+
+            // Monetary amounts - multiple patterns
+            const amountPatterns = [
+                // ש"ח / ₪
+                { pattern: /([\d,\.]+)\s*(?:מיליון)?\s*(?:₪|ש"ח|שקל)/i, multiplier: 1 },
+                { pattern: /([\d,\.]+)\s*מיליון\s*(?:₪|ש"ח|שקל)?/i, multiplier: 1000000 },
+                { pattern: /([\d,\.]+)\s*אלף\s*(?:₪|ש"ח|שקל)?/i, multiplier: 1000 },
+                // Turnover specific
+                { pattern: /מחזור\s*(?:שנתי|כספי)?\s*(?:של|בסך|לפחות)?\s*([\d,\.]+)\s*(?:מיליון)?/i, multiplier: 1, isTurnover: true },
+                { pattern: /הכנסות\s*(?:שנתיות)?\s*(?:של|בסך|לפחות)?\s*([\d,\.]+)/i, multiplier: 1, isTurnover: true }
+            ];
+
+            for (const { pattern, multiplier, isTurnover } of amountPatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    let value = parseFloat(match[1].replace(/,/g, ''));
+                    // Check if "מיליון" appears after the number
+                    if (text.includes('מיליון') && multiplier === 1) {
+                        value *= 1000000;
+                    }
+                    value *= multiplier;
+
+                    if (isTurnover) {
+                        result.turnover = value;
+                        result.raw.turnover = match[0];
+                    } else if (!result.amount) {
+                        result.amount = value;
+                        result.raw.amount = match[0];
+                    }
+                }
+            }
+
+            // Count patterns - projects, contracts, etc.
+            const countPatterns = [
+                { pattern: /(\d+)\s*(?:פרויקט|פרוייקט)(?:ים|ות)?/i, type: 'projects' },
+                { pattern: /(\d+)\s*(?:עבודות|עבודה)/i, type: 'works' },
+                { pattern: /(\d+)\s*(?:חוזים|חוזה|הסכם|הסכמים)/i, type: 'contracts' },
+                { pattern: /(\d+)\s*(?:לקוחות|לקוח)/i, type: 'clients' },
+                { pattern: /לפחות\s*(\d+)/i, type: 'minimum' },
+                { pattern: /(\d+)\s*(?:התקנות|אתרים|מבנים)/i, type: 'installations' }
+            ];
+
+            for (const { pattern, type } of countPatterns) {
+                const match = text.match(pattern);
+                if (match && !result.count) {
+                    result.count = parseInt(match[1]);
+                    result.raw.count = match[0];
+                    result.raw.countType = type;
+                }
+            }
+
+            // Years patterns
+            const yearsPatterns = [
+                { pattern: /(\d+)\s*שנות?\s*(?:ניסיון|ותק|פעילות)/i },
+                { pattern: /ניסיון\s*(?:של\s*)?(?:לפחות\s*)?(\d+)\s*שנ/i },
+                { pattern: /ותק\s*(?:של\s*)?(?:לפחות\s*)?(\d+)\s*שנ/i },
+                { pattern: /(?:ב|-)(\d+)\s*השנים\s*האחרונות/i },
+                { pattern: /(\d+)\s*שנים\s*(?:לפחות|ומעלה|אחרונות)/i }
+            ];
+
+            for (const { pattern } of yearsPatterns) {
+                const match = text.match(pattern);
+                if (match && !result.years) {
+                    result.years = parseInt(match[1]);
+                    result.raw.years = match[0];
+                }
+            }
+
+            return result;
+        }
+
+        // Deep requirement type classification
+        function classifyRequirementTypeDeep(text) {
+            const categories = {
+                EXPERIENCE: {
+                    patterns: [/ניסיון/, /ביצוע/, /פרויקט/, /עבודות/, /התקנ/, /יישום/],
+                    weight: 0
+                },
+                FINANCIAL: {
+                    patterns: [/מחזור/, /הכנס/, /הון/, /כספי/, /פיננס/, /ערבות/, /ביטוח/],
+                    weight: 0
+                },
+                CERTIFICATION: {
+                    patterns: [/תעודה/, /רישיון/, /היתר/, /הסמכה/, /ISO/, /תקן/, /סיווג/, /אישור/],
+                    weight: 0
+                },
+                PERSONNEL: {
+                    patterns: [/מנהל/, /צוות/, /עובד/, /מהנדס/, /יועץ/, /טכנאי/, /כוח.?אדם/],
+                    weight: 0
+                },
+                EQUIPMENT: {
+                    patterns: [/ציוד/, /מכונ/, /רכב/, /כלים/, /מעבדה/, /תשתית/],
+                    weight: 0
+                },
+                LEGAL: {
+                    patterns: [/משפטי/, /הצהרה/, /התחייבות/, /חוזה/, /תביע/],
+                    weight: 0
+                },
+                QUALITY: {
+                    patterns: [/איכות/, /בקרה/, /תקינה/, /בדיקה/],
+                    weight: 0
+                }
+            };
+
+            for (const [category, data] of Object.entries(categories)) {
+                for (const pattern of data.patterns) {
+                    if (pattern.test(text)) {
+                        data.weight++;
+                    }
+                }
+            }
+
+            // Find highest scoring category
+            let maxCategory = 'OTHER';
+            let maxWeight = 0;
+
+            for (const [category, data] of Object.entries(categories)) {
+                if (data.weight > maxWeight) {
+                    maxWeight = data.weight;
+                    maxCategory = category;
+                }
+            }
+
+            return maxCategory;
+        }
+
+        // Scan for scattered requirements in full text
+        function scanForScatteredRequirements(text, startNumber, tenderId, definitions, extractedSignatures) {
+            const conditions = [];
+            let conditionNumber = startNumber;
+
+            // Patterns for scattered requirements
+            const scatteredPatterns = [
+                {
+                    pattern: /(?:על\s*)?המציע\s*(?:חייב|נדרש|יידרש)\s*(?:להיות|להוכיח|להציג|לצרף)\s*([^\n.]{20,300})/gi,
+                    type: 'MANDATORY'
+                },
+                {
+                    pattern: /(?:יש\s*)?להציג\s*(?:אישור|תעודה|רישיון)\s*([^\n.]{10,200})/gi,
+                    type: 'MANDATORY'
+                },
+                {
+                    pattern: /תנאי\s*מקדמי\s*[-–:]\s*([^\n]{20,300})/gi,
+                    type: 'MANDATORY'
+                },
+                {
+                    pattern: /דרישות\s*(?:סף|חובה)\s*[-–:]?\s*([^\n]{20,300})/gi,
+                    type: 'MANDATORY'
+                }
+            ];
+
+            for (const { pattern, type } of scatteredPatterns) {
                 pattern.lastIndex = 0;
-                while ((match = pattern.exec(normalizedText)) !== null) {
-                    const conditionText = match[1].trim();
-                    if (conditionText.length < 15 || extractedTexts.has(conditionText.substring(0, 50))) continue;
-                    extractedTexts.add(conditionText.substring(0, 50));
+                let match;
 
-                    conditions.push({
-                        tender_id: tenderId,
-                        condition_number: String(conditionNumber++),
-                        condition_text: conditionText,
-                        condition_type: 'ADVANTAGE',
-                        is_mandatory: false,
-                        requirement_type: classifyRequirementType(conditionText),
-                        status: 'UNKNOWN'
-                    });
+                while ((match = pattern.exec(text)) !== null) {
+                    const conditionText = cleanConditionText(match[1] || match[0]);
+                    const signature = createConditionSignature(conditionText);
+
+                    if (conditionText.length >= 20 && !extractedSignatures.has(signature)) {
+                        extractedSignatures.add(signature);
+
+                        const quantitative = extractQuantitativeDataDeep(conditionText);
+                        const bearer = identifyRequirementBearer(conditionText);
+
+                        conditions.push({
+                            tender_id: tenderId,
+                            condition_number: String(conditionNumber++),
+                            condition_text: conditionText,
+                            original_quote: match[0].substring(0, 500),
+                            condition_type: type,
+                            is_mandatory: type === 'MANDATORY',
+                            requirement_type: classifyRequirementTypeDeep(conditionText),
+                            required_amount: quantitative.amount,
+                            required_count: quantitative.count,
+                            required_years: quantitative.years,
+                            required_turnover: quantitative.turnover,
+                            entity_type: bearer.entity,
+                            source_page: extractPageFromPosition(text, match.index),
+                            source_section: extractSectionNumber(match[0]),
+                            status: 'PENDING'
+                        });
+                    }
                 }
             }
 
-            console.log('[Gates Enhanced] Found', conditions.length, 'conditions');
+            return conditions;
+        }
 
-            // Save to database
-            let savedCount = 0;
-            for (const condition of conditions.slice(0, 50)) {
-                try {
-                    const { error } = await supabase.from('gate_conditions').insert(condition);
-                    if (!error) savedCount++;
-                } catch (err) {
-                    console.error('[Gates] Save error:', err);
+        // Extract advantage/scoring conditions
+        function extractAdvantageConditions(text, startNumber, tenderId, extractedSignatures) {
+            const conditions = [];
+            let conditionNumber = startNumber;
+
+            const advantagePatterns = [
+                { pattern: /יתרון\s*(?:ל|ינתן\s*ל|יינתן\s*ל)?\s*(?:מציע\s*)?([^\n.]{15,250})/gi },
+                { pattern: /עדיפות\s*(?:ל|תינתן\s*ל)?\s*([^\n.]{15,250})/gi },
+                { pattern: /ניקוד\s*(?:נוסף|עודף|איכות)\s*(?:ל|עבור|יינתן)?\s*([^\n.]{15,250})/gi },
+                { pattern: /(?:יקבל|יזכה\s*ב)\s*ניקוד\s*(?:נוסף|עודף)?\s*([^\n.]{15,250})/gi },
+                { pattern: /קריטריון(?:ים)?\s*(?:איכות|ניקוד)\s*[-–:]?\s*([^\n.]{15,300})/gi }
+            ];
+
+            for (const { pattern } of advantagePatterns) {
+                pattern.lastIndex = 0;
+                let match;
+
+                while ((match = pattern.exec(text)) !== null) {
+                    const conditionText = cleanConditionText(match[1] || match[0]);
+                    const signature = createConditionSignature(conditionText);
+
+                    if (conditionText.length >= 15 && !extractedSignatures.has(signature)) {
+                        extractedSignatures.add(signature);
+
+                        conditions.push({
+                            tender_id: tenderId,
+                            condition_number: String(conditionNumber++),
+                            condition_text: conditionText,
+                            original_quote: match[0].substring(0, 500),
+                            condition_type: 'ADVANTAGE',
+                            is_mandatory: false,
+                            requirement_type: classifyRequirementTypeDeep(conditionText),
+                            source_page: extractPageFromPosition(text, match.index),
+                            status: 'PENDING'
+                        });
+                    }
                 }
             }
 
-            return { success: savedCount > 0, count: savedCount, conditions };
+            return conditions;
         }
 
         // Module 2.2: Extract quantitative requirements
