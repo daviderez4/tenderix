@@ -794,6 +794,7 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="js/config.js"></script>
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
@@ -804,8 +805,221 @@
         // ============================================
         const N8N_WEBHOOK = 'https://daviderez.app.n8n.cloud/webhook';
 
+        // PDF.js worker setup
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
         // Use global supabase from config.js via getSupabase()
         let selectedFile = null;
+
+        // ============================================
+        // PDF TEXT EXTRACTION
+        // ============================================
+        async function extractTextFromPDF(file) {
+            console.log('[PDF] Starting text extraction from:', file.name);
+
+            if (typeof pdfjsLib === 'undefined') {
+                console.error('[PDF] PDF.js not loaded');
+                return '';
+            }
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                console.log('[PDF] Document loaded, pages:', pdf.numPages);
+
+                let fullText = '';
+                const maxPages = Math.min(pdf.numPages, 50); // Limit to 50 pages
+
+                for (let i = 1; i <= maxPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(' ');
+                    fullText += pageText + '\n\n';
+                }
+
+                console.log('[PDF] Extracted', fullText.length, 'characters');
+                return fullText;
+            } catch (error) {
+                console.error('[PDF] Extraction error:', error);
+                return '';
+            }
+        }
+
+        // ============================================
+        // TENDER METADATA PARSING
+        // ============================================
+        function parseTenderMetadata(text, fileName) {
+            console.log('[Parse] Parsing metadata from', text.length, 'chars');
+
+            const parseField = (patterns) => {
+                for (const pattern of patterns) {
+                    const match = text.match(pattern);
+                    if (match && match[1]) {
+                        const value = match[1].trim();
+                        if (value.length > 0 && value.length < 200) return value;
+                    }
+                }
+                return null;
+            };
+
+            const parseDate = (patterns) => {
+                for (const pattern of patterns) {
+                    const match = text.match(pattern);
+                    if (match && match[1]) {
+                        // Try to parse Hebrew date format DD/MM/YYYY or DD.MM.YYYY
+                        const dateStr = match[1].trim();
+                        const parts = dateStr.split(/[\.\/\-]/);
+                        if (parts.length >= 3) {
+                            const day = parseInt(parts[0]);
+                            const month = parseInt(parts[1]) - 1;
+                            let year = parseInt(parts[2]);
+                            if (year < 100) year += 2000;
+                            const date = new Date(year, month, day);
+                            if (!isNaN(date.getTime())) {
+                                return date.toISOString();
+                            }
+                        }
+                    }
+                }
+                return null;
+            };
+
+            const parseAmount = (patterns) => {
+                for (const pattern of patterns) {
+                    const match = text.match(pattern);
+                    if (match && match[1]) {
+                        let value = parseFloat(match[1].replace(/,/g, ''));
+                        if (text.substring(match.index, match.index + 50).includes('מיליון')) {
+                            value *= 1000000;
+                        } else if (text.substring(match.index, match.index + 50).includes('אלף')) {
+                            value *= 1000;
+                        }
+                        return value;
+                    }
+                }
+                return null;
+            };
+
+            const metadata = {
+                tender_number: parseField([
+                    /מכרז\s*(?:מס['׳]?|מספר|פומבי)?\s*[:\-]?\s*([\d\/\-\.]+)/i,
+                    /מספר\s*(?:ה)?מכרז\s*[:\-]?\s*([\d\/\-\.]+)/i,
+                    /מכרז\s+(\d+[\d\/\-\.]*)/i,
+                ]),
+                tender_name: parseField([
+                    /שם\s*(?:ה)?מכרז\s*[:\-]?\s*([^\n]{5,100})/i,
+                    /מכרז\s+(?:ל|ה)?([^\n]{10,100})/i,
+                    /נושא\s*(?:ה)?מכרז\s*[:\-]?\s*([^\n]{5,100})/i,
+                ]) || fileName.replace(/\.[^/.]+$/, ''),
+                issuing_body: parseField([
+                    /(?:גוף|גורם)\s*מזמין\s*[:\-]?\s*([^\n]{3,80})/i,
+                    /המזמין\s*[:\-]?\s*([^\n]{3,80})/i,
+                    /עיריית?\s+([^\n]{3,50})/i,
+                    /משרד\s+([^\n]{3,50})/i,
+                    /חברת?\s+([^\n]{3,50})/i,
+                ]),
+                submission_deadline: parseDate([
+                    /מועד\s*(?:אחרון\s*)?(?:ל)?הגשה?\s*[:\-]?\s*([\d]{1,2}[\.\/\-][\d]{1,2}[\.\/\-][\d]{2,4})/i,
+                    /להגיש\s*עד\s*[:\-]?\s*([\d]{1,2}[\.\/\-][\d]{1,2}[\.\/\-][\d]{2,4})/i,
+                    /תאריך\s*הגשה\s*[:\-]?\s*([\d]{1,2}[\.\/\-][\d]{1,2}[\.\/\-][\d]{2,4})/i,
+                ]),
+                clarification_deadline: parseDate([
+                    /מועד\s*(?:אחרון\s*)?(?:ל)?(?:שאלות|הבהרות)\s*[:\-]?\s*([\d]{1,2}[\.\/\-][\d]{1,2}[\.\/\-][\d]{2,4})/i,
+                    /שאלות\s*(?:הבהרה)?\s*עד\s*[:\-]?\s*([\d]{1,2}[\.\/\-][\d]{1,2}[\.\/\-][\d]{2,4})/i,
+                ]),
+                estimated_value: parseAmount([
+                    /(?:אומדן|היקף|שווי)\s*[:\-]?\s*([\d,\.]+)/i,
+                    /תקציב\s*[:\-]?\s*([\d,\.]+)/i,
+                ]),
+                guarantee_amount: parseAmount([
+                    /ערבות\s*(?:הצעה|בנקאית)?\s*[:\-]?\s*([\d,\.]+)/i,
+                    /סכום\s*(?:ה)?ערבות\s*[:\-]?\s*([\d,\.]+)/i,
+                ]),
+            };
+
+            console.log('[Parse] Extracted metadata:', metadata);
+            return metadata;
+        }
+
+        // ============================================
+        // GATE CONDITIONS EXTRACTION
+        // ============================================
+        async function extractGateConditions(tenderId, text) {
+            console.log('[Gates] Extracting gate conditions for tender:', tenderId);
+
+            const supabase = getSupabase();
+            if (!supabase) return { success: false, count: 0 };
+
+            const extractedConditions = [];
+            let conditionNumber = 1;
+            const extractedTexts = new Set();
+
+            const gatePatterns = [
+                /תנאי\s*סף\s*(?:מס['׳]?|מספר)?\s*(\d+(?:\.\d+)?)\s*[-–:]\s*([^\n]+)/gi,
+                /(\d+(?:\.\d+)?)\s*[.\)]\s*(?:על\s*המציע|נדרש|חובה|יש\s*להציג|יש\s*לצרף)\s*([^\n]+)/gi,
+                /על\s*המציע\s*(?:להיות|להוכיח|להציג|לצרף|להמציא|לעמוד)\s*([^\n]{10,200})/gi,
+                /תנאי\s*חובה\s*[-–:]\s*([^\n]+)/gi,
+                /דרישות?\s*סף\s*[-–:]\s*([^\n]+)/gi,
+            ];
+
+            for (const pattern of gatePatterns) {
+                let match;
+                pattern.lastIndex = 0;
+                while ((match = pattern.exec(text)) !== null) {
+                    const conditionText = (match[2] || match[1]).trim();
+
+                    if (conditionText.length < 15 || extractedTexts.has(conditionText.substring(0, 50))) {
+                        continue;
+                    }
+                    extractedTexts.add(conditionText.substring(0, 50));
+
+                    let requirementType = 'OTHER';
+                    if (/ניסיון|פרויקט|ביצוע|עבודה|שנ[הות]/.test(conditionText)) {
+                        requirementType = 'EXPERIENCE';
+                    } else if (/מחזור|הכנסות|הון|כספי|פיננס|ערבות/.test(conditionText)) {
+                        requirementType = 'FINANCIAL';
+                    } else if (/תעודה|רישיון|הסמכה|ISO|סיווג|אישור/.test(conditionText)) {
+                        requirementType = 'CERTIFICATION';
+                    } else if (/מנהל|צוות|עובד|מהנדס|יועץ/.test(conditionText)) {
+                        requirementType = 'PERSONNEL';
+                    }
+
+                    const isMandatory = /חובה|תנאי\s*סף|פוסל|להגיש|נדרש/.test(conditionText) ||
+                                       /על\s*המציע/.test(match[0]);
+
+                    extractedConditions.push({
+                        tender_id: tenderId,
+                        condition_number: String(conditionNumber),
+                        condition_text: conditionText,
+                        condition_type: 'GATE',
+                        is_mandatory: isMandatory,
+                        requirement_type: requirementType,
+                        status: 'UNKNOWN',
+                    });
+                    conditionNumber++;
+                }
+            }
+
+            console.log('[Gates] Found', extractedConditions.length, 'conditions');
+
+            // Save to database
+            let savedCount = 0;
+            for (const condition of extractedConditions.slice(0, 30)) {
+                try {
+                    const { error } = await supabase
+                        .from('gate_conditions')
+                        .insert(condition);
+                    if (!error) savedCount++;
+                } catch (err) {
+                    console.error('[Gates] Error saving condition:', err);
+                }
+            }
+
+            console.log('[Gates] Saved', savedCount, 'conditions to database');
+            return { success: savedCount > 0, count: savedCount };
+        }
 
         // ============================================
         // INITIALIZATION
@@ -1163,23 +1377,23 @@
 
             const tenderName = document.getElementById('tender-name-input').value || selectedFile.name.replace(/\.[^/.]+$/, '');
             const zone = document.getElementById('modal-upload-zone');
+            let extractedText = '';
 
             try {
-                // Step 1: Show progress
+                // Step 1: Upload file
                 zone.innerHTML = `
                     <div class="upload-progress">
                         <div class="spinner"></div>
-                        <p>שלב 1/3: מעלה קובץ...</p>
+                        <p>שלב 1/5: מעלה קובץ...</p>
                     </div>
                 `;
                 console.log('[Upload] Step 1: Uploading file to storage...');
 
-                // Generate unique file path
                 const timestamp = Date.now();
-                const fileExt = selectedFile.name.split('.').pop();
-                const filePath = `tenders/${timestamp}_${selectedFile.name}`;
+                const fileExt = selectedFile.name.split('.').pop().toLowerCase();
+                const safeFileName = `${timestamp}.${fileExt}`;
+                const filePath = `tenders/${safeFileName}`;
 
-                // Upload file to Supabase Storage
                 const { data: uploadData, error: uploadError } = await supabase.storage
                     .from('tender-documents')
                     .upload(filePath, selectedFile, {
@@ -1194,7 +1408,6 @@
 
                 console.log('[Upload] File uploaded:', uploadData.path);
 
-                // Get public URL
                 const { data: urlData } = supabase.storage
                     .from('tender-documents')
                     .getPublicUrl(filePath);
@@ -1202,26 +1415,62 @@
                 const fileUrl = urlData?.publicUrl || filePath;
                 console.log('[Upload] File URL:', fileUrl);
 
-                // Step 2: Create tender record
+                // Step 2: Extract text from PDF
                 zone.innerHTML = `
                     <div class="upload-progress">
                         <div class="spinner"></div>
-                        <p>שלב 2/3: יוצר רשומת מכרז...</p>
+                        <p>שלב 2/5: מחלץ טקסט מהמסמך...</p>
                     </div>
                 `;
-                console.log('[Upload] Step 2: Creating tender record...');
+                console.log('[Upload] Step 2: Extracting text from PDF...');
 
-                const tenderNumber = 'TDR-' + timestamp;
+                if (fileExt === 'pdf') {
+                    extractedText = await extractTextFromPDF(selectedFile);
+                    console.log('[Upload] Extracted', extractedText.length, 'characters');
+                }
+
+                // Step 3: Parse metadata
+                zone.innerHTML = `
+                    <div class="upload-progress">
+                        <div class="spinner"></div>
+                        <p>שלב 3/5: מנתח מטאדאטה...</p>
+                    </div>
+                `;
+                console.log('[Upload] Step 3: Parsing metadata...');
+
+                let metadata = {};
+                if (extractedText.length > 100) {
+                    metadata = parseTenderMetadata(extractedText, selectedFile.name);
+                }
+
+                // Step 4: Create tender record with parsed metadata
+                zone.innerHTML = `
+                    <div class="upload-progress">
+                        <div class="spinner"></div>
+                        <p>שלב 4/5: יוצר רשומת מכרז...</p>
+                    </div>
+                `;
+                console.log('[Upload] Step 4: Creating tender record with metadata...');
+
+                const tenderData = {
+                    tender_name: metadata.tender_name || tenderName,
+                    tender_number: metadata.tender_number || ('TDR-' + timestamp),
+                    issuing_body: metadata.issuing_body || null,
+                    submission_deadline: metadata.submission_deadline || null,
+                    clarification_deadline: metadata.clarification_deadline || null,
+                    estimated_value: metadata.estimated_value || null,
+                    guarantee_amount: metadata.guarantee_amount || null,
+                    status: 'INTAKE',
+                    current_step: 'ANALYZING',
+                    category: 'OTHER',
+                    created_at: new Date().toISOString()
+                };
+
+                console.log('[Upload] Tender data:', tenderData);
+
                 const { data: tender, error: tenderError } = await supabase
                     .from('tenders')
-                    .insert({
-                        tender_name: tenderName,
-                        tender_number: tenderNumber,
-                        status: 'INTAKE',
-                        current_step: 'UPLOADED',
-                        category: 'OTHER',
-                        created_at: new Date().toISOString()
-                    })
+                    .insert(tenderData)
                     .select()
                     .single();
 
@@ -1232,15 +1481,7 @@
 
                 console.log('[Upload] Tender created:', tender.id);
 
-                // Step 3: Create document record
-                zone.innerHTML = `
-                    <div class="upload-progress">
-                        <div class="spinner"></div>
-                        <p>שלב 3/3: מקשר מסמך למכרז...</p>
-                    </div>
-                `;
-                console.log('[Upload] Step 3: Creating document record...');
-
+                // Create document record
                 const { data: doc, error: docError } = await supabase
                     .from('tender_documents')
                     .insert({
@@ -1260,15 +1501,35 @@
 
                 if (docError) {
                     console.error('[Upload] Document record error:', docError);
-                    // Don't fail completely, tender was created
-                    console.log('[Upload] Warning: Document record not created, but tender exists');
                 } else {
                     console.log('[Upload] Document record created:', doc.id);
                 }
 
+                // Step 5: Extract gate conditions
+                zone.innerHTML = `
+                    <div class="upload-progress">
+                        <div class="spinner"></div>
+                        <p>שלב 5/5: מנתח תנאי סף...</p>
+                    </div>
+                `;
+                console.log('[Upload] Step 5: Extracting gate conditions...');
+
+                let gatesResult = { success: false, count: 0 };
+                if (extractedText.length > 100) {
+                    gatesResult = await extractGateConditions(tender.id, extractedText);
+                    console.log('[Upload] Gates extraction result:', gatesResult);
+
+                    // Update tender status
+                    await supabase
+                        .from('tenders')
+                        .update({ current_step: 'GATES_ANALYZED' })
+                        .eq('id', tender.id);
+                }
+
                 // Success!
                 console.log('[Upload] SUCCESS! Tender ID:', tender.id);
-                showToast('success', 'המכרז הועלה בהצלחה!');
+                const gatesMsg = gatesResult.count > 0 ? ` (${gatesResult.count} תנאי סף נמצאו)` : '';
+                showToast('success', 'המכרז הועלה ונותח בהצלחה!' + gatesMsg);
                 closeUploadModal();
 
                 // Refresh data
@@ -1282,7 +1543,7 @@
 
                 // Navigate to tender detail
                 setTimeout(() => {
-                    if (confirm('המכרז נוצר בהצלחה! לעבור לדף פרטי המכרז?')) {
+                    if (confirm('המכרז נוצר ונותח בהצלחה! לעבור לדף פרטי המכרז?')) {
                         viewTender(tender.id);
                     }
                 }, 500);
