@@ -1,0 +1,1282 @@
+# Tenderix System Architecture Plan
+## מערכת מודיעין מכרזים - תכנית פיתוח מלאה v3.0
+
+> **מטרת המסמך**: תכנית פיתוח מקיפה למערכת Tenderix - פלטפורמת AI לניתוח מכרזים עבור ארגונים מוניציפליים ישראליים
+> **גרסה**: 3.0 | כולל הערות אליצח ועידו
+> **תאריך**: January 2026
+
+---
+
+## 🎯 סקירה כללית
+
+### תהליך העבודה הראשי (Main Flow)
+```
+📥 קליטת מכרז → 🔍 ניתוח תנאי סף → 📋 מפרט ו-BOQ → 🎯 ניתוח מתחרים → ✅ דוח GO/NO-GO
+   (PILLAR 1)      (PILLAR 2)         (PILLAR 3)      (PILLAR 4)        (OUTPUT)
+```
+
+### מקרא תורמים
+- 🟠 **אליצח** - הערות אליצח דמבינסקי
+- 🟢 **עידו** - הערות עידו בן יקיר
+- 🆕 **חדש** - מודול חדש
+- 🔄 **מעודכן** - מודול שעודכן
+
+---
+
+## ⚙️ עקרונות ליבה רוחביים (Core Cross-Cutting Principles)
+
+> עקרונות שחלים על **כל** המודולים במערכת - לא ספציפיים לעמוד מסוים
+
+### עקרון C1: עקיבות מלאה (Traceability)
+
+**כל קביעה של המערכת חייבת לכלול מקור מדויק במסמכי המכרז:**
+
+| שדה | תיאור | דוגמה |
+|-----|-------|-------|
+| `source_file` | שם הקובץ | מכרז.pdf, מפרט.docx |
+| `page_number` | מספר עמוד מדויק | 12 |
+| `section` | מספר סעיף/פרק | 3.2.1 |
+| `quote` | ציטוט קצר | "המציע יציג ניסיון..." |
+
+**פורמט ציטוט סטנדרטי:**
+```
+📄 מכרז_2024_001.pdf | עמ' 12 | סעיף 3.2.1
+"המציע יציג ניסיון בלפחות 3 פרויקטים בהיקף של 50 מיליון ש"ח כל אחד"
+```
+
+> ⚠️ **קריטי**: בלי מקור = אי אפשר לעבוד מול מנכ"ל או יועמ"ש. זה לא אופציה.
+
+### עקרון C2: מילון טכני לפי קטגוריה
+
+**ידע מקצועי לפי סוג מכרז - פרשנות לפי יכולות ולא לפי שמות:**
+
+```yaml
+technical_dictionaries:
+  video_cctv:
+    - CCTV
+    - LPR (License Plate Recognition)
+    - Video Analytics
+    - PTZ Cameras
+  
+  communications:
+    - Networks
+    - Cyber Security
+    - WiFi Infrastructure
+  
+  software:
+    - VMS (Video Management System)
+    - PSIM (Physical Security Information Management)
+    - API Integrations
+  
+  access_control:
+    - Card Readers
+    - Electronic Locks
+    - Biometric Systems
+  
+  infrastructure:
+    - Electrical
+    - Communications Cabling
+    - Civil Works
+```
+
+> 🟢 **עידו**: המנוע המקצועי צריך להציע פרשנויות **התואמות את הפרויקטים של המציע** ולהסביר למה מצלמת תנועה יכולה להיחשב כמצלמת אבטחה
+
+### עקרון C3: לוגיקת הצטברות נכונה
+
+**מנגנון שמונע ספירה כפולה וחישוב שגוי:**
+
+```typescript
+interface AccumulationRules {
+  // בדיקות אוטומטיות
+  rules: {
+    no_duplicate_project_per_requirement: boolean;  // פרויקט לא נספר פעמיים לאותה דרישה
+    no_sum_from_same_project: boolean;              // סכומים לא מצטרפים אם מאותו פרויקט
+    date_validation_per_tender_definition: boolean; // תאריכים נבדקים לפי הגדרת המכרז
+  };
+  
+  // 🟠 אליצח: חריג חשוב!
+  exceptions: {
+    project_can_count_for_threshold_AND_scoring: true; // פרויקט יכול להיספר גם לתנאי סף וגם לניקוד
+  };
+}
+```
+
+> 🟢 **עידו**: **אופטימיזציה** - מינימום לעמידה בתנאי סף מול מקסימום ניקוד - המערכת צריכה למקסם את מה שמוצג איפה
+
+### עקרון C4: מסלולי סגירת פערים (תנאי סף בלבד)
+
+**רלוונטי לעמוד 2 (תנאי סף) בלבד** - כשיש פער בתנאי סף:
+
+```typescript
+enum GapClosureOption {
+  SUBCONTRACTOR = "🤝 קבלן משנה - אם המכרז מתיר הסתמכות",
+  PARTNERSHIP = "👥 שותפות/קונסורציום",
+  ALTERNATIVE_DOC = "📄 מסמך חלופי/משלים",
+  DEVELOPMENT = "🛠️ פיתוח/התאמה (אם המכרז מאפשר)",
+  CLARIFICATION = "📝 שאלת הבהרה למזמין",
+  BLOCKER = "⛔ חוסם - אין פתרון ריאלי"
+}
+```
+
+> 🟢 **עידו**: אם אין מניעה מפורשת בהגדרות או בהוראות המכרז, **המערכת תציע למציע להגיש שאלת הבהרה אך לא חובה**, או לגשת עם קבלן משנה/שותף
+
+> 🟠 **אליצח**: אם אפשר להסתמך על ק.משנה - **לחזור עם רשימת חברות פוטנציאליות** מחיפוש של מי יכול להיות שותף ועומד בתנאי הסף
+
+---
+
+## 📥 PILLAR 1: קליטת מכרז (Tender Intake & Document Processing)
+
+### Module 1.1: העלאה וזיהוי מסמכים
+
+**מטרה**: קבלת קבצים מהמשתמש וזיהוי אוטומטי של סוג כל מסמך
+
+```typescript
+interface DocumentUpload {
+  supported_formats: ['PDF', 'DOCX', 'XLSX'];
+  
+  auto_detection_types: {
+    invitation_to_bid: {
+      hebrew: "הזמנה להציע הצעות";
+      includes: "סעיף תנאי הסף";
+    };
+    technical_specification: {
+      hebrew: "מפרט טכני";
+    };
+    bill_of_quantities: {
+      hebrew: "כתב כמויות (BOQ)";
+    };
+    contract: {
+      hebrew: "חוזה התקשרות";
+    };
+    clarifications: {
+      hebrew: "מסמכי הבהרות";
+    };
+    forms: {
+      hebrew: "טפסים למילוי";
+    };
+  };
+  
+  // כל מסמך מקבל מזהה ייחודי לצורך עקיבות
+  document_id: {
+    format: "filename + page_mapping";
+  };
+}
+```
+
+### Module 1.1.5: ניהול גרסאות מסמכים 🆕 🟢
+
+**מטרה**: שמירת היסטוריית גרסאות והשוואה בין מסמכים
+
+```typescript
+interface VersionControl {
+  original_version: {
+    description: "שמירת המכרז כפי שפורסם";
+    immutable: true;
+  };
+  
+  updated_versions: {
+    description: "לאחר הבהרות/תיקונים";
+    track_changes: true;
+  };
+  
+  version_comparison: {
+    description: "מה השתנה בין גרסאות";
+    diff_algorithm: "semantic";
+  };
+  
+  full_history: {
+    description: "צפייה בכל הגרסאות";
+    timeline_view: true;
+  };
+}
+```
+
+> 🟢 **עידו**: "חשוב שהמציע יראה את הגרסה המקורית של המכרז במערכת ולאחר מכן את הגרסאות המעודכנות אם פורסמו ותשובות ההבהרה"
+
+### Module 1.2: חילוץ מבנה ומטא-דאטה 🔄
+
+**מטרה**: חילוץ פרטי המכרז הבסיסיים ומיפוי מבנה המסמכים
+
+```typescript
+interface TenderMetadata {
+  basic_info: {
+    tender_number: string;
+    tender_name: string;
+    issuing_body: string;
+    publication_date: Date;
+    submission_deadline: Date;
+    clarification_deadline: Date;
+    bid_bond_amount: number;
+    contract_period: string;
+    extension_options: string[];
+  };
+  
+  document_structure: {
+    chapters: Chapter[];
+    tables: Table[];
+    appendices: Appendix[];
+  };
+  
+  // 🟠 אליצח: חשוב!
+  scoring_weights: {
+    has_quality_score: boolean;
+    quality_weight: number;      // אחוז ניקוד איכות
+    price_weight: number;        // אחוז ניקוד מחיר
+  };
+}
+```
+
+### Module 1.3: נרמול טקסט עברי
+
+**מטרה**: ניקוי ואיחוד הטקסט לפני עיבוד
+
+```typescript
+interface TextNormalization {
+  typo_correction: {
+    example: "יכולצ → יכולת";
+  };
+  
+  synonym_unification: {
+    example: "יכולת = מסוגלות = כשירות";
+  };
+  
+  number_normalization: {
+    example: "50 מלש\"ח = ₪50,000,000";
+  };
+  
+  date_normalization: {
+    output_format: "ISO 8601";
+  };
+}
+```
+
+### Module 1.4: חילוץ סעיף הגדרות 🔄
+
+**מטרה**: זיהוי ה"מילון הפנימי" של המכרז שמשנה משמעויות
+
+```typescript
+interface DefinitionsExtraction {
+  search_target: "סעיף הגדרות";
+  
+  dictionary_structure: {
+    term: string;
+    definition: string;
+    constraints: string[];
+  };
+  
+  examples: [
+    { term: "פרויקט דומה", definition: "מערכות אבטחה ≥50 מצלמות" },
+    { term: "מציע", definition: "לא כולל קבלן משנה" }
+  ];
+  
+  // 🟠 אליצח: אם לא במסמכי המכרז
+  fallback: {
+    search_similar_tenders: true;
+    interpretation_type: "מצמצמת או מרחיבה";
+  };
+}
+```
+
+> 🟠 **אליצח**: "לשים לב לפרשנות מצמצמת - אם כתוב בדיוק מה נדרש או לפרשנות מרחיבה אם כתוב 'מערכת'"
+
+### Module 1.5: זיהוי קטגוריית מכרז
+
+**מטרה**: סיווג המכרז לקטגוריה טכנית לטעינת המילון המתאים
+
+```typescript
+interface TenderCategorization {
+  categories: [
+    'video',
+    'communications', 
+    'software',
+    'access_control',
+    'combined'
+  ];
+  
+  actions: {
+    load_relevant_dictionary: true;
+    define_equivalence_rules: true;
+  };
+}
+```
+
+### Module 1.6: ניתוח מכרז קודם 🆕 🟠
+
+**מטרה**: איתור והשוואה למכרז קודם של אותו מזמין
+
+```typescript
+interface PreviousTenderAnalysis {
+  find_previous: {
+    same_issuer: true;
+    same_subject: true;
+  };
+  
+  analysis: {
+    winner: string;
+    scope: number;
+    content_comparison: {
+      added: string[];
+      removed: string[];
+      changed: string[];
+    };
+    previous_clarifications: {
+      asked_then_not_now: string[];
+    };
+    copy_percentage: number; // ככל שהעתיקו יותר = השקיעו פחות מחשבה
+  };
+  
+  output: {
+    clarification_suggestions: string[];
+    decision_insights: string[];
+  };
+}
+```
+
+> 🟠 **אליצח**: "להכין שאלות הבהרה מבוססות על מה שהיה במכרז הקודם ולא מופיע פה - לקבל החלטות לפי זה כדי לראות אם פספסו"
+
+> ⚠️ אם אין מידע בכלל - להקפיץ שנדרש לדבר אנושית עם החברה שביצעה את הפרויקט האחרון
+
+---
+
+## 👤 מודול רוחבי: ניהול פרופיל חברה (Company Profile Manager) 🔄
+
+> פרופיל החברה הוא התשתית להשוואה מול תנאי הסף - חייב להיות מובנה ומפורט
+
+> 🟢 **עידו**: "מאגר המידע הזה הוא **דינמי** - אם הוזן פרויקט ובמהלך מכרז מסוים חודדו בו פרטים ורזולוציות, המציע ידרש לעדכן את הנתונים במכרז **והמידע ישמר לעתיד**"
+
+### Company Profile Schema
+
+```typescript
+interface CompanyProfile {
+  // פרטים בסיסיים
+  basic_info: {
+    company_name: string;
+    company_id: string;           // ח.פ.
+    establishment_year: number;
+    annual_revenue: Map<number, number>;  // לפי שנים
+    employee_count: number;
+    activity_areas: string[];
+    contractor_classifications: string[];
+    
+    // 🟠 אליצח
+    group_companies: {
+      parent: string | null;
+      subsidiaries: string[];
+      sister_companies: string[];
+    };
+  };
+  
+  // הסמכות ורישיונות
+  certifications: {
+    iso: {
+      type: string;
+      validity: Date;
+      certifying_body: string;
+    }[];
+    professional_licenses: License[];
+    security_clearance: SecurityClearance | null;
+    contractor_registration: Registration;
+    tax_certificates: TaxCertificate[];
+  };
+  
+  // אנשי מפתח
+  key_personnel: {
+    name: string;
+    role: string;
+    education: string;
+    experience_years: number;
+    certifications: string[];
+    led_projects: string[];  // project IDs
+  }[];
+  
+  // תיק פרויקטים - מעודכן
+  projects: Project[];
+  
+  // 🟠 אליצח: פרויקטים משיקים
+  tangent_projects: TangentProject[];
+}
+
+interface Project {
+  id: string;                    // מזהה ייחודי!
+  name: string;
+  client: string;
+  start_date: Date;
+  end_date: Date;
+  
+  // היקף כספי
+  financial_scope: {
+    total_value: number;
+    role: 'primary' | 'subcontractor';
+    percentage: number;
+  };
+  
+  // 🟢 עידו: סוג פרויקט
+  project_type: 'construction' | 'maintenance' | 'combined';
+  
+  // 🟢 עידו: היקפים נפרדים
+  construction_scope: number | null;
+  maintenance_scope: number | null;
+  maintenance_duration_months: number | null;
+  
+  // 🟠 אליצח: הגדרת סיום
+  completion_type: 'handover' | 'final_invoice' | 'warranty_period';
+  
+  // תיאור טכני מפורט
+  technical_details: {
+    technologies: string[];      // סוגי מצלמות, VMS וכו'
+    quantities: Map<string, number>;  // מספר מצלמות, נק' קצה
+    integrations: string[];
+    sla_provided: string;
+  };
+  
+  // מסמכים תומכים
+  supporting_documents: {
+    type: string;
+    file_reference: string;
+    client_approval: boolean;
+  }[];
+}
+
+// 🟠 אליצח: פרויקטים משיקים
+interface TangentProject {
+  definition: "פרויקט שהחברה מכירה את התחום, יכולה לתת שירות או נתנה בעבר";
+  
+  types: {
+    group_company_projects: string[];     // פרויקטים של חברות אם/בת/אחות
+    service_provided_projects: string[];  // פרויקטים שסיפקנו להם שירות
+    related_scope_projects: string[];     // תחומים שאנחנו מספקים בפרויקט אחר
+  };
+}
+```
+
+> 🟠 **אליצח**: "האם אני יכול לחתום הסכם עם חברות בקבוצה על פרויקטים כאילו אני מבצע את האחזקה/הקמה ולקבל על זה ניקוד?"
+
+---
+
+## 🔍 PILLAR 2: ניתוח תנאי סף (Gate Conditions Analysis)
+
+### Module 2.1: חילוץ וסיווג תנאי סף
+
+**מטרה**: זיהוי כל תנאי וסיווגו לפי סוג
+
+```typescript
+interface RequirementClassification {
+  // תנאי סף vs יתרון
+  requirement_type: {
+    mandatory: {
+      indicators: ["חייב להציג", "נדרש", "תנאי סף"];
+      effect: "פוסל אם לא עומד";
+    };
+    advantage: {
+      indicators: ["יתרון ל...", "עדיפות ל...", "ניקוד נוסף"];
+      effect: "ניקוד בלבד";
+    };
+  };
+  
+  // יכולת vs ביצוע
+  proof_type: {
+    capability: "הוכחה שמסוגל (צוות, ציוד, נהלים)";
+    execution: "הוכחה היסטורית (עשה בפועל)";
+  };
+  
+  // לוגיקה
+  logic: {
+    AND: ["וגם", "בנוסף"];
+    OR: ["או", "אחד מבין"];
+    NESTED: "(X או Y) וגם Z";
+  };
+}
+```
+
+### Module 2.2: פירוק כימותי של דרישות 🔄
+
+**מטרה**: פירוק כל דרישה מספרית לרכיבים מדויקים
+
+```typescript
+interface QuantitativeBreakdown {
+  amount: {
+    exact_value: number;
+    includes_vat: boolean;
+    per_project_or_cumulative: 'single' | 'cumulative';
+    scope_type: 'ordered' | 'executed' | 'paid';
+  };
+  
+  contractor_role: {
+    type: 'primary' | 'subcontractor' | 'partial';
+    percentage: number | null;
+  };
+  
+  time_range: {
+    years: number;
+    start_from: 'tender_date' | 'submission_date' | 'specific_date';
+  };
+  
+  // 🟢 עידו: הגדרת "בוצע"
+  completion_definition: {
+    options: ['handover', 'final_invoice', 'warranty_end'];
+    tender_specifies: boolean;
+    if_not_specified: "alert_and_show_options";
+  };
+}
+```
+
+> 🟢 **עידו**: אם אין הגדרה במכרז - **להתריע ולהציג את האפשרויות שעומדות בפני המציע, בהתאם לנתוני הפרויקטים ומה שמיטיב איתו**. לדוגמה: אם פרויקט טרם נמסר אבל הסתיים, המערכת יכולה להציע להציג אותו.
+
+### Module 2.3: זיהוי ישות נושאת הדרישה 🔄
+
+**מטרה**: מי בדיוק צריך לעמוד בתנאי?
+
+```typescript
+interface RequirementBearer {
+  questions: [
+    "המציע בלבד?",
+    "כל שותף בקונסורציום?",
+    "מותר להסתמך על ק.משנה?",
+    "מותר 'להשאיל' מחברת אם?",
+    "מגבלה על אחוז הסתמכות?"
+  ];
+  
+  // 🟠 אליצח
+  group_companies: {
+    for_threshold: boolean;
+    for_scoring: boolean;
+  };
+  
+  // 🟢 עידו
+  pre_analysis: {
+    can_rely_on_subcontractor: boolean;
+    what_can_rely: string[];
+  };
+}
+```
+
+### Module 2.4: פרשנות "דומה" / "שווה ערך" 🔄
+
+**מטרה**: פירוק המושג "פרויקט דומה" לממדים - בהתאם למילון הטכני
+
+```typescript
+interface SimilarityInterpretation {
+  dimensions: {
+    similar_technology: boolean;    // לפי מילון טכני
+    similar_complexity: boolean;
+    similar_integrations: boolean;
+    similar_scope: boolean;
+    similar_sla: boolean;
+    similar_purpose: boolean;
+  };
+  
+  // 🟠 אליצח
+  interpretation_style: 'restrictive' | 'expansive';
+  validate_interpretation: boolean;
+}
+```
+
+### Module 2.5: מנגנון פרשנות כפול
+
+**מטרה**: שני "ראשים" לפרשנות כשאין הגדרות
+
+```typescript
+interface DualInterpretation {
+  legal_head: {
+    question: "איך ועדת מכרזים מפרשת?";
+    classification: 'strict' | 'open' | 'proof_dependent';
+  };
+  
+  technical_head: {
+    question: "מאפיינים נדרשים בפועל?";
+    approach: "purpose_vs_capabilities";
+    uses: "technical_dictionary";
+  };
+  
+  opening_clauses: {
+    indicators: [
+      "ניתן לבצע פיתוחים/התאמות",
+      "ניתן להציע פתרון שווה ערך"
+    ];
+  };
+}
+```
+
+### Module 2.6: השוואה לפרופיל חברה 🔄
+
+**מטרה**: התאמה בין דרישות לפרופיל וזיהוי פערי מידע
+
+```typescript
+interface ProfileComparison {
+  matching: {
+    match_requirement_to_project: true;
+    match_requirement_to_certification: true;
+  };
+  
+  gap_identification: {
+    format: "זוהה פרויקט X אך לא ברור אם קיים רכיב Y. בבקשה לוודא.";
+    question_type: 'targeted';
+  };
+  
+  // 🟢 עידו: למידה ושמירה
+  learning: {
+    positive_answer: "update_project_profile";
+    save_for_future: true;
+    dont_ask_same_question: true;
+  };
+  
+  duplicate_prevention: {
+    same_project_same_requirement: false;
+    sum_from_same_project: false;
+  };
+}
+```
+
+### Module 2.6.5: אופטימיזציה: תנאי סף vs ניקוד 🆕 🟢
+
+**מטרה**: מיקסום הניקוד תוך עמידה מינימלית בתנאי סף
+
+```typescript
+interface ScoreOptimization {
+  principle: "מינימום לתנאי סף, מקסימום לניקוד";
+  
+  checks: {
+    threshold_projects_count_for_scoring: boolean;
+    strategy: "which_project_where";
+  };
+  
+  alerts: {
+    missing_project: true;
+    missing_quality_metric: true;
+  };
+  
+  // 🟠 אליצח
+  scoring_analysis: {
+    fixed_score_percentage: number;
+    flexible_score_percentage: number;
+  };
+}
+```
+
+> 🟢 **עידו**: "בדרך כלל הניקוד הוא על הצגת פרויקטים מעבר למה שהוצג בתנאי הסף. יכול להיות מצב בו יחשיבו בניקוד את הפרויקטים שהוצגו בתנאי הסף ויש פעמים שלא"
+
+### Module 2.7: בקשות הבהרה והשלמה 🔄
+
+**מטרה**: יצירת בקשות לסגירת פערים
+
+```typescript
+interface ClarificationRequests {
+  // בקשות למזמין - ניסוח כבקשה!
+  to_issuer: {
+    format: "נבקש לחדד את תנאי הסף כך שיאפשר הסתמכות על קבלן משנה בכל הנוגע לניסיון מסוג X";
+    priority: 'P1' | 'P2' | 'P3';
+  };
+  
+  // שאלות לחברה
+  to_company: {
+    purpose: "השלמת פרטים חסרים בפרופיל";
+  };
+  
+  priority_levels: {
+    P1: "משנה GO/NO-GO";
+    P2: "משנה רמת סיכון";
+    P3: "מחזק טיעון";
+  };
+  
+  // 🟠 אליצח
+  post_response: {
+    update_what_changed: true;
+  };
+}
+```
+
+### Module 2.7.5: שאלות אסטרטגיות להכשלת מתחרים 🆕 🟠
+
+**מטרה**: שאלות שמטרתן לצמצם תחרות (בלי לפגוע בנו)
+
+```typescript
+interface StrategicQuestions {
+  opportunity_identification: {
+    requirements_we_meet_competitors_dont: string[];
+    our_exclusive_representations: string[];
+  };
+  
+  question_types: [
+    "להבהיר כי נדרשת מערכת מסוג X (אם אני הנציג)",
+    "להבהיר שנדרשת מצלמה עם NDAA"
+  ];
+  
+  justification_to_issuer: [
+    "דרישות אבטחה גדולות יותר",
+    "הגנה מתקיפות סייבר",
+    "רזולוציה גבוהה יותר לצרכים מסוימים"
+  ];
+  
+  self_check: {
+    verify_doesnt_hurt_us: true;
+  };
+}
+```
+
+> 🟠 **אליצח**: "מהותי מאוד - למעשה זה חלק גדול מהשכל. להציע שאלות שיכולות לפסול או להקשות על מתחרים"
+
+### Module 2.7.6: ניתוח שאלות הבהרה של אחרים 🆕 🟠
+
+**מטרה**: ניתוח שאלות שלא אנחנו שאלנו - מי שאל ולמה
+
+```typescript
+interface OthersQuestionsAnalysis {
+  marking: {
+    questions_not_ours: true;
+  };
+  
+  analysis: {
+    targeted_at_specific_competitor: boolean;
+    who_had_interest: string | null;
+  };
+  
+  deep_research: {
+    if_obvious_from_market: "mark_it";
+  };
+}
+```
+
+### Module 2.8: רשימת מסמכים נדרשים
+
+**מטרה**: לכל תנאי - מה בדיוק צריך לצרף
+
+```typescript
+interface RequiredDocuments {
+  for_each_requirement: {
+    document_type: string;        // אישור מזמין, ISO וכו'
+    required_format: string;      // לפי נספח X?
+    signer: string;
+    format: 'original' | 'certified_copy';
+    validity_date: Date;
+    status: 'exists' | 'missing' | 'needs_renewal';
+  };
+}
+```
+
+### Module 2.9: הערכה והמלצה
+
+**מטרה**: דוח מסכם לכל תנאי סף - עם עקיבות מלאה
+
+```typescript
+interface RequirementAssessment {
+  report_structure: [
+    "1. מה הדרישה אומרת + ציטוט מדויק",
+    "2. משמעות משפטית: קשיח/פתוח/תלוי פרשנות",
+    "3. משמעות טכנית: מה צריך להתקיים (לפי מילון)",
+    "4. מה בפרופיל תומך + מה חסר",
+    "5. טענה אפשרית + מסלולי סגירה",
+    "6. מסקנה"
+  ];
+  
+  conclusion_options: {
+    PASS: "עומד בוודאות";
+    RISK: "עומד + סיכון";
+    PENDING: "בכפוף לאימות";
+    FAIL: "לא עומד";
+  };
+}
+```
+
+### Module 2.10: ניתוח מחדש אחרי הבהרות 🆕 🟢
+
+**מטרה**: הרצת ניתוח מחודש לאחר קבלת תשובות הבהרה
+
+```typescript
+interface ReAnalysis {
+  trigger: "העלאת מסמך הבהרות חדש";
+  
+  process: {
+    run_all_documents: true;
+    compare_to_previous: true;
+  };
+  
+  output: {
+    change_report: true;
+    impact_on_bidder: true;
+    go_nogo_changed_alert: true;
+  };
+}
+```
+
+> 🟢 **עידו**: "המערכת מתוכננת להריץ את כל מסמכי המכרז לאחר שהתקבלו שאלות הבהרה ולהבין מה השתנה ואם זה משנה את מצבו של המציע"
+
+---
+
+## 📋 PILLAR 3: ניתוח מפרט וכתב כמויות (Specification & BOQ Analysis)
+
+### Module 3.1: ניתוח מפרט טכני 🔄
+
+**מטרה**: פירוק המפרט הטכני לדרישות מובנות
+
+```typescript
+interface SpecificationAnalysis {
+  structure: {
+    general_requirements: ["תקנים", "SLA"];
+    technical_requirements: "לפי סוג הפרויקט";
+    execution_requirements: ["לו\"ז", "מסירה"];
+  };
+  
+  per_requirement: {
+    id: string;
+    description: string;
+    type: 'mandatory' | 'optional' | 'advantage';
+    boq_link: string[];
+    source: {
+      file: string;
+      page: number;
+      section: string;
+    };
+  };
+}
+```
+
+> 🟢 **עידו**: **זיהוי פערים חכם** - אם במפרט מצוין "הצבת עמודים" אבל לא מצוין כבילה/חפירה → הצלבה עם BOQ. אם BOQ לא כולל = **חריג פוטנציאלי!**
+
+### Module 3.2: ניתוח כתב כמויות (BOQ) 🔄
+
+**מטרה**: פירוק כל שורה בכתב הכמויות
+
+```typescript
+interface BOQAnalysis {
+  per_line: {
+    line_id: string;
+    description: string;
+    unit: string;
+    quantity: number;
+    category: 'supply' | 'work' | 'service' | 'maintenance';
+    specification_link: string[];
+    completeness_analysis: string;
+  };
+  
+  // 🟠 אליצח
+  manual_input: {
+    enabled: true;
+    structure_adaptation: "sections_or_chapters";
+  };
+}
+```
+
+### Module 3.3: הבנת היקף העבודה
+
+**מטרה**: מיפוי Work Breakdown Structure
+
+```typescript
+interface WorkScope {
+  phases: [
+    "תכנון והנדסה",
+    "אספקה",
+    "ביצוע והתקנה",
+    "הרצה ומסירה",
+    "תחזוקה ושירות"
+  ];
+  
+  hidden_work_detection: {
+    indicators: ["כל העבודות הנדרשות להשלמה"];
+  };
+}
+```
+
+### Module 3.4: זיהוי חריגים ואי-התאמות 🔄
+
+**מטרה**: מציאת סתירות, חוסרים והזדמנויות
+
+```typescript
+interface DiscrepancyDetection {
+  types: {
+    spec_vs_boq: "4MP vs 2MP";
+    spec_vs_contract: true;
+    internal_contradictions: true;
+  };
+  
+  // 🟠 אליצח: במפרט ולא ב-BOQ
+  in_spec_not_boq: {
+    risk: "HIGH";
+    reason: "נדרש לתמחור אבל לא מקבלים כסף";
+  };
+  
+  // 🟠 אליצח: לא במפרט ולא ב-BOQ אבל נדרש
+  missing_both: {
+    action: "שכחו! להציף";
+  };
+}
+```
+
+> 🟢 **עידו**: **הזדמנות אסטרטגית** - אם המציע ידע שיש חריגים בסבירות גבוהה והתמחור שלהם - הוא יוכל לתת הנחות גדולות יותר בכתב הכמויות ולהגדיל סיכויי זכיה, כי החריגים יכסו על ההנחות
+
+### Module 3.4.5: השוואה למכרזים דומים 🆕 🟠
+
+**מטרה**: בדיקת התכולה מול 2 מכרזים דומים
+
+```typescript
+interface SimilarTenderComparison {
+  similar_tender_definition: {
+    similar_scale: true;
+    same_client_type: ['authority', 'government', 'contractor'];
+    same_subject_detailed: true;
+  };
+  
+  checks: {
+    what_forgot: string[];
+    what_different: string[];
+    section_by_section: {
+      not_written_but_needed: boolean;
+      pricing_if_needed: number;
+    };
+  };
+}
+```
+
+> 🟠 **אליצח**: "לשים לב בהיקף העבודה לקחת סעיף סעיף ולבדוק מול מכרזים אחרים דומים - לראות מה לא כתוב ולסמן האם נדרש או לא, אם כן מה התמחור שלו"
+
+### Module 3.5: ניתוח סיכוני תמחור והמלצות 🔄
+
+**מטרה**: זיהוי וסיווג סיכונים כספיים + המלצות תמחור
+
+```typescript
+interface PricingRiskAnalysis {
+  risk_levels: {
+    HIGH: ["כל הנדרש", "קנסות לא מוגבלים"];
+    MEDIUM: ["כמויות לא ברורות", "אחריות מורחבת"];
+    LOW: ["סעיפים סטנדרטיים"];
+  };
+  
+  recommendations: {
+    reserve_percentage: number;
+    detailed_pricing_items: string[];
+    lump_sum_items: string[];
+  };
+  
+  // 🟠 אליצח: תמחור חכם
+  smart_pricing: {
+    erp_integration: true;
+    market_data: ["price_lists", "previous_tenders"];
+    price_recommendation: "combined_sources";
+  };
+}
+```
+
+---
+
+## 🎯 PILLAR 4: ניתוח מתחרים (Competitor Analysis)
+
+### Module 4.1: איסוף הצעות זוכות 🔄
+
+**מטרה**: איסוף נתונים ממכרזים קודמים
+
+```typescript
+interface WinningBidsCollection {
+  sources: [
+    "mr.gov.il (מרכבה)",
+    "גופים ממשלתיים (משרדים, רשויות)",
+    "מכרזי עירייה ספציפיים",
+    "פרוטוקולי ועדות מכרזים"
+  ];
+  
+  collected_data: {
+    winning_bids: "BOQ מתומחר";
+    priced_boq: true;
+    bid_details: "אם פורסם";
+  };
+  
+  // 🟠 אליצח
+  freedom_of_information: {
+    automatic_requests: true;
+  };
+}
+```
+
+### Module 4.2: מיפוי מתחרים
+
+**מטרה**: בניית פרופיל לכל מתחרה
+
+```typescript
+interface CompetitorMapping {
+  profile: {
+    name: string;
+    size: string;
+    specialization_areas: string[];
+    win_history: WinRecord[];
+    pricing_strategy: 'aggressive' | 'conservative';
+    known_strengths: string[];
+    known_weaknesses: string[];
+  };
+  
+  win_loss_table: WinLossRecord[];
+}
+```
+
+### Module 4.3: ניתוח תמחור מתחרים 🔄
+
+**מטרה**: השוואת מחירים ברמת שורת BOQ
+
+```typescript
+interface CompetitorPricingAnalysis {
+  per_item: {
+    average_price: number;
+    min_max_range: [number, number];
+  };
+  
+  pricing_patterns: {
+    front_loading: "גבוה בהתחלה";
+    back_loading: "גבוה בסוף";
+    equipment_heavy: "רווח בציוד";
+  };
+  
+  // 🟠 אליצח
+  price_type: {
+    discount_from_pricelist: boolean;
+    open_number: boolean;
+  };
+  
+  max_price_indicator: {
+    meaning: "סעיף הפסדי למתחרה";
+  };
+  
+  trend_graphs: {
+    enabled: true;
+  };
+}
+```
+
+> 🟠 **אליצח**: "צריך לשים לב שמשווים תפוחים לתפוחים - כי זה לא בהכרח סעיפים דומים"
+
+### Module 4.4: מודיעין תחרותי
+
+**מטרה**: תחזית השתתפות וניתוח בידול
+
+```typescript
+interface CompetitiveIntelligence {
+  participation_forecast: {
+    competitor: string;
+    probability: number;
+    reason: string;
+  }[];
+  
+  differentiation_analysis: {
+    our_advantages: string[];
+    our_disadvantages: string[];
+  };
+}
+```
+
+---
+
+## ✅ OUTPUT: דוח החלטה מסכם (Decision Report - GO / NO-GO)
+
+### Executive Summary
+
+```typescript
+interface ExecutiveSummary {
+  recommendation: 'GO' | 'NO_GO' | 'CONDITIONAL';
+  confidence_level: number;        // percentage
+  overall_risk_level: 'LOW' | 'MEDIUM' | 'HIGH';
+  estimated_win_probability: number;
+  one_sentence_summary: string;
+}
+```
+
+### Requirements Summary
+
+```typescript
+interface RequirementsSummary {
+  status_table: RequirementStatus[];  // + מקור
+  gaps_to_close: {
+    priority: 'P1' | 'P2' | 'P3';
+    description: string;
+  }[];
+  
+  clarification_requests_to_issuer: string[];
+  completion_questions_to_company: string[];
+  gap_closure_paths: GapClosurePath[];
+  
+  // 🟢 עידו
+  optimization: {
+    for_threshold: string[];
+    for_scoring: string[];
+  };
+}
+```
+
+### Scope & Pricing Summary
+
+```typescript
+interface ScopePricingSummary {
+  work_scope_summary: string;
+  
+  discrepancies: {
+    item: string;
+    handling_recommendation: string;
+  }[];
+  
+  // 🟢 עידו
+  discrepancies_as_opportunity: {
+    expected_extras: string[];
+    pricing_recommendations: number[];
+  };
+  
+  pricing_risks: string[];
+  recommendation: 'conservative' | 'balanced' | 'aggressive';
+  recommended_reserve_percentage: number;
+}
+```
+
+### Competitive Landscape
+
+```typescript
+interface CompetitiveLandscape {
+  expected_competitors: {
+    name: string;
+    probability: number;
+  }[];
+  
+  expected_price_range: [number, number];
+  reasonable_winning_price: number;
+  our_differentiation: string[];
+  
+  // 🟠 אליצח
+  strategic_questions: {
+    description: string;
+    can_reduce_competition: boolean;
+  }[];
+}
+```
+
+### Action Items
+
+```typescript
+interface ActionItems {
+  before_decision: {
+    task: string;
+    assignee: string;
+  }[];
+  
+  if_go: {
+    send_clarifications: Date;
+    complete_missing_info: Date;
+    pricing_with_reserves: Date;
+    prepare_reservations: Date;
+  };
+  
+  timeline: {
+    clarification_deadline: Date;
+    submission_deadline: Date;
+  };
+}
+```
+
+---
+
+## 📊 סיכום סטטיסטי
+
+| מדד | ערך |
+|-----|-----|
+| מודולים חדשים | 7 |
+| מודולים מעודכנים | 12 |
+| סה"כ מודולים | 31 |
+| עקרונות ליבה | 4 |
+
+### מודולים חדשים שנוספו
+
+| מספר | שם | מקור |
+|------|-----|------|
+| 1.1.5 | ניהול גרסאות מסמכים | 🟢 עידו |
+| 1.6 | ניתוח מכרז קודם | 🟠 אליצח |
+| 2.6.5 | אופטימיזציה תנאי סף vs ניקוד | 🟢 עידו |
+| 2.7.5 | שאלות אסטרטגיות להכשלת מתחרים | 🟠 אליצח |
+| 2.7.6 | ניתוח שאלות הבהרה של אחרים | 🟠 אליצח |
+| 2.10 | ניתוח מחדש אחרי הבהרות | 🟢 עידו |
+| 3.4.5 | השוואה למכרזים דומים | 🟠 אליצח |
+
+---
+
+## 🔧 הנחיות טכניות לפיתוח
+
+### Database Schema Considerations
+
+```sql
+-- Core tables needed
+CREATE TABLE tenders (
+    id UUID PRIMARY KEY,
+    tender_number VARCHAR(50),
+    name TEXT,
+    issuing_body TEXT,
+    publication_date DATE,
+    submission_deadline TIMESTAMP,
+    status VARCHAR(20),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE documents (
+    id UUID PRIMARY KEY,
+    tender_id UUID REFERENCES tenders(id),
+    document_type VARCHAR(50),
+    file_name TEXT,
+    version INTEGER DEFAULT 1,
+    is_original BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE requirements (
+    id UUID PRIMARY KEY,
+    tender_id UUID REFERENCES tenders(id),
+    requirement_type VARCHAR(20), -- 'threshold' or 'scoring'
+    description TEXT,
+    source_document_id UUID REFERENCES documents(id),
+    source_page INTEGER,
+    source_section VARCHAR(50),
+    source_quote TEXT,
+    logic_operator VARCHAR(10), -- 'AND', 'OR', 'NESTED'
+    status VARCHAR(20)
+);
+
+CREATE TABLE company_projects (
+    id UUID PRIMARY KEY,
+    company_id UUID,
+    name TEXT,
+    client TEXT,
+    start_date DATE,
+    end_date DATE,
+    project_type VARCHAR(20),
+    construction_scope NUMERIC,
+    maintenance_scope NUMERIC,
+    completion_type VARCHAR(20),
+    technical_details JSONB
+);
+```
+
+### n8n Workflow Structure
+
+```yaml
+workflows:
+  - name: "Tender Document Intake"
+    trigger: "Webhook - Document Upload"
+    nodes:
+      - Document Type Detection
+      - Text Extraction (OCR if needed)
+      - Hebrew Normalization
+      - Metadata Extraction
+      - Store in Supabase
+  
+  - name: "Requirements Analysis"
+    trigger: "Database Trigger - New Tender"
+    nodes:
+      - Load Tender Documents
+      - Extract Requirements (Claude API)
+      - Classify Requirements
+      - Match to Company Profile
+      - Generate Gap Report
+  
+  - name: "Competitor Analysis"
+    trigger: "Manual/Scheduled"
+    nodes:
+      - Scrape mr.gov.il
+      - Parse Winning Bids
+      - Update Competitor Profiles
+      - Calculate Market Prices
+```
+
+---
+
+**Document Version**: 3.0  
+**Last Updated**: January 2026  
+**Contributors**: אליצח דמבינסקי, עידו בן יקיר

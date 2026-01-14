@@ -1617,6 +1617,1194 @@
         }
 
         // ============================================
+        // MODULE 2.5: DUAL INTERPRETATION MECHANISM
+        // Two "heads" for interpretation when no definitions exist
+        // ============================================
+        function applyDualInterpretation(conditionText, definitions, category) {
+            console.log('[DualInterp] Applying dual interpretation...');
+
+            const result = {
+                legal_interpretation: null,
+                technical_interpretation: null,
+                opening_clauses: [],
+                recommendation: null
+            };
+
+            // LEGAL HEAD: How would a tender committee interpret this?
+            const legalIndicators = {
+                strict: ['בדיוק', 'רק', 'אך ורק', 'בלבד', 'מדויק', 'ספציפי'],
+                open: ['או שווה ערך', 'או דומה', 'לפחות', 'מינימום', 'כגון'],
+                proof_dependent: ['יוכיח', 'יציג', 'יתעד', 'להנחת דעת']
+            };
+
+            result.legal_interpretation = {
+                classification: 'open', // default
+                confidence: 0.5,
+                reasoning: ''
+            };
+
+            for (const [type, indicators] of Object.entries(legalIndicators)) {
+                for (const indicator of indicators) {
+                    if (conditionText.includes(indicator)) {
+                        result.legal_interpretation.classification = type;
+                        result.legal_interpretation.confidence = 0.8;
+                        result.legal_interpretation.reasoning = `נמצא מילה "${indicator}" המצביעה על פרשנות ${type === 'strict' ? 'קשיחה' : type === 'open' ? 'פתוחה' : 'תלויית הוכחה'}`;
+                        break;
+                    }
+                }
+            }
+
+            // TECHNICAL HEAD: What technical capabilities are actually needed?
+            const technicalDictionary = getTechnicalDictionary(category);
+            result.technical_interpretation = {
+                required_capabilities: [],
+                equivalent_solutions: [],
+                reasoning: ''
+            };
+
+            // Check for technical terms and find equivalents
+            if (technicalDictionary.equivalents) {
+                for (const [term, equivalents] of Object.entries(technicalDictionary.equivalents)) {
+                    if (conditionText.includes(term)) {
+                        result.technical_interpretation.required_capabilities.push(term);
+                        result.technical_interpretation.equivalent_solutions = equivalents;
+                        result.technical_interpretation.reasoning = `דרישה ל"${term}" יכולה להתמלא גם באמצעות: ${equivalents.join(', ')}`;
+                    }
+                }
+            }
+
+            // Detect opening clauses (פתחים)
+            const openingPatterns = [
+                { pattern: /ניתן\s*לבצע\s*(?:פיתוחים|התאמות)/i, type: 'development_allowed' },
+                { pattern: /ניתן\s*להציע\s*(?:פתרון\s*)?שווה\s*ערך/i, type: 'equivalent_allowed' },
+                { pattern: /או\s*מערכת\s*דומה/i, type: 'similar_allowed' },
+                { pattern: /לפי\s*שיקול\s*דעת/i, type: 'discretion' }
+            ];
+
+            for (const { pattern, type } of openingPatterns) {
+                if (pattern.test(conditionText)) {
+                    result.opening_clauses.push({
+                        type,
+                        found: pattern.exec(conditionText)?.[0]
+                    });
+                }
+            }
+
+            // Generate recommendation
+            if (result.legal_interpretation.classification === 'strict') {
+                result.recommendation = 'EXACT_MATCH_REQUIRED';
+            } else if (result.opening_clauses.length > 0 || result.legal_interpretation.classification === 'open') {
+                result.recommendation = 'EQUIVALENT_POSSIBLE';
+            } else {
+                result.recommendation = 'VERIFY_WITH_CLARIFICATION';
+            }
+
+            console.log('[DualInterp] Result:', result);
+            return result;
+        }
+
+        // ============================================
+        // MODULE 2.6: COMPANY PROFILE COMPARISON
+        // Match requirements to company profile and identify gaps
+        // ============================================
+        async function compareToCompanyProfile(tenderId, conditions) {
+            console.log('[ProfileCompare] Comparing', conditions.length, 'conditions to company profile...');
+
+            const supabase = getSupabase();
+            if (!supabase) return { matches: [], gaps: [], questions: [] };
+
+            // Try to get company profile (if exists)
+            let companyProfile = null;
+            try {
+                const { data: profile } = await supabase
+                    .from('company_profiles')
+                    .select('*')
+                    .limit(1)
+                    .single();
+                companyProfile = profile;
+            } catch (e) {
+                console.log('[ProfileCompare] No company profile found');
+            }
+
+            // Try to get company projects
+            let projects = [];
+            try {
+                const { data: projectData } = await supabase
+                    .from('company_projects')
+                    .select('*');
+                projects = projectData || [];
+            } catch (e) {
+                console.log('[ProfileCompare] No projects found');
+            }
+
+            const result = {
+                matches: [],
+                gaps: [],
+                questions: [],
+                optimization: {
+                    for_threshold: [],
+                    for_scoring: []
+                }
+            };
+
+            for (const condition of conditions) {
+                const matching = {
+                    condition_id: condition.id,
+                    condition_text: condition.condition_text,
+                    matching_projects: [],
+                    matching_certifications: [],
+                    status: 'UNKNOWN'
+                };
+
+                // Match experience requirements to projects
+                if (condition.requirement_type === 'EXPERIENCE') {
+                    for (const project of projects) {
+                        // Check if project matches requirement
+                        const meetsAmount = !condition.required_amount ||
+                            (project.total_value >= condition.required_amount);
+                        const meetsYears = !condition.required_years ||
+                            (project.end_date && new Date(project.end_date) >= new Date(Date.now() - condition.required_years * 365 * 24 * 60 * 60 * 1000));
+
+                        if (meetsAmount && meetsYears) {
+                            matching.matching_projects.push({
+                                project_id: project.id,
+                                project_name: project.name,
+                                value: project.total_value,
+                                relevance: 'HIGH'
+                            });
+                        }
+                    }
+
+                    if (matching.matching_projects.length >= (condition.required_count || 1)) {
+                        matching.status = 'PASS';
+                        result.matches.push(matching);
+                    } else if (matching.matching_projects.length > 0) {
+                        matching.status = 'PARTIAL';
+                        result.gaps.push({
+                            condition_id: condition.id,
+                            gap_type: 'INSUFFICIENT_PROJECTS',
+                            have: matching.matching_projects.length,
+                            need: condition.required_count || 1,
+                            closure_options: ['SUBCONTRACTOR', 'PARTNERSHIP', 'CLARIFICATION']
+                        });
+                    } else {
+                        matching.status = 'FAIL';
+                        result.gaps.push({
+                            condition_id: condition.id,
+                            gap_type: 'NO_MATCHING_PROJECTS',
+                            have: 0,
+                            need: condition.required_count || 1,
+                            closure_options: ['SUBCONTRACTOR', 'PARTNERSHIP']
+                        });
+
+                        // Generate question to company
+                        result.questions.push({
+                            type: 'TO_COMPANY',
+                            priority: 'P1',
+                            question: `זוהה פער בתנאי סף: "${condition.condition_text}". האם קיימים פרויקטים רלוונטיים שלא הוזנו למערכת?`
+                        });
+                    }
+                }
+
+                // Match certification requirements
+                if (condition.requirement_type === 'CERTIFICATION' && companyProfile?.certifications) {
+                    const certs = companyProfile.certifications;
+                    if (condition.condition_text.includes('ISO') && certs.iso) {
+                        matching.matching_certifications.push(certs.iso);
+                        matching.status = 'PASS';
+                        result.matches.push(matching);
+                    }
+                }
+            }
+
+            // Module 2.6.5: Optimization - threshold vs scoring
+            const passedConditions = result.matches.filter(m => m.status === 'PASS');
+            result.optimization = {
+                for_threshold: passedConditions.slice(0, 3).map(m => m.condition_id),
+                for_scoring: passedConditions.slice(3).map(m => m.condition_id),
+                strategy: 'MINIMUM_FOR_THRESHOLD_MAX_FOR_SCORING'
+            };
+
+            console.log('[ProfileCompare] Result - Matches:', result.matches.length, 'Gaps:', result.gaps.length);
+            return result;
+        }
+
+        // ============================================
+        // MODULE 2.7: CLARIFICATION REQUESTS GENERATION
+        // Generate requests to issuer and questions to company
+        // ============================================
+        function generateClarificationRequests(conditions, gaps, definitions) {
+            console.log('[Clarifications] Generating clarification requests...');
+
+            const requests = {
+                to_issuer: [],
+                to_company: [],
+                strategic: []
+            };
+
+            // Analyze each gap and generate appropriate request
+            for (const gap of gaps) {
+                const condition = conditions.find(c => c.id === gap.condition_id);
+                if (!condition) continue;
+
+                // Generate issuer request based on gap type
+                if (gap.closure_options.includes('CLARIFICATION')) {
+                    const issuerRequest = {
+                        priority: determinePriority(gap, condition),
+                        request_text: '',
+                        purpose: '',
+                        condition_ref: condition.condition_number
+                    };
+
+                    // Request format: polite request to expand interpretation
+                    if (gap.gap_type === 'INSUFFICIENT_PROJECTS') {
+                        issuerRequest.request_text = `נבקש לחדד את תנאי סף ${condition.condition_number}: האם ניתן להסתמך על ניסיון קבלן משנה לצורך הוכחת ניסיון בתחום ${condition.condition_text.substring(0, 50)}...?`;
+                        issuerRequest.purpose = 'EXPAND_ELIGIBILITY';
+                    } else if (gap.gap_type === 'NO_MATCHING_PROJECTS') {
+                        issuerRequest.request_text = `נבקש הבהרה בנוגע לתנאי סף ${condition.condition_number}: האם פרויקט בתחום דומה (${condition.condition_text.substring(0, 30)}...) יענה על הדרישה?`;
+                        issuerRequest.purpose = 'EXPAND_DEFINITION';
+                    }
+
+                    requests.to_issuer.push(issuerRequest);
+                }
+
+                // Generate company questions
+                if (gap.gap_type.includes('PROJECT')) {
+                    requests.to_company.push({
+                        priority: 'P1',
+                        question: `בנוגע לדרישה "${condition.condition_text.substring(0, 50)}..." - האם יש פרויקטים נוספים שלא הוזנו למערכת?`,
+                        purpose: 'COMPLETE_PROFILE'
+                    });
+                }
+            }
+
+            // Check for undefined terms that need clarification
+            const undefinedTerms = ['פרויקט דומה', 'ניסיון מוכח', 'היקף דומה', 'מערכת מקבילה'];
+            for (const term of undefinedTerms) {
+                const conditionsWithTerm = conditions.filter(c => c.condition_text.includes(term));
+                const termDefined = definitions.some(d => d.term.includes(term));
+
+                if (conditionsWithTerm.length > 0 && !termDefined) {
+                    requests.to_issuer.push({
+                        priority: 'P2',
+                        request_text: `נבקש להגדיר את המונח "${term}" המופיע בתנאי הסף - מהם הקריטריונים המדויקים?`,
+                        purpose: 'DEFINE_TERM',
+                        condition_refs: conditionsWithTerm.map(c => c.condition_number)
+                    });
+                }
+            }
+
+            console.log('[Clarifications] Generated - To issuer:', requests.to_issuer.length, 'To company:', requests.to_company.length);
+            return requests;
+        }
+
+        function determinePriority(gap, condition) {
+            if (condition.is_mandatory && gap.gap_type === 'NO_MATCHING_PROJECTS') return 'P1';
+            if (condition.is_mandatory) return 'P2';
+            return 'P3';
+        }
+
+        // ============================================
+        // MODULE 2.7.5: STRATEGIC QUESTIONS FOR COMPETITOR EXCLUSION
+        // Questions designed to reduce competition (without hurting us)
+        // ============================================
+        function generateStrategicQuestions(conditions, companyProfile, category) {
+            console.log('[Strategic] Generating strategic questions...');
+
+            const strategicQuestions = [];
+            const technicalDictionary = getTechnicalDictionary(category);
+
+            // Identify our exclusive advantages
+            const ourAdvantages = {
+                exclusive_representations: [], // Products we exclusively represent
+                unique_certifications: [],
+                unique_capabilities: []
+            };
+
+            // Check for opportunities to tighten requirements in our favor
+            const opportunities = [
+                {
+                    type: 'NDAA_COMPLIANCE',
+                    check: (text) => text.includes('מצלמ') && !text.includes('NDAA'),
+                    question: 'נבקש להבהיר האם נדרשת עמידה בתקן NDAA עבור ציוד המצלמות, לאור דרישות אבטחת מידע?',
+                    justification: 'הגנה מתקיפות סייבר וציות לדרישות ביטחוניות',
+                    benefits_us: true
+                },
+                {
+                    type: 'SPECIFIC_RESOLUTION',
+                    check: (text) => text.includes('מצלמ') && !text.match(/\d+MP/),
+                    question: 'נבקש לחדד את דרישות הרזולוציה המינימלית עבור המצלמות - האם נדרש 4MP ומעלה?',
+                    justification: 'רזולוציה גבוהה יותר לצרכי זיהוי ואנליטיקה',
+                    benefits_us: true
+                },
+                {
+                    type: 'CYBER_CERTIFICATION',
+                    check: (text) => (text.includes('רשת') || text.includes('תקשורת')) && !text.includes('סייבר'),
+                    question: 'נבקש להבהיר האם נדרשת הסמכת סייבר (ISO 27001) מהמציע?',
+                    justification: 'הגנה מפני איומי סייבר על תשתיות קריטיות',
+                    benefits_us: true
+                }
+            ];
+
+            for (const opp of opportunities) {
+                for (const condition of conditions) {
+                    if (opp.check(condition.condition_text)) {
+                        // Verify this doesn't hurt us before suggesting
+                        if (opp.benefits_us) {
+                            strategicQuestions.push({
+                                type: opp.type,
+                                question: opp.question,
+                                justification: opp.justification,
+                                target_condition: condition.condition_number,
+                                potential_impact: 'MAY_EXCLUDE_COMPETITORS',
+                                self_check: 'VERIFIED_SAFE'
+                            });
+                        }
+                    }
+                }
+            }
+
+            console.log('[Strategic] Generated', strategicQuestions.length, 'strategic questions');
+            return strategicQuestions;
+        }
+
+        // ============================================
+        // MODULE 2.8: REQUIRED DOCUMENTS LIST
+        // For each requirement - what documents need to be attached
+        // ============================================
+        function generateRequiredDocumentsList(conditions) {
+            console.log('[RequiredDocs] Generating required documents list...');
+
+            const documentsList = [];
+
+            const documentMappings = {
+                EXPERIENCE: [
+                    { type: 'אישור מזמין', format: 'מקור/העתק נאמן', signer: 'נציג מזמין' },
+                    { type: 'חוזה התקשרות', format: 'העתק', signer: 'לא נדרש' },
+                    { type: 'חשבונית סופית', format: 'העתק', signer: 'לא נדרש' }
+                ],
+                FINANCIAL: [
+                    { type: 'אישור רואה חשבון', format: 'מקור', signer: 'רו"ח' },
+                    { type: 'דוחות כספיים', format: 'מבוקרים', signer: 'רו"ח' },
+                    { type: 'אישור ניהול ספרים', format: 'מקור', signer: 'מס הכנסה' }
+                ],
+                CERTIFICATION: [
+                    { type: 'תעודת ISO', format: 'העתק נאמן', signer: 'גוף מסמיך' },
+                    { type: 'רישיון קבלן', format: 'העתק', signer: 'רשם הקבלנים' }
+                ],
+                PERSONNEL: [
+                    { type: 'קורות חיים', format: 'מקור', signer: 'העובד' },
+                    { type: 'תעודות השכלה', format: 'העתק נאמן', signer: 'מוסד לימודים' },
+                    { type: 'אישור העסקה', format: 'מקור', signer: 'מעסיק' }
+                ]
+            };
+
+            for (const condition of conditions) {
+                const docs = documentMappings[condition.requirement_type] || [];
+
+                for (const doc of docs) {
+                    documentsList.push({
+                        condition_id: condition.id,
+                        condition_number: condition.condition_number,
+                        condition_text: condition.condition_text.substring(0, 50) + '...',
+                        document_type: doc.type,
+                        required_format: doc.format,
+                        signer: doc.signer,
+                        status: 'MISSING', // Will be updated when documents are attached
+                        validity_check: null
+                    });
+                }
+            }
+
+            console.log('[RequiredDocs] Generated', documentsList.length, 'document requirements');
+            return documentsList;
+        }
+
+        // ============================================
+        // MODULE 2.9: ASSESSMENT AND RECOMMENDATION
+        // Summary report for each requirement with full traceability
+        // ============================================
+        function generateRequirementAssessment(condition, companyMatch, interpretation) {
+            console.log('[Assessment] Generating assessment for condition:', condition.condition_number);
+
+            const assessment = {
+                condition_number: condition.condition_number,
+                // 1. What the requirement says + exact quote
+                requirement_statement: {
+                    text: condition.condition_text,
+                    source: {
+                        page: condition.source_page,
+                        section: condition.source_section
+                    }
+                },
+                // 2. Legal meaning
+                legal_meaning: {
+                    classification: interpretation?.legal_interpretation?.classification || 'UNKNOWN',
+                    explanation: interpretation?.legal_interpretation?.reasoning || 'לא נותח'
+                },
+                // 3. Technical meaning
+                technical_meaning: {
+                    required_capabilities: interpretation?.technical_interpretation?.required_capabilities || [],
+                    equivalents: interpretation?.technical_interpretation?.equivalent_solutions || []
+                },
+                // 4. Company profile support
+                profile_support: {
+                    matching_evidence: companyMatch?.matching_projects || [],
+                    missing: companyMatch?.status === 'FAIL' ? 'אין התאמה בפרופיל' : null
+                },
+                // 5. Possible arguments and closure paths
+                closure_paths: [],
+                // 6. Conclusion
+                conclusion: {
+                    status: 'UNKNOWN',
+                    confidence: 0,
+                    recommendation: ''
+                }
+            };
+
+            // Determine conclusion based on all factors
+            if (companyMatch?.status === 'PASS') {
+                assessment.conclusion = {
+                    status: 'PASS',
+                    confidence: 0.9,
+                    recommendation: 'עומד בוודאות'
+                };
+            } else if (companyMatch?.status === 'PARTIAL') {
+                assessment.conclusion = {
+                    status: 'RISK',
+                    confidence: 0.6,
+                    recommendation: 'עומד + סיכון - מומלץ לשקול קבלן משנה או שאלת הבהרה'
+                };
+                assessment.closure_paths = ['SUBCONTRACTOR', 'CLARIFICATION'];
+            } else if (interpretation?.opening_clauses?.length > 0) {
+                assessment.conclusion = {
+                    status: 'PENDING',
+                    confidence: 0.5,
+                    recommendation: 'בכפוף לאימות - זוהו פתחים בניסוח'
+                };
+                assessment.closure_paths = ['CLARIFICATION', 'ALTERNATIVE_DOC'];
+            } else {
+                assessment.conclusion = {
+                    status: 'FAIL',
+                    confidence: 0.8,
+                    recommendation: 'לא עומד - נדרש פתרון'
+                };
+                assessment.closure_paths = ['SUBCONTRACTOR', 'PARTNERSHIP', 'BLOCKER'];
+            }
+
+            return assessment;
+        }
+
+        // ============================================
+        // MODULE 2.10: RE-ANALYSIS AFTER CLARIFICATIONS
+        // Run analysis again after clarification responses received
+        // ============================================
+        async function reAnalyzeAfterClarifications(tenderId, previousAnalysis) {
+            console.log('[ReAnalyze] Re-analyzing tender after clarifications:', tenderId);
+
+            const supabase = getSupabase();
+            if (!supabase) return null;
+
+            // Get the latest clarification document
+            const { data: docs } = await supabase
+                .from('tender_documents')
+                .select('*')
+                .eq('tender_id', tenderId)
+                .eq('document_type', 'CLARIFICATIONS')
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            if (!docs || docs.length === 0) {
+                console.log('[ReAnalyze] No clarification documents found');
+                return { changed: false, message: 'לא נמצאו מסמכי הבהרות' };
+            }
+
+            const changeReport = {
+                tender_id: tenderId,
+                analysis_date: new Date().toISOString(),
+                changes_detected: [],
+                impact_on_bidder: [],
+                go_nogo_changed: false,
+                previous_recommendation: previousAnalysis?.recommendation || 'UNKNOWN',
+                new_recommendation: 'UNKNOWN'
+            };
+
+            // Compare current state to previous
+            // This would need to re-run the full analysis and compare
+
+            // For now, mark that re-analysis was triggered
+            await supabase
+                .from('tenders')
+                .update({
+                    current_step: 'RE_ANALYZED',
+                    last_analysis_date: new Date().toISOString()
+                })
+                .eq('id', tenderId);
+
+            console.log('[ReAnalyze] Re-analysis complete');
+            return changeReport;
+        }
+
+        // ============================================
+        // PILLAR 3: SPECIFICATION & BOQ ANALYSIS
+        // ============================================
+
+        // Module 3.1: Technical Specification Analysis
+        function analyzeSpecification(text) {
+            console.log('[Spec] Analyzing technical specification...');
+
+            const specification = {
+                general_requirements: [],
+                technical_requirements: [],
+                execution_requirements: [],
+                sla_requirements: [],
+                standards: []
+            };
+
+            // Extract general requirements
+            const generalPatterns = [
+                /דרישות\s*כלליות[:\s]*([^\n]+)/gi,
+                /תקן\s*([^\n]+)/gi,
+                /עמידה\s*ב[-]?\s*([^\n]+)/gi
+            ];
+
+            for (const pattern of generalPatterns) {
+                let match;
+                while ((match = pattern.exec(text)) !== null) {
+                    specification.general_requirements.push({
+                        text: match[1].trim(),
+                        source_position: match.index
+                    });
+                }
+            }
+
+            // Extract SLA requirements
+            const slaPatterns = [
+                /SLA[:\s]*([^\n]+)/gi,
+                /רמת\s*שירות[:\s]*([^\n]+)/gi,
+                /זמן\s*תגובה[:\s]*(\d+)\s*(?:שעות|דקות)/gi,
+                /זמן\s*תיקון[:\s]*(\d+)\s*(?:שעות|ימים)/gi
+            ];
+
+            for (const pattern of slaPatterns) {
+                let match;
+                while ((match = pattern.exec(text)) !== null) {
+                    specification.sla_requirements.push({
+                        text: match[0].trim(),
+                        value: match[1],
+                        source_position: match.index
+                    });
+                }
+            }
+
+            // Extract standards
+            const standardsPatterns = [
+                /ISO\s*(\d+)/gi,
+                /תקן\s*ישראלי\s*(\d+)/gi,
+                /ת"י\s*(\d+)/gi
+            ];
+
+            for (const pattern of standardsPatterns) {
+                let match;
+                while ((match = pattern.exec(text)) !== null) {
+                    specification.standards.push({
+                        standard: match[0].trim(),
+                        number: match[1]
+                    });
+                }
+            }
+
+            console.log('[Spec] Found requirements - General:', specification.general_requirements.length,
+                'SLA:', specification.sla_requirements.length, 'Standards:', specification.standards.length);
+            return specification;
+        }
+
+        // Module 3.2: Bill of Quantities (BOQ) Analysis
+        function analyzeBOQ(text) {
+            console.log('[BOQ] Analyzing bill of quantities...');
+
+            const boq = {
+                items: [],
+                categories: {},
+                totals: {
+                    supply: 0,
+                    work: 0,
+                    service: 0,
+                    maintenance: 0
+                }
+            };
+
+            // BOQ line pattern: number, description, unit, quantity, price
+            const boqPatterns = [
+                /(\d+(?:\.\d+)?)\s+([^\t\n]{10,100})\s+(יח'|מ'|מ"ר|שעות|חודש|פאושלי)\s+(\d+(?:,\d+)?(?:\.\d+)?)/gi,
+                /פריט\s*(\d+)[:\s]*([^\n]{10,100})/gi
+            ];
+
+            for (const pattern of boqPatterns) {
+                let match;
+                while ((match = pattern.exec(text)) !== null) {
+                    const item = {
+                        line_id: match[1],
+                        description: match[2].trim(),
+                        unit: match[3] || 'יח\'',
+                        quantity: parseFloat((match[4] || '1').replace(/,/g, '')),
+                        category: categorizeBOQItem(match[2]),
+                        completeness: 'COMPLETE'
+                    };
+
+                    boq.items.push(item);
+
+                    // Aggregate by category
+                    if (!boq.categories[item.category]) {
+                        boq.categories[item.category] = [];
+                    }
+                    boq.categories[item.category].push(item);
+                }
+            }
+
+            console.log('[BOQ] Found', boq.items.length, 'BOQ items');
+            return boq;
+        }
+
+        function categorizeBOQItem(description) {
+            const lower = description.toLowerCase();
+            if (/אספקה|ציוד|מצלמה|מתג|שרת/.test(lower)) return 'supply';
+            if (/התקנה|עבודה|חפירה|כבילה/.test(lower)) return 'work';
+            if (/שירות|תמיכה|הדרכה/.test(lower)) return 'service';
+            if (/תחזוקה|אחזקה/.test(lower)) return 'maintenance';
+            return 'other';
+        }
+
+        // Module 3.3: Work Scope Understanding
+        function analyzeWorkScope(specification, boq) {
+            console.log('[WorkScope] Analyzing work scope...');
+
+            const workScope = {
+                phases: {
+                    planning: { items: [], estimated_scope: 0 },
+                    supply: { items: [], estimated_scope: 0 },
+                    installation: { items: [], estimated_scope: 0 },
+                    commissioning: { items: [], estimated_scope: 0 },
+                    maintenance: { items: [], estimated_scope: 0 }
+                },
+                hidden_work_indicators: [],
+                warnings: []
+            };
+
+            // Categorize BOQ items into phases
+            for (const item of boq.items) {
+                if (item.category === 'supply') {
+                    workScope.phases.supply.items.push(item);
+                } else if (item.category === 'work') {
+                    workScope.phases.installation.items.push(item);
+                } else if (item.category === 'maintenance') {
+                    workScope.phases.maintenance.items.push(item);
+                }
+            }
+
+            // Detect hidden work indicators
+            const hiddenWorkPatterns = [
+                'כל העבודות הנדרשות להשלמה',
+                'כולל כל הנלווים',
+                'לפי הנחיות המפקח',
+                'לשביעות רצון המזמין'
+            ];
+
+            for (const pattern of hiddenWorkPatterns) {
+                const found = boq.items.filter(i => i.description.includes(pattern));
+                if (found.length > 0) {
+                    workScope.hidden_work_indicators.push({
+                        pattern,
+                        items: found,
+                        risk: 'HIGH'
+                    });
+                    workScope.warnings.push(`זוהה ניסוח גורף: "${pattern}" - סיכון לעבודות נסתרות`);
+                }
+            }
+
+            console.log('[WorkScope] Phases analyzed, hidden indicators:', workScope.hidden_work_indicators.length);
+            return workScope;
+        }
+
+        // Module 3.4: Discrepancy Detection
+        function detectDiscrepancies(specification, boq) {
+            console.log('[Discrepancy] Detecting discrepancies...');
+
+            const discrepancies = {
+                spec_vs_boq: [],
+                in_spec_not_boq: [],
+                in_boq_not_spec: [],
+                internal_contradictions: []
+            };
+
+            // Check for items in spec but not in BOQ (HIGH RISK)
+            const specItems = specification.technical_requirements.map(r => r.text);
+            const boqDescriptions = boq.items.map(i => i.description);
+
+            // Simple keyword matching
+            const specKeywords = ['מצלמות', 'מתג', 'שרת', 'כבילה', 'עמודים', 'חפירה'];
+
+            for (const keyword of specKeywords) {
+                const inSpec = specItems.some(s => s.includes(keyword));
+                const inBOQ = boqDescriptions.some(d => d.includes(keyword));
+
+                if (inSpec && !inBOQ) {
+                    discrepancies.in_spec_not_boq.push({
+                        item: keyword,
+                        risk: 'HIGH',
+                        reason: 'נדרש לתמחור אבל לא מקבלים כסף',
+                        recommendation: 'להעלות כשאלת הבהרה או לתמחר בעלויות אחרות'
+                    });
+                }
+
+                if (inBOQ && !inSpec) {
+                    discrepancies.in_boq_not_spec.push({
+                        item: keyword,
+                        risk: 'MEDIUM',
+                        reason: 'מופיע ב-BOQ אך לא במפרט - לוודא דרישות'
+                    });
+                }
+            }
+
+            console.log('[Discrepancy] Found - Spec not BOQ:', discrepancies.in_spec_not_boq.length,
+                'BOQ not Spec:', discrepancies.in_boq_not_spec.length);
+            return discrepancies;
+        }
+
+        // Module 3.5: Pricing Risk Analysis
+        function analyzePricingRisks(boq, discrepancies, workScope) {
+            console.log('[PricingRisk] Analyzing pricing risks...');
+
+            const pricingAnalysis = {
+                risk_items: [],
+                recommendations: {
+                    reserve_percentage: 0,
+                    detailed_pricing: [],
+                    lump_sum: []
+                },
+                smart_pricing: {
+                    opportunities: [],
+                    warnings: []
+                }
+            };
+
+            // Identify high-risk items
+            for (const item of boq.items) {
+                let riskLevel = 'LOW';
+                let reasons = [];
+
+                // Check for risky keywords
+                if (/כל הנדרש|לפי הצורך|לשביעות רצון/.test(item.description)) {
+                    riskLevel = 'HIGH';
+                    reasons.push('ניסוח גורף');
+                }
+
+                if (/פאושלי/.test(item.unit)) {
+                    riskLevel = Math.max(riskLevel, 'MEDIUM');
+                    reasons.push('תמחור פאושלי');
+                }
+
+                if (riskLevel !== 'LOW') {
+                    pricingAnalysis.risk_items.push({
+                        item_id: item.line_id,
+                        description: item.description,
+                        risk_level: riskLevel,
+                        reasons
+                    });
+                }
+            }
+
+            // Calculate reserve recommendation
+            const highRiskCount = pricingAnalysis.risk_items.filter(r => r.risk_level === 'HIGH').length;
+            const mediumRiskCount = pricingAnalysis.risk_items.filter(r => r.risk_level === 'MEDIUM').length;
+
+            pricingAnalysis.recommendations.reserve_percentage =
+                (highRiskCount * 5) + (mediumRiskCount * 2) +
+                (discrepancies.in_spec_not_boq.length * 3) +
+                (workScope.hidden_work_indicators.length * 4);
+
+            // Identify pricing opportunities from discrepancies (עידו's insight)
+            for (const disc of discrepancies.in_spec_not_boq) {
+                pricingAnalysis.smart_pricing.opportunities.push({
+                    type: 'EXPECTED_EXTRA',
+                    description: disc.item,
+                    recommendation: 'לתת הנחה על שורות BOQ ולהרוויח מחריגים'
+                });
+            }
+
+            console.log('[PricingRisk] Risk items:', pricingAnalysis.risk_items.length,
+                'Reserve:', pricingAnalysis.recommendations.reserve_percentage + '%');
+            return pricingAnalysis;
+        }
+
+        // ============================================
+        // PILLAR 4: COMPETITOR ANALYSIS
+        // ============================================
+
+        // Module 4.1: Winning Bids Collection (stub - needs external data)
+        async function collectWinningBids(tenderId, category) {
+            console.log('[Competitors] Collecting winning bids data...');
+
+            // This would typically fetch from external sources like mr.gov.il
+            // For now, return structure for future implementation
+            return {
+                source: 'mr.gov.il',
+                tenders_analyzed: 0,
+                winning_bids: [],
+                message: 'נדרש חיבור למקורות מידע חיצוניים'
+            };
+        }
+
+        // Module 4.2: Competitor Mapping
+        async function mapCompetitors(tenderId, category) {
+            console.log('[Competitors] Mapping competitors...');
+
+            const supabase = getSupabase();
+
+            // Try to get competitors from database
+            let competitors = [];
+            if (supabase) {
+                try {
+                    const { data } = await supabase
+                        .from('competitors')
+                        .select('*')
+                        .limit(20);
+                    competitors = data || [];
+                } catch (e) {
+                    console.log('[Competitors] No competitor data');
+                }
+            }
+
+            const mapping = {
+                competitors: competitors.map(c => ({
+                    name: c.name,
+                    size: c.size || 'UNKNOWN',
+                    specialization: c.specialization_areas || [],
+                    pricing_strategy: c.pricing_strategy || 'unknown',
+                    strengths: c.known_strengths || [],
+                    weaknesses: c.known_weaknesses || []
+                })),
+                win_loss_history: []
+            };
+
+            console.log('[Competitors] Mapped', mapping.competitors.length, 'competitors');
+            return mapping;
+        }
+
+        // Module 4.3: Competitor Pricing Analysis
+        function analyzeCompetitorPricing(winningBids, boq) {
+            console.log('[Competitors] Analyzing competitor pricing...');
+
+            const analysis = {
+                per_item: {},
+                patterns: [],
+                insights: []
+            };
+
+            // If we have winning bids data, analyze it
+            if (winningBids.winning_bids && winningBids.winning_bids.length > 0) {
+                // Calculate average prices per item
+                for (const bid of winningBids.winning_bids) {
+                    for (const item of bid.items || []) {
+                        if (!analysis.per_item[item.description]) {
+                            analysis.per_item[item.description] = {
+                                prices: [],
+                                average: 0,
+                                min: Infinity,
+                                max: 0
+                            };
+                        }
+                        analysis.per_item[item.description].prices.push(item.price);
+                    }
+                }
+
+                // Calculate statistics
+                for (const [desc, data] of Object.entries(analysis.per_item)) {
+                    data.average = data.prices.reduce((a, b) => a + b, 0) / data.prices.length;
+                    data.min = Math.min(...data.prices);
+                    data.max = Math.max(...data.prices);
+                }
+            }
+
+            return analysis;
+        }
+
+        // Module 4.4: Competitive Intelligence
+        function generateCompetitiveIntelligence(competitors, conditions, companyProfile) {
+            console.log('[Competitors] Generating competitive intelligence...');
+
+            const intelligence = {
+                participation_forecast: [],
+                differentiation: {
+                    our_advantages: [],
+                    our_disadvantages: []
+                },
+                expected_price_range: { min: 0, max: 0 },
+                strategic_recommendations: []
+            };
+
+            // Forecast participation based on condition match
+            for (const competitor of competitors.competitors) {
+                const probability = estimateParticipationProbability(competitor, conditions);
+                intelligence.participation_forecast.push({
+                    competitor: competitor.name,
+                    probability,
+                    reason: probability > 0.5 ? 'מתאים לתנאי הסף' : 'עלול להיות מוגבל בתנאי סף'
+                });
+            }
+
+            // Identify our differentiation
+            if (companyProfile) {
+                // Our advantages
+                if (companyProfile.certifications?.iso) {
+                    intelligence.differentiation.our_advantages.push('הסמכות ISO');
+                }
+                if (companyProfile.projects?.length > 5) {
+                    intelligence.differentiation.our_advantages.push('ניסיון עשיר בפרויקטים');
+                }
+            }
+
+            console.log('[Competitors] Generated forecast for', intelligence.participation_forecast.length, 'competitors');
+            return intelligence;
+        }
+
+        function estimateParticipationProbability(competitor, conditions) {
+            // Simple probability based on specialization match
+            let matchScore = 0;
+            const specializations = competitor.specialization || [];
+
+            for (const condition of conditions) {
+                if (condition.requirement_type === 'EXPERIENCE') {
+                    for (const spec of specializations) {
+                        if (condition.condition_text.toLowerCase().includes(spec.toLowerCase())) {
+                            matchScore += 1;
+                        }
+                    }
+                }
+            }
+
+            return Math.min(matchScore / conditions.length, 1);
+        }
+
+        // ============================================
+        // OUTPUT: DECISION REPORT (GO/NO-GO)
+        // ============================================
+        async function generateDecisionReport(tenderId) {
+            console.log('[Decision] Generating GO/NO-GO decision report...');
+
+            const supabase = getSupabase();
+            if (!supabase) return null;
+
+            // Fetch all tender data
+            const { data: tender } = await supabase
+                .from('tenders')
+                .select('*')
+                .eq('id', tenderId)
+                .single();
+
+            const { data: conditions } = await supabase
+                .from('gate_conditions')
+                .select('*')
+                .eq('tender_id', tenderId);
+
+            // Calculate overall assessment
+            const passedConditions = conditions?.filter(c => c.status === 'PASS') || [];
+            const failedConditions = conditions?.filter(c => c.status === 'FAIL') || [];
+            const riskConditions = conditions?.filter(c => c.status === 'RISK') || [];
+            const totalMandatory = conditions?.filter(c => c.is_mandatory) || [];
+
+            // Decision logic
+            let recommendation = 'CONDITIONAL';
+            let confidence = 0.5;
+            let riskLevel = 'MEDIUM';
+
+            if (failedConditions.length > 0 && failedConditions.some(c => c.is_mandatory)) {
+                recommendation = 'NO_GO';
+                confidence = 0.8;
+                riskLevel = 'HIGH';
+            } else if (passedConditions.length === totalMandatory.length) {
+                recommendation = 'GO';
+                confidence = 0.85;
+                riskLevel = 'LOW';
+            } else if (riskConditions.length > 0) {
+                recommendation = 'CONDITIONAL';
+                confidence = 0.6;
+                riskLevel = 'MEDIUM';
+            }
+
+            const report = {
+                // Executive Summary
+                executive_summary: {
+                    recommendation,
+                    confidence_level: Math.round(confidence * 100),
+                    overall_risk_level: riskLevel,
+                    estimated_win_probability: calculateWinProbability(conditions, recommendation),
+                    one_sentence_summary: generateSummary(recommendation, tender, conditions)
+                },
+
+                // Requirements Summary
+                requirements_summary: {
+                    total: conditions?.length || 0,
+                    passed: passedConditions.length,
+                    failed: failedConditions.length,
+                    risk: riskConditions.length,
+                    gaps_to_close: failedConditions.map(c => ({
+                        priority: c.is_mandatory ? 'P1' : 'P2',
+                        description: c.condition_text
+                    }))
+                },
+
+                // Action Items
+                action_items: {
+                    before_decision: [],
+                    if_go: {
+                        send_clarifications: tender?.clarification_deadline,
+                        submission_deadline: tender?.submission_deadline
+                    }
+                },
+
+                // Metadata
+                generated_at: new Date().toISOString(),
+                tender_id: tenderId
+            };
+
+            // Save report to database
+            try {
+                await supabase
+                    .from('decision_reports')
+                    .upsert({
+                        tender_id: tenderId,
+                        report_data: report,
+                        recommendation,
+                        confidence_level: Math.round(confidence * 100),
+                        created_at: new Date().toISOString()
+                    });
+            } catch (e) {
+                console.log('[Decision] Could not save report:', e.message);
+            }
+
+            console.log('[Decision] Report generated:', recommendation, 'with', Math.round(confidence * 100) + '% confidence');
+            return report;
+        }
+
+        function calculateWinProbability(conditions, recommendation) {
+            if (recommendation === 'NO_GO') return 0;
+            if (recommendation === 'GO') return 65;
+            return 40; // CONDITIONAL
+        }
+
+        function generateSummary(recommendation, tender, conditions) {
+            const name = tender?.tender_name || 'המכרז';
+            const passRate = conditions?.length > 0
+                ? Math.round((conditions.filter(c => c.status === 'PASS').length / conditions.length) * 100)
+                : 0;
+
+            if (recommendation === 'GO') {
+                return `${name} - מומלץ להגיש. עומדים ב-${passRate}% מתנאי הסף.`;
+            } else if (recommendation === 'NO_GO') {
+                return `${name} - לא מומלץ להגיש. פערים משמעותיים בתנאי הסף.`;
+            }
+            return `${name} - החלטה מותנית. נדרשות פעולות לסגירת פערים.`;
+        }
+
+        // ============================================
+        // FULL ANALYSIS PIPELINE
+        // Run all analysis modules in sequence
+        // ============================================
+        async function runFullAnalysis(tenderId, text, fileName) {
+            console.log('[FullAnalysis] Starting full analysis pipeline for tender:', tenderId);
+
+            const results = {
+                steps_completed: [],
+                errors: [],
+                final_report: null
+            };
+
+            try {
+                // PILLAR 1: Document Processing
+                results.steps_completed.push('PILLAR_1_START');
+
+                const documentType = detectDocumentType(text, fileName);
+                const normalizedText = normalizeHebrewText(text);
+                const definitions = extractDefinitions(normalizedText);
+                const category = categorizeTender(normalizedText);
+
+                results.steps_completed.push('PILLAR_1_COMPLETE');
+
+                // PILLAR 2: Gate Conditions Analysis
+                results.steps_completed.push('PILLAR_2_START');
+
+                const gatesResult = await extractGateConditionsEnhanced(tenderId, normalizedText, definitions);
+                const conditions = gatesResult.conditions || [];
+
+                // Apply dual interpretation to each condition
+                for (const condition of conditions) {
+                    condition.interpretation = applyDualInterpretation(
+                        condition.condition_text,
+                        definitions,
+                        category.primary
+                    );
+                }
+
+                // Compare to company profile
+                const profileComparison = await compareToCompanyProfile(tenderId, conditions);
+
+                // Generate clarification requests
+                const clarifications = generateClarificationRequests(conditions, profileComparison.gaps, definitions);
+
+                // Generate strategic questions
+                const strategic = generateStrategicQuestions(conditions, null, category.primary);
+
+                // Generate required documents list
+                const requiredDocs = generateRequiredDocumentsList(conditions);
+
+                // Generate assessments
+                const assessments = conditions.map(condition => {
+                    const match = profileComparison.matches.find(m => m.condition_id === condition.id);
+                    return generateRequirementAssessment(condition, match, condition.interpretation);
+                });
+
+                results.steps_completed.push('PILLAR_2_COMPLETE');
+
+                // PILLAR 3: Specification & BOQ Analysis
+                results.steps_completed.push('PILLAR_3_START');
+
+                const specification = analyzeSpecification(normalizedText);
+                const boq = analyzeBOQ(normalizedText);
+                const workScope = analyzeWorkScope(specification, boq);
+                const discrepancies = detectDiscrepancies(specification, boq);
+                const pricingRisks = analyzePricingRisks(boq, discrepancies, workScope);
+
+                results.steps_completed.push('PILLAR_3_COMPLETE');
+
+                // PILLAR 4: Competitor Analysis
+                results.steps_completed.push('PILLAR_4_START');
+
+                const winningBids = await collectWinningBids(tenderId, category.primary);
+                const competitorMapping = await mapCompetitors(tenderId, category.primary);
+                const competitorPricing = analyzeCompetitorPricing(winningBids, boq);
+                const competitiveIntel = generateCompetitiveIntelligence(competitorMapping, conditions, null);
+
+                results.steps_completed.push('PILLAR_4_COMPLETE');
+
+                // OUTPUT: Generate Decision Report
+                results.steps_completed.push('DECISION_REPORT_START');
+
+                results.final_report = await generateDecisionReport(tenderId);
+
+                results.steps_completed.push('DECISION_REPORT_COMPLETE');
+
+                console.log('[FullAnalysis] Pipeline complete. Steps:', results.steps_completed.length);
+
+            } catch (error) {
+                console.error('[FullAnalysis] Error:', error);
+                results.errors.push(error.message);
+            }
+
+            return results;
+        }
+
+        // ============================================
         // INITIALIZATION
         // ============================================
         document.addEventListener('DOMContentLoaded', async function() {
