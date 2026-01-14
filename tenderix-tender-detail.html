@@ -270,9 +270,9 @@
     <script>
         // Supabase Config
         const SUPABASE_URL = 'https://rerfjgjwjqodevkvhkxu.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY1OTYxNzksImV4cCI6MjA1MjE3MjE3OX0.--tz3L5akKPzsfiP_mpuw-103LT1F3Dl5FUyffLrgxs';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0OTQzMDcsImV4cCI6MjA4MTA3MDMwN30.XE4N3ewYESrVeCMWZdJhYbgjTG_SRaYQ9zUczjVgNUM';
 
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // Get tender ID from URL
         const urlParams = new URLSearchParams(window.location.search);
@@ -299,7 +299,7 @@
                 console.log('Loading tender:', tenderId);
 
                 // Load tender
-                const { data: tender, error } = await supabase
+                const { data: tender, error } = await supabaseClient
                     .from('tenders')
                     .select('*')
                     .eq('id', tenderId)
@@ -341,7 +341,7 @@
 
         async function loadDocuments() {
             try {
-                const { data: docs, error } = await supabase
+                const { data: docs, error } = await supabaseClient
                     .from('tender_documents')
                     .select('*')
                     .eq('tender_id', tenderId);
@@ -377,7 +377,7 @@
 
         async function loadGateConditions() {
             try {
-                const { data: gates, error } = await supabase
+                const { data: gates, error } = await supabaseClient
                     .from('gate_conditions')
                     .select('*')
                     .eq('tender_id', tenderId)
