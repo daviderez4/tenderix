@@ -1,4 +1,4 @@
-import { API_CONFIG } from './config';
+import { API_CONFIG, getCurrentOrgId } from './config';
 
 // ==================== TYPES ====================
 
@@ -241,7 +241,14 @@ async function callWebhook<T>(path: string, payload: object, timeoutMs = 120000)
 export const api = {
   // ==================== TENDERS ====================
   tenders: {
-    list: () => supabaseFetch<Tender[]>('tenders?select=*&order=created_at.desc'),
+    // List only tenders belonging to current session's organization
+    list: () => {
+      const orgId = getCurrentOrgId();
+      return supabaseFetch<Tender[]>(`tenders?org_id=eq.${orgId}&select=*&order=created_at.desc`);
+    },
+
+    // List ALL tenders (admin only - for debugging)
+    listAll: () => supabaseFetch<Tender[]>('tenders?select=*&order=created_at.desc'),
 
     get: (id: string) => supabaseFetch<Tender[]>(`tenders?id=eq.${id}`).then(r => r[0]),
 
@@ -379,77 +386,646 @@ export const api = {
 
   // ==================== AI WORKFLOWS ====================
   workflows: {
-    // Gate Analysis
-    extractGates: (tenderId: string, tenderText: string) =>
-      callWebhook<{ success: boolean; conditions: GateCondition[] }>(
-        'tdx-extract-gates',
-        { tender_id: tenderId, tender_text: tenderText }
-      ),
+    // Gate Analysis - Local extraction with optional AI enhancement
+    extractGates: async (tenderId: string, tenderText: string): Promise<{ success: boolean; conditions: GateCondition[] }> => {
+      console.log(`extractGates called with ${tenderText.length} chars`);
 
-    matchGates: (tenderId: string, orgId: string) =>
-      callWebhook<{
-        success: boolean;
-        tender_id: string;
-        org_id: string;
-        conditions: Array<{
-          condition_number: string;
-          condition_text: string;
-          status: string;
-          evidence: string;
-          gap_description?: string;
-          closure_options?: string[];
-        }>;
-        summary: {
-          total: number;
-          meets: number;
-          partial: number;
-          not_meets: number;
-          eligibility: string;
+      // Local gate extraction using regex patterns
+      const extractedConditions: Partial<GateCondition>[] = [];
+      let conditionNumber = 1;
+
+      // Pattern 1: Numbered conditions with "תנאי סף"
+      const gatePatterns = [
+        // Pattern: תנאי סף מס' X - description
+        /תנאי\s*סף\s*(?:מס['׳]?|מספר)?\s*(\d+(?:\.\d+)?)\s*[-–:]\s*([^\n]+)/gi,
+        // Pattern: numbered list after תנאי סף
+        /(\d+(?:\.\d+)?)\s*[.\)]\s*(?:על\s*המציע|נדרש|חובה|יש\s*להציג|יש\s*לצרף)\s*([^\n]+)/gi,
+        // Pattern: על המציע + requirement
+        /על\s*המציע\s*(?:להיות|להוכיח|להציג|לצרף|להמציא|לעמוד)\s*([^\n]{10,200})/gi,
+        // Pattern: תנאי חובה
+        /תנאי\s*חובה\s*[-–:]\s*([^\n]+)/gi,
+        // Pattern: דרישות סף
+        /דרישות?\s*סף\s*[-–:]\s*([^\n]+)/gi,
+      ];
+
+      // Track already extracted to avoid duplicates
+      const extractedTexts = new Set<string>();
+
+      for (const pattern of gatePatterns) {
+        let match;
+        const text = tenderText;
+        pattern.lastIndex = 0; // Reset regex
+        while ((match = pattern.exec(text)) !== null) {
+          const conditionText = (match[2] || match[1]).trim();
+
+          // Skip short or duplicate conditions
+          if (conditionText.length < 15 || extractedTexts.has(conditionText.substring(0, 50))) {
+            continue;
+          }
+          extractedTexts.add(conditionText.substring(0, 50));
+
+          // Determine requirement type
+          let requirementType = 'OTHER';
+          if (/ניסיון|פרויקט|ביצוע|עבודה|שנ[הות]/.test(conditionText)) {
+            requirementType = 'EXPERIENCE';
+          } else if (/מחזור|הכנסות|הון|כספי|פיננס|ערבות/.test(conditionText)) {
+            requirementType = 'FINANCIAL';
+          } else if (/תעודה|רישיון|הסמכה|ISO|סיווג|אישור/.test(conditionText)) {
+            requirementType = 'CERTIFICATION';
+          } else if (/מנהל|צוות|עובד|מהנדס|יועץ/.test(conditionText)) {
+            requirementType = 'PERSONNEL';
+          }
+
+          // Check if mandatory
+          const isMandatory = /חובה|תנאי\s*סף|פוסל|להגיש|נדרש/.test(conditionText) ||
+                            /על\s*המציע/.test(match[0]);
+
+          // Extract numbers if present
+          const numberMatch = conditionText.match(/(\d+)\s*(?:שנ|פרויקט|עבודו?ת)/);
+          const amountMatch = conditionText.match(/([\d,]+)\s*(?:₪|ש"ח|מיליון|אלף)/);
+
+          extractedConditions.push({
+            tender_id: tenderId,
+            condition_number: `${conditionNumber}`,
+            condition_text: conditionText,
+            condition_type: 'GATE',
+            is_mandatory: isMandatory,
+            requirement_type: requirementType,
+            required_years: numberMatch ? parseInt(numberMatch[1]) : undefined,
+            required_amount: amountMatch ? parseFloat(amountMatch[1].replace(/,/g, '')) : undefined,
+            status: 'UNKNOWN',
+          });
+          conditionNumber++;
+        }
+      }
+
+      // Also look for section-based gate conditions
+      const sectionPattern = /(?:פרק|סעיף)\s*[-–]?\s*תנאי\s*סף([\s\S]{100,3000}?)(?=(?:פרק|סעיף)\s*[-–]|$)/gi;
+      let sectionMatch;
+      while ((sectionMatch = sectionPattern.exec(tenderText)) !== null) {
+        const sectionText = sectionMatch[1];
+        // Extract bullet points from section
+        const bulletPattern = /[•\-\*]\s*([^\n•\-\*]{15,200})/g;
+        let bulletMatch;
+        while ((bulletMatch = bulletPattern.exec(sectionText)) !== null) {
+          const conditionText = bulletMatch[1].trim();
+          if (!extractedTexts.has(conditionText.substring(0, 50))) {
+            extractedTexts.add(conditionText.substring(0, 50));
+
+            let requirementType = 'OTHER';
+            if (/ניסיון|פרויקט/.test(conditionText)) requirementType = 'EXPERIENCE';
+            else if (/מחזור|כספי/.test(conditionText)) requirementType = 'FINANCIAL';
+            else if (/תעודה|רישיון|ISO/.test(conditionText)) requirementType = 'CERTIFICATION';
+            else if (/מנהל|צוות/.test(conditionText)) requirementType = 'PERSONNEL';
+
+            extractedConditions.push({
+              tender_id: tenderId,
+              condition_number: `${conditionNumber}`,
+              condition_text: conditionText,
+              condition_type: 'GATE',
+              is_mandatory: true,
+              requirement_type: requirementType,
+              status: 'UNKNOWN',
+            });
+            conditionNumber++;
+          }
+        }
+      }
+
+      console.log(`Local extraction found ${extractedConditions.length} conditions`);
+
+      // Save conditions to database
+      const savedConditions: GateCondition[] = [];
+      for (const condition of extractedConditions.slice(0, 30)) { // Limit to 30 conditions
+        try {
+          const saved = await api.gates.create(condition);
+          savedConditions.push(saved);
+        } catch (err) {
+          console.error('Error saving condition:', err);
+        }
+      }
+
+      console.log(`Saved ${savedConditions.length} conditions to database`);
+
+      // Try webhook enhancement (optional, with short timeout)
+      try {
+        console.log('Attempting AI enhancement for gates (20s timeout)...');
+        const aiResult = await callWebhook<{ success: boolean; conditions?: Array<{ condition_text: string; status?: string }> }>(
+          'tdx-extract-gates',
+          { tender_id: tenderId, tender_text: tenderText.substring(0, 15000) },
+          20000 // 20 second timeout
+        );
+
+        if (aiResult?.success && aiResult.conditions?.length) {
+          console.log(`AI found ${aiResult.conditions.length} additional conditions`);
+          // Add any new conditions not already found
+          for (const aiCond of aiResult.conditions) {
+            const exists = savedConditions.some(c =>
+              c.condition_text.substring(0, 40) === aiCond.condition_text.substring(0, 40)
+            );
+            if (!exists && aiCond.condition_text.length > 15) {
+              try {
+                const saved = await api.gates.create({
+                  tender_id: tenderId,
+                  condition_number: `AI-${savedConditions.length + 1}`,
+                  condition_text: aiCond.condition_text,
+                  condition_type: 'GATE',
+                  is_mandatory: true,
+                  requirement_type: 'OTHER',
+                  status: aiCond.status || 'UNKNOWN',
+                });
+                savedConditions.push(saved);
+              } catch (err) {
+                console.error('Error saving AI condition:', err);
+              }
+            }
+          }
+        }
+      } catch (aiError) {
+        console.log('AI enhancement skipped (timeout or error):', aiError);
+      }
+
+      return {
+        success: savedConditions.length > 0,
+        conditions: savedConditions,
+      };
+    },
+
+    matchGates: async (tenderId: string, orgId: string): Promise<{
+      success: boolean;
+      tender_id: string;
+      org_id: string;
+      conditions: Array<{
+        condition_number: string;
+        condition_text: string;
+        status: string;
+        evidence: string;
+        gap_description?: string;
+        closure_options?: string[];
+      }>;
+      summary: {
+        total: number;
+        meets: number;
+        partial: number;
+        not_meets: number;
+        eligibility: string;
+      };
+    }> => {
+      console.log(`matchGates called for tender ${tenderId}, org ${orgId}`);
+
+      // Get gate conditions
+      const gates = await api.getGateConditions(tenderId);
+      if (!gates || gates.length === 0) {
+        return {
+          success: false,
+          tender_id: tenderId,
+          org_id: orgId,
+          conditions: [],
+          summary: { total: 0, meets: 0, partial: 0, not_meets: 0, eligibility: 'UNKNOWN' },
         };
-      }>('tdx-gate-work', { tender_id: tenderId, org_id: orgId }),
+      }
 
-    // Clarification Questions
-    getClarifications: (tenderId: string, orgId: string) =>
-      callWebhook<{
-        success: boolean;
-        tender_id: string;
-        questions: Array<{
-          question: string;
-          rationale: string;
-          priority: string;
-          category: string;
-        }>;
-      }>('tdx-clarify-simple', { tender_id: tenderId, org_id: orgId }),
+      // Get organization profile
+      const [projects, financials, certifications] = await Promise.all([
+        api.company.getProjects(orgId).catch(() => [] as CompanyProject[]),
+        api.company.getFinancials(orgId).catch(() => [] as CompanyFinancial[]),
+        api.company.getCertifications(orgId).catch(() => [] as CompanyCertification[]),
+      ]);
 
-    getStrategicQuestions: (tenderId: string, orgId: string) =>
-      callWebhook<{
-        success: boolean;
-        tender_id: string;
-        total_questions: number;
-        safe_questions: Array<{
-          question: string;
-          rationale: string;
-        }>;
-        strategic_questions: Array<{
-          question: string;
-          rationale: string;
-          target_competitor?: string;
-        }>;
-      }>('tdx-strategic-v3', { tender_id: tenderId, org_id: orgId }),
+      console.log(`Profile data: ${projects.length} projects, ${financials.length} financials, ${certifications.length} certs`);
 
-    // Required Documents
-    getRequiredDocs: (tenderId: string, orgId: string) =>
-      callWebhook<{
-        success: boolean;
-        tender_id: string;
-        documents: Array<{
-          document_name: string;
-          description: string;
-          source_condition: string;
-          status: string;
-          deadline?: string;
-        }>;
-      }>('tdx-required-docs', { tender_id: tenderId, org_id: orgId }),
+      // Match each gate condition
+      const matchedConditions: Array<{
+        condition_number: string;
+        condition_text: string;
+        status: string;
+        evidence: string;
+        gap_description?: string;
+        closure_options?: string[];
+      }> = [];
+
+      for (const gate of gates) {
+        let status = 'UNKNOWN';
+        let evidence = '';
+        let gapDescription = '';
+        const closureOptions: string[] = [];
+
+        const conditionText = gate.condition_text.toLowerCase();
+        const requirementType = gate.requirement_type || 'OTHER';
+
+        // Match based on requirement type
+        if (requirementType === 'EXPERIENCE' || /ניסיון|פרויקט|ביצוע/.test(conditionText)) {
+          // Check projects for experience
+          const projectMatch = conditionText.match(/(\d+)\s*פרויקט/);
+          const requiredProjects = projectMatch ? parseInt(projectMatch[1]) : 1;
+
+          const relevantProjects = projects.filter((p: CompanyProject) => {
+            // Check if project is in relevant category/type
+            const projectText = `${p.project_name} ${p.project_type || ''} ${p.category || ''}`.toLowerCase();
+            const conditionWords = conditionText.split(/\s+/).filter((w: string) => w.length > 3);
+            return conditionWords.some((word: string) => projectText.includes(word));
+          });
+
+          if (relevantProjects.length >= requiredProjects) {
+            status = 'MEETS';
+            evidence = `נמצאו ${relevantProjects.length} פרויקטים רלוונטיים: ${relevantProjects.slice(0, 3).map((p: CompanyProject) => p.project_name).join(', ')}`;
+          } else if (relevantProjects.length > 0) {
+            status = 'PARTIALLY_MEETS';
+            evidence = `נמצאו ${relevantProjects.length} פרויקטים רלוונטיים מתוך ${requiredProjects} נדרשים`;
+            gapDescription = `חסרים ${requiredProjects - relevantProjects.length} פרויקטים`;
+            closureOptions.push('שיתוף פעולה עם קבלן משנה בעל ניסיון');
+          } else {
+            status = 'DOES_NOT_MEET';
+            gapDescription = `לא נמצאו פרויקטים רלוונטיים. נדרשים ${requiredProjects} פרויקטים`;
+            closureOptions.push('שיתוף פעולה עם קבלן משנה בעל ניסיון', 'בקשת הקלה בתנאי');
+          }
+        } else if (requirementType === 'FINANCIAL' || /מחזור|הכנסות|כספי/.test(conditionText)) {
+          // Check financials
+          const amountMatch = conditionText.match(/([\d,]+)\s*(?:מיליון|₪|ש"ח)/);
+          const requiredAmount = amountMatch ? parseFloat(amountMatch[1].replace(/,/g, '')) * (conditionText.includes('מיליון') ? 1000000 : 1) : 0;
+
+          const latestFinancial = financials.length > 0 ? financials[0] : null;
+          if (latestFinancial && latestFinancial.annual_revenue) {
+            if (latestFinancial.annual_revenue >= requiredAmount) {
+              status = 'MEETS';
+              evidence = `מחזור שנתי: ₪${(latestFinancial.annual_revenue / 1000000).toFixed(1)} מיליון (${latestFinancial.fiscal_year})`;
+            } else {
+              status = 'DOES_NOT_MEET';
+              gapDescription = `מחזור נדרש: ₪${(requiredAmount / 1000000).toFixed(1)} מיליון, קיים: ₪${(latestFinancial.annual_revenue / 1000000).toFixed(1)} מיליון`;
+              closureOptions.push('הגשה עם שותף', 'קבלת מכתב כוונות מבנק');
+            }
+          } else {
+            status = 'UNKNOWN';
+            gapDescription = 'לא נמצאו נתונים פיננסיים בפרופיל';
+            closureOptions.push('עדכון נתונים פיננסיים בפרופיל');
+          }
+        } else if (requirementType === 'CERTIFICATION' || /תעודה|רישיון|הסמכה|ISO/.test(conditionText)) {
+          // Check certifications
+          const isoMatch = conditionText.match(/ISO\s*(\d+)/i);
+          const certKeywords = ['קבלן', 'רישום', 'סיווג', 'רישיון'];
+
+          const matchingCerts = certifications.filter((c: CompanyCertification) => {
+            const certText = `${c.cert_type} ${c.cert_name}`.toLowerCase();
+            if (isoMatch) {
+              return certText.includes(isoMatch[1]) || certText.includes('iso');
+            }
+            return certKeywords.some(kw => conditionText.includes(kw) && certText.includes(kw));
+          });
+
+          if (matchingCerts.length > 0) {
+            status = 'MEETS';
+            evidence = `נמצאה הסמכה: ${matchingCerts[0].cert_name} (${matchingCerts[0].cert_type})`;
+          } else {
+            status = 'UNKNOWN';
+            gapDescription = 'לא נמצאה הסמכה מתאימה בפרופיל';
+            closureOptions.push('בדיקה האם קיימת הסמכה רלוונטית', 'קבלת הסמכה חדשה');
+          }
+        } else if (requirementType === 'PERSONNEL' || /מנהל|צוות|עובד|מהנדס/.test(conditionText)) {
+          // Personnel - usually needs manual verification
+          status = 'UNKNOWN';
+          gapDescription = 'יש לוודא ידנית זמינות כ"א מתאים';
+          closureOptions.push('בדיקת זמינות צוות', 'גיוס יועצים חיצוניים');
+        }
+
+        matchedConditions.push({
+          condition_number: gate.condition_number,
+          condition_text: gate.condition_text,
+          status,
+          evidence,
+          gap_description: gapDescription || undefined,
+          closure_options: closureOptions.length > 0 ? closureOptions : undefined,
+        });
+
+        // Update gate in database
+        try {
+          await api.gates.update(gate.id, {
+            status,
+            evidence: evidence || undefined,
+            gap_description: gapDescription || undefined,
+            closure_options: closureOptions.length > 0 ? closureOptions : undefined,
+          });
+        } catch (err) {
+          console.error('Error updating gate:', err);
+        }
+      }
+
+      // Calculate summary
+      const summary = {
+        total: matchedConditions.length,
+        meets: matchedConditions.filter(c => c.status === 'MEETS').length,
+        partial: matchedConditions.filter(c => c.status === 'PARTIALLY_MEETS').length,
+        not_meets: matchedConditions.filter(c => c.status === 'DOES_NOT_MEET').length,
+        eligibility: 'UNKNOWN' as string,
+      };
+
+      // Determine eligibility
+      const mandatoryFails = matchedConditions.filter((c, i) =>
+        gates[i].is_mandatory && c.status === 'DOES_NOT_MEET'
+      ).length;
+
+      if (mandatoryFails > 0) {
+        summary.eligibility = 'NOT_ELIGIBLE';
+      } else if (summary.meets === summary.total) {
+        summary.eligibility = 'ELIGIBLE';
+      } else if (summary.not_meets === 0) {
+        summary.eligibility = 'CONDITIONAL';
+      } else {
+        summary.eligibility = 'REVIEW_NEEDED';
+      }
+
+      console.log(`Gate matching complete: ${summary.meets}/${summary.total} meets, eligibility: ${summary.eligibility}`);
+
+      // Try AI enhancement with short timeout (optional)
+      try {
+        const aiResult = await callWebhook<{
+          success: boolean;
+          conditions?: Array<{ condition_number: string; status?: string; evidence?: string }>;
+        }>('tdx-gate-work', { tender_id: tenderId, org_id: orgId }, 15000);
+
+        if (aiResult?.success && aiResult.conditions) {
+          console.log('AI gate matching enhancement received');
+          // Could merge AI insights here if needed
+        }
+      } catch (aiError) {
+        console.log('AI enhancement skipped for gate matching');
+      }
+
+      return {
+        success: true,
+        tender_id: tenderId,
+        org_id: orgId,
+        conditions: matchedConditions,
+        summary,
+      };
+    },
+
+    // Clarification Questions - Local generation with optional AI
+    getClarifications: async (tenderId: string, _orgId: string): Promise<{
+      success: boolean;
+      tender_id: string;
+      questions: Array<{
+        question: string;
+        rationale: string;
+        priority: string;
+        category: string;
+      }>;
+    }> => {
+      console.log(`getClarifications for tender ${tenderId}`);
+
+      // Get gate conditions to generate questions about
+      const gates = await api.getGateConditions(tenderId);
+      const questions: Array<{ question: string; rationale: string; priority: string; category: string }> = [];
+
+      // Generate clarification questions based on gate conditions
+      for (const gate of gates) {
+        // Questions for unknown/partial status
+        if (gate.status === 'UNKNOWN' || gate.status === 'PARTIALLY_MEETS') {
+          // Experience-related clarifications
+          if (gate.requirement_type === 'EXPERIENCE' || /ניסיון|פרויקט/.test(gate.condition_text)) {
+            questions.push({
+              question: `האם ניסיון בפרויקטים דומים ${gate.condition_text.includes('ממשלתי') ? 'לגופים ציבוריים אחרים' : 'בסקטור הפרטי'} יתקבל כתחליף?`,
+              rationale: `תנאי סף ${gate.condition_number} דורש ניסיון ספציפי`,
+              priority: gate.is_mandatory ? 'P1' : 'P2',
+              category: 'ניסיון',
+            });
+          }
+          // Financial clarifications
+          if (gate.requirement_type === 'FINANCIAL' || /מחזור|כספי/.test(gate.condition_text)) {
+            questions.push({
+              question: 'האם ניתן להציג דוחות כספיים מבוקרים עבור תקופה שונה מזו המוגדרת?',
+              rationale: `תנאי סף ${gate.condition_number} כולל דרישה פיננסית`,
+              priority: 'P1',
+              category: 'פיננסי',
+            });
+          }
+          // Certification clarifications
+          if (gate.requirement_type === 'CERTIFICATION' || /תעודה|הסמכה|ISO/.test(gate.condition_text)) {
+            questions.push({
+              question: 'האם ניתן להציג אישור על תהליך הסמכה בהתהוות במקום תעודה סופית?',
+              rationale: `תנאי סף ${gate.condition_number} דורש הסמכה ספציפית`,
+              priority: 'P2',
+              category: 'הסמכות',
+            });
+          }
+        }
+
+        // Questions for conditions that don't meet
+        if (gate.status === 'DOES_NOT_MEET' && gate.is_mandatory) {
+          questions.push({
+            question: `האם ניתן לעמוד בתנאי "${gate.condition_text.substring(0, 50)}..." באמצעות שותפות או קבלן משנה?`,
+            rationale: 'בחינת אפשרויות חלופיות לעמידה בתנאי סף',
+            priority: 'P1',
+            category: 'תנאי סף',
+          });
+        }
+      }
+
+      // Add general clarification questions
+      const generalQuestions = [
+        { question: 'מהו לוח הזמנים המשוער לביצוע הפרויקט?', rationale: 'בירור היקף ומשך הפרויקט', priority: 'P2', category: 'כללי' },
+        { question: 'האם צפויים שינויים במפרט הטכני לפני מועד ההגשה?', rationale: 'תכנון משאבים לעדכון ההצעה', priority: 'P3', category: 'כללי' },
+        { question: 'מהו היקף הערבות הבנקאית הנדרשת?', rationale: 'הערכת עלויות מימון', priority: 'P2', category: 'פיננסי' },
+      ];
+
+      questions.push(...generalQuestions);
+
+      // Try AI enhancement
+      try {
+        const aiResult = await callWebhook<{ success: boolean; questions?: Array<{ question: string; rationale: string; priority: string; category: string }> }>(
+          'tdx-clarify-simple', { tender_id: tenderId, org_id: _orgId }, 15000
+        );
+        if (aiResult?.success && aiResult.questions?.length) {
+          // Add unique AI questions
+          for (const q of aiResult.questions) {
+            if (!questions.some(existing => existing.question.includes(q.question.substring(0, 30)))) {
+              questions.push(q);
+            }
+          }
+        }
+      } catch { console.log('AI clarifications skipped'); }
+
+      return { success: true, tender_id: tenderId, questions: questions.slice(0, 15) };
+    },
+
+    // Strategic Questions - Local generation with optional AI
+    getStrategicQuestions: async (tenderId: string, _orgId: string): Promise<{
+      success: boolean;
+      tender_id: string;
+      total_questions: number;
+      safe_questions: Array<{ question: string; rationale: string }>;
+      strategic_questions: Array<{ question: string; rationale: string; target_competitor?: string }>;
+    }> => {
+      console.log(`getStrategicQuestions for tender ${tenderId}`);
+
+      const gates = await api.getGateConditions(tenderId);
+      const safeQuestions: Array<{ question: string; rationale: string }> = [];
+      const strategicQuestions: Array<{ question: string; rationale: string; target_competitor?: string }> = [];
+
+      // Generate safe questions based on tender requirements
+      const experienceGates = gates.filter(g => g.requirement_type === 'EXPERIENCE' || /ניסיון|פרויקט/.test(g.condition_text));
+      if (experienceGates.length > 0) {
+        safeQuestions.push({
+          question: 'האם ניתן להציג ניסיון משותף עם קבלן משנה כחלק מהניסיון הנדרש?',
+          rationale: 'מאפשר הרחבת אפשרויות הגשה עבור חברות עם ניסיון חלקי',
+        });
+        safeQuestions.push({
+          question: 'מהו סף הערך המינימלי של פרויקט בודד הנחשב כניסיון רלוונטי?',
+          rationale: 'הגדרה ברורה תאפשר הכללת פרויקטים נוספים',
+        });
+      }
+
+      const financialGates = gates.filter(g => g.requirement_type === 'FINANCIAL' || /מחזור|כספי/.test(g.condition_text));
+      if (financialGates.length > 0) {
+        strategicQuestions.push({
+          question: 'האם ניתן להציג ערבות בנקאית במקום הון עצמי להוכחת איתנות פיננסית?',
+          rationale: 'מאפשר לחברות עם תזרים חזק אך הון עצמי נמוך להתמודד',
+        });
+      }
+
+      // Add general strategic questions
+      strategicQuestions.push({
+        question: 'האם יש משקל לחדשנות טכנולוגית בניקוד האיכות?',
+        rationale: 'יתרון לחברות עם פתרונות מתקדמים',
+      });
+      safeQuestions.push({
+        question: 'האם ניתן להגיש הצעה לחלק מהפרויקט בלבד?',
+        rationale: 'מאפשר התמודדות ממוקדת',
+      });
+      safeQuestions.push({
+        question: 'האם יתקיים סיור קבלנים נוסף?',
+        rationale: 'הזדמנות להכיר את האתר והדרישות',
+      });
+
+      // Try AI enhancement
+      try {
+        const aiResult = await callWebhook<{
+          success: boolean;
+          safe_questions?: Array<{ question: string; rationale: string }>;
+          strategic_questions?: Array<{ question: string; rationale: string }>;
+        }>('tdx-strategic-v3', { tender_id: tenderId, org_id: _orgId }, 15000);
+
+        if (aiResult?.success) {
+          if (aiResult.safe_questions) safeQuestions.push(...aiResult.safe_questions);
+          if (aiResult.strategic_questions) strategicQuestions.push(...aiResult.strategic_questions);
+        }
+      } catch { console.log('AI strategic questions skipped'); }
+
+      return {
+        success: true,
+        tender_id: tenderId,
+        total_questions: safeQuestions.length + strategicQuestions.length,
+        safe_questions: safeQuestions.slice(0, 8),
+        strategic_questions: strategicQuestions.slice(0, 8),
+      };
+    },
+
+    // Required Documents - Local generation with optional AI
+    getRequiredDocs: async (tenderId: string, _orgId: string): Promise<{
+      success: boolean;
+      tender_id: string;
+      required_documents: Array<{
+        document_name: string;
+        description: string;
+        source_condition: string;
+        category: string;
+        prep_time: string;
+        source: string;
+      }>;
+    }> => {
+      console.log(`getRequiredDocs for tender ${tenderId}`);
+
+      const gates = await api.getGateConditions(tenderId);
+      const documents: Array<{ document_name: string; description: string; source_condition: string; category: string; prep_time: string; source: string }> = [];
+
+      // Generate document list based on gate conditions
+      for (const gate of gates) {
+        const text = gate.condition_text;
+        const condRef = `תנאי סף ${gate.condition_number}`;
+
+        if (gate.requirement_type === 'EXPERIENCE' || /ניסיון|פרויקט/.test(text)) {
+          documents.push({
+            document_name: 'רשימת פרויקטים',
+            description: 'טבלת פרויקטים כולל: שם הלקוח, היקף, תאריכים, תפקיד',
+            source_condition: condRef,
+            category: 'ניסיון',
+            prep_time: '2-3 ימים',
+            source: 'פנימי',
+          });
+          documents.push({
+            document_name: 'אישורי ביצוע / מכתבי המלצה',
+            description: 'אישורים חתומים מלקוחות על ביצוע מוצלח',
+            source_condition: condRef,
+            category: 'ניסיון',
+            prep_time: '1-2 שבועות',
+            source: 'לקוחות',
+          });
+        }
+
+        if (gate.requirement_type === 'FINANCIAL' || /מחזור|כספי|הון/.test(text)) {
+          documents.push({
+            document_name: 'דוחות כספיים מבוקרים',
+            description: 'דוחות שנתיים מבוקרים ל-3 השנים האחרונות',
+            source_condition: condRef,
+            category: 'פיננסי',
+            prep_time: 'מיידי (אם קיימים)',
+            source: 'רו"ח',
+          });
+        }
+
+        if (gate.requirement_type === 'CERTIFICATION' || /תעודה|רישיון|הסמכה|ISO/.test(text)) {
+          documents.push({
+            document_name: 'תעודות והסמכות',
+            description: `העתק תעודה/רישיון בתוקף בהתאם לדרישה: ${text.substring(0, 50)}`,
+            source_condition: condRef,
+            category: 'הסמכות',
+            prep_time: 'מיידי',
+            source: 'גוף מסמיך',
+          });
+        }
+
+        if (/ערבות/.test(text)) {
+          documents.push({
+            document_name: 'ערבות בנקאית',
+            description: 'ערבות בנקאית בהתאם לנוסח המפורט במכרז',
+            source_condition: condRef,
+            category: 'פיננסי',
+            prep_time: '3-5 ימי עסקים',
+            source: 'בנק',
+          });
+        }
+      }
+
+      // Add standard documents
+      const standardDocs = [
+        { document_name: 'תעודת התאגדות', description: 'העתק נאמן למקור', source_condition: 'סטנדרטי', category: 'חברה', prep_time: 'מיידי', source: 'רשם החברות' },
+        { document_name: 'אישור ניהול ספרים', description: 'אישור תקף ממס הכנסה', source_condition: 'סטנדרטי', category: 'חברה', prep_time: 'מיידי', source: 'מס הכנסה' },
+        { document_name: 'אישור ניכוי מס במקור', description: 'אישור תקף ממס הכנסה', source_condition: 'סטנדרטי', category: 'חברה', prep_time: 'מיידי', source: 'מס הכנסה' },
+        { document_name: 'טופס הצעה חתום', description: 'טופס ההצעה המלא על כל נספחיו', source_condition: 'סטנדרטי', category: 'הצעה', prep_time: 'יום הגשה', source: 'פנימי' },
+      ];
+
+      // Add standard docs that aren't already included
+      for (const doc of standardDocs) {
+        if (!documents.some(d => d.document_name === doc.document_name)) {
+          documents.push(doc);
+        }
+      }
+
+      // Try AI enhancement
+      try {
+        const aiResult = await callWebhook<{ success: boolean; documents?: Array<{ document_name: string; description: string }> }>(
+          'tdx-required-docs', { tender_id: tenderId, org_id: _orgId }, 15000
+        );
+        if (aiResult?.success && aiResult.documents) {
+          console.log('AI documents enhancement received');
+        }
+      } catch { console.log('AI documents skipped'); }
+
+      return {
+        success: true,
+        tender_id: tenderId,
+        required_documents: documents,
+      };
+    },
 
     // BOQ & SOW Analysis
     analyzeBOQ: (tenderId: string, boqText: string) =>
@@ -646,150 +1222,117 @@ export const api = {
         insights: string[];
       }>('tdx-historical-bids', { tender_id: tenderId, org_id: orgId }),
 
-    // Module 1.1 - Document Analysis (uses SOW analysis for document parsing)
+    // Module 1.1 - Document Analysis (uses local regex parsing with optional AI enhancement)
     analyzeDocument: async (documentText: string, fileName: string) => {
-      // Use SOW analysis workflow which is known to work
-      const TEST_TENDER_ID = 'e1e1e1e1-0000-0000-0000-000000000001';
-
       console.log(`analyzeDocument called with ${documentText.length} chars, file: ${fileName}`);
 
-      try {
-        console.log('Calling tdx-sow-analysis webhook...');
-        const result = await callWebhook<{
-          success: boolean;
-          tender_id: string;
-          scope?: {
-            main_deliverables?: string[];
-            work_phases?: string[];
-            exclusions?: string[];
-          };
-          risks?: Array<{
-            description: string;
-            severity: string;
-            mitigation: string;
-          }>;
-          recommendations?: string[];
-        }>('tdx-sow-analysis', { tender_id: TEST_TENDER_ID, sow_text: documentText }, 180000);
-
-        console.log('SOW analysis result:', result);
-
-        // Parse basic metadata from the document text with improved patterns
-        const parseField = (patterns: RegExp[]): string => {
-          for (const pattern of patterns) {
-            const match = documentText.match(pattern);
-            if (match && match[1]) {
-              const value = match[1].trim();
-              if (value.length > 0 && value.length < 200) return value;
-            }
+      // Helper function to parse fields using regex patterns
+      const parseField = (patterns: RegExp[]): string => {
+        for (const pattern of patterns) {
+          const match = documentText.match(pattern);
+          if (match && match[1]) {
+            const value = match[1].trim();
+            if (value.length > 0 && value.length < 200) return value;
           }
-          return 'לא זוהה';
-        };
-
-        // Improved patterns for Hebrew tender documents
-        const metadata = {
-          tender_number: parseField([
-            /מכרז\s*(?:מס['׳]?|מספר|פומבי)?\s*[:\-]?\s*([\d\/\-\.]+)/i,
-            /מספר\s*(?:ה)?מכרז\s*[:\-]?\s*([\d\/\-\.]+)/i,
-            /מכרז\s+(\d+[\d\/\-\.]*)/i,
-          ]),
-          tender_name: parseField([
-            /שם\s*(?:ה)?מכרז\s*[:\-]?\s*([^\n]{5,100})/i,
-            /מכרז\s+(?:ל|ה)?([^\n]{10,100})/i,
-            /נושא\s*(?:ה)?מכרז\s*[:\-]?\s*([^\n]{5,100})/i,
-          ]) || fileName.replace('.pdf', ''),
-          issuing_body: parseField([
-            /(?:גוף|גורם)\s*מזמין\s*[:\-]?\s*([^\n]{3,80})/i,
-            /המזמין\s*[:\-]?\s*([^\n]{3,80})/i,
-            /עיריית?\s+([^\n]{3,50})/i,
-            /משרד\s+([^\n]{3,50})/i,
-            /חברת?\s+([^\n]{3,50})/i,
-          ]),
-          publish_date: parseField([
-            /תאריך\s*פרסום\s*[:\-]?\s*([\d]{1,2}[\.\/\-][\d]{1,2}[\.\/\-][\d]{2,4})/i,
-            /פורסם\s*(?:ב|ביום)?\s*[:\-]?\s*([\d]{1,2}[\.\/\-][\d]{1,2}[\.\/\-][\d]{2,4})/i,
-          ]),
-          submission_deadline: parseField([
-            /מועד\s*(?:אחרון\s*)?(?:ל)?הגשה?\s*[:\-]?\s*([\d]{1,2}[\.\/\-][\d]{1,2}[\.\/\-][\d]{2,4}(?:\s*(?:בשעה|שעה)?\s*[\d:]+)?)/i,
-            /להגיש\s*עד\s*[:\-]?\s*([\d]{1,2}[\.\/\-][\d]{1,2}[\.\/\-][\d]{2,4})/i,
-            /תאריך\s*הגשה\s*[:\-]?\s*([\d]{1,2}[\.\/\-][\d]{1,2}[\.\/\-][\d]{2,4})/i,
-          ]),
-          clarification_deadline: parseField([
-            /מועד\s*(?:אחרון\s*)?(?:ל)?(?:שאלות|הבהרות)\s*[:\-]?\s*([\d]{1,2}[\.\/\-][\d]{1,2}[\.\/\-][\d]{2,4})/i,
-            /שאלות\s*(?:הבהרה)?\s*עד\s*[:\-]?\s*([\d]{1,2}[\.\/\-][\d]{1,2}[\.\/\-][\d]{2,4})/i,
-          ]),
-          guarantee_amount: parseField([
-            /ערבות\s*(?:הצעה|בנקאית)?\s*[:\-]?\s*([\d,\.]+\s*(?:ש"ח|₪|שקל|אלף|מיליון)?)/i,
-            /בטוחה\s*[:\-]?\s*([\d,\.]+\s*(?:ש"ח|₪)?)/i,
-            /סכום\s*(?:ה)?ערבות\s*[:\-]?\s*([\d,\.]+)/i,
-          ]),
-          contract_period: parseField([
-            /תקופת?\s*(?:ה)?התקשרות\s*[:\-]?\s*([^\n]{3,80})/i,
-            /תקופה\s*[:\-]?\s*(\d+\s*(?:חודש|שנ)[^\n]{0,30})/i,
-            /למשך\s*(\d+\s*(?:חודש|שנ)[^\n]{0,20})/i,
-          ]),
-          category: result.scope?.main_deliverables?.[0] || parseField([
-            /תחום\s*[:\-]?\s*([^\n]{3,50})/i,
-            /סיווג\s*[:\-]?\s*([^\n]{3,50})/i,
-          ]),
-          price_weight: parseField([
-            /משקל\s*(?:ה)?מחיר\s*[:\-]?\s*(\d+%?)/i,
-            /מחיר\s*[:\-]?\s*(\d+)%/i,
-            /(\d+)%\s*מחיר/i,
-          ]),
-          quality_weight: parseField([
-            /משקל\s*(?:ה)?איכות\s*[:\-]?\s*(\d+%?)/i,
-            /איכות\s*[:\-]?\s*(\d+)%/i,
-            /(\d+)%\s*איכות/i,
-          ]),
-        };
-
-        // Extract definitions
-        const definitions: Array<{term: string; definition: string}> = [];
-        const defPattern = /["״]([^"״]+)["״]\s*[-–:]\s*([^\n]+)/g;
-        let match;
-        while ((match = defPattern.exec(documentText)) !== null) {
-          definitions.push({ term: match[1], definition: match[2] });
         }
+        return 'לא זוהה';
+      };
 
-        // Build summary from SOW analysis
-        const summaryParts = [];
-        if (result.scope?.main_deliverables?.length) {
-          summaryParts.push(`תחומים עיקריים: ${result.scope.main_deliverables.slice(0, 3).join(', ')}`);
-        }
-        if (result.risks?.length) {
-          const highRisks = result.risks.filter(r => r.severity === 'HIGH').length;
-          if (highRisks > 0) summaryParts.push(`זוהו ${highRisks} סיכונים גבוהים`);
-        }
+      // Parse metadata locally first (fast, always works)
+      const localMetadata = {
+        tender_number: parseField([
+          /מכרז\s*(?:מס['׳]?|מספר|פומבי)?\s*[:\-]?\s*([\d\/\-\.]+)/i,
+          /מספר\s*(?:ה)?מכרז\s*[:\-]?\s*([\d\/\-\.]+)/i,
+          /מכרז\s+(\d+[\d\/\-\.]*)/i,
+        ]),
+        tender_name: parseField([
+          /שם\s*(?:ה)?מכרז\s*[:\-]?\s*([^\n]{5,100})/i,
+          /מכרז\s+(?:ל|ה)?([^\n]{10,100})/i,
+          /נושא\s*(?:ה)?מכרז\s*[:\-]?\s*([^\n]{5,100})/i,
+        ]) || fileName.replace('.pdf', ''),
+        issuing_body: parseField([
+          /(?:גוף|גורם)\s*מזמין\s*[:\-]?\s*([^\n]{3,80})/i,
+          /המזמין\s*[:\-]?\s*([^\n]{3,80})/i,
+          /עיריית?\s+([^\n]{3,50})/i,
+          /משרד\s+([^\n]{3,50})/i,
+          /חברת?\s+([^\n]{3,50})/i,
+        ]),
+        publish_date: parseField([
+          /תאריך\s*פרסום\s*[:\-]?\s*([\d]{1,2}[\.\/\-][\d]{1,2}[\.\/\-][\d]{2,4})/i,
+          /פורסם\s*(?:ב|ביום)?\s*[:\-]?\s*([\d]{1,2}[\.\/\-][\d]{1,2}[\.\/\-][\d]{2,4})/i,
+        ]),
+        submission_deadline: parseField([
+          /מועד\s*(?:אחרון\s*)?(?:ל)?הגשה?\s*[:\-]?\s*([\d]{1,2}[\.\/\-][\d]{1,2}[\.\/\-][\d]{2,4}(?:\s*(?:בשעה|שעה)?\s*[\d:]+)?)/i,
+          /להגיש\s*עד\s*[:\-]?\s*([\d]{1,2}[\.\/\-][\d]{1,2}[\.\/\-][\d]{2,4})/i,
+          /תאריך\s*הגשה\s*[:\-]?\s*([\d]{1,2}[\.\/\-][\d]{1,2}[\.\/\-][\d]{2,4})/i,
+        ]),
+        clarification_deadline: parseField([
+          /מועד\s*(?:אחרון\s*)?(?:ל)?(?:שאלות|הבהרות)\s*[:\-]?\s*([\d]{1,2}[\.\/\-][\d]{1,2}[\.\/\-][\d]{2,4})/i,
+          /שאלות\s*(?:הבהרה)?\s*עד\s*[:\-]?\s*([\d]{1,2}[\.\/\-][\d]{1,2}[\.\/\-][\d]{2,4})/i,
+        ]),
+        guarantee_amount: parseField([
+          /ערבות\s*(?:הצעה|בנקאית)?\s*[:\-]?\s*([\d,\.]+\s*(?:ש"ח|₪|שקל|אלף|מיליון)?)/i,
+          /בטוחה\s*[:\-]?\s*([\d,\.]+\s*(?:ש"ח|₪)?)/i,
+          /סכום\s*(?:ה)?ערבות\s*[:\-]?\s*([\d,\.]+)/i,
+        ]),
+        contract_period: parseField([
+          /תקופת?\s*(?:ה)?התקשרות\s*[:\-]?\s*([^\n]{3,80})/i,
+          /תקופה\s*[:\-]?\s*(\d+\s*(?:חודש|שנ)[^\n]{0,30})/i,
+          /למשך\s*(\d+\s*(?:חודש|שנ)[^\n]{0,20})/i,
+        ]),
+        category: parseField([
+          /תחום\s*[:\-]?\s*([^\n]{3,50})/i,
+          /סיווג\s*[:\-]?\s*([^\n]{3,50})/i,
+        ]),
+        price_weight: parseField([
+          /משקל\s*(?:ה)?מחיר\s*[:\-]?\s*(\d+%?)/i,
+          /מחיר\s*[:\-]?\s*(\d+)%/i,
+          /(\d+)%\s*מחיר/i,
+        ]),
+        quality_weight: parseField([
+          /משקל\s*(?:ה)?איכות\s*[:\-]?\s*(\d+%?)/i,
+          /איכות\s*[:\-]?\s*(\d+)%/i,
+          /(\d+)%\s*איכות/i,
+        ]),
+      };
 
-        return {
-          success: true,
-          metadata,
-          definitions: definitions.slice(0, 10),
-          document_type: 'הזמנה להציע הצעות',
-          summary: summaryParts.join('. ') || 'המסמך עובד בהצלחה',
-        };
-      } catch (error) {
-        // Return basic parsed data even on error
-        return {
-          success: false,
-          metadata: {
-            tender_number: 'לא זוהה',
-            tender_name: fileName || 'לא זוהה',
-            issuing_body: 'לא זוהה',
-            publish_date: 'לא זוהה',
-            submission_deadline: 'לא זוהה',
-            clarification_deadline: 'לא זוהה',
-            guarantee_amount: 'לא זוהה',
-            contract_period: 'לא זוהה',
-            category: 'לא זוהה',
-            price_weight: 'לא זוהה',
-            quality_weight: 'לא זוהה',
-          },
-          definitions: [],
-          document_type: 'לא זוהה',
-          summary: error instanceof Error ? error.message : 'שגיאה בניתוח',
-        };
+      // Extract definitions locally
+      const definitions: Array<{term: string; definition: string}> = [];
+      const defPattern = /["״]([^"״]+)["״]\s*[-–:]\s*([^\n]+)/g;
+      let match;
+      while ((match = defPattern.exec(documentText)) !== null) {
+        definitions.push({ term: match[1], definition: match[2] });
       }
+
+      console.log('Local parsing complete:', localMetadata);
+
+      // Try to enhance with AI analysis (optional, with short timeout)
+      let aiResult = null;
+      try {
+        console.log('Attempting AI enhancement (15s timeout)...');
+        const TEST_TENDER_ID = 'e1e1e1e1-0000-0000-0000-000000000001';
+        aiResult = await callWebhook<{
+          success: boolean;
+          scope?: { main_deliverables?: string[] };
+        }>('tdx-sow-analysis', { tender_id: TEST_TENDER_ID, sow_text: documentText.substring(0, 10000) }, 15000);
+        console.log('AI enhancement result:', aiResult);
+      } catch (aiError) {
+        console.log('AI enhancement skipped (timeout or error):', aiError);
+        // Continue with local parsing only
+      }
+
+      // Merge AI results if available
+      if (aiResult?.scope?.main_deliverables?.[0]) {
+        localMetadata.category = aiResult.scope.main_deliverables[0];
+      }
+
+      return {
+        success: true,
+        metadata: localMetadata,
+        definitions: definitions.slice(0, 10),
+        document_type: 'הזמנה להציע הצעות',
+        summary: 'המסמך עובד בהצלחה',
+      };
     },
   },
 

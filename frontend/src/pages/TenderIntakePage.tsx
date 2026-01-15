@@ -19,7 +19,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { api } from '../api/tenderix';
-import { setCurrentTender, setTenderExtractedText, DEFAULT_ORG } from '../api/config';
+import { setCurrentTender, setTenderExtractedText, getDefaultOrgData, getCurrentOrgId } from '../api/config';
 import * as pdfjsLib from 'pdfjs-dist';
 // @ts-ignore - Vite handles this URL import specially
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -379,18 +379,22 @@ export function TenderIntakePage() {
     setError(null);
 
     try {
+      // Get session-specific org data
+      const orgData = getDefaultOrgData();
+      const orgId = getCurrentOrgId();
+
       // CRITICAL: Ensure organization exists before creating tender
-      console.log('Ensuring organization exists...');
-      await api.organizations.ensureExists(DEFAULT_ORG.id, {
-        name: DEFAULT_ORG.name,
-        company_number: DEFAULT_ORG.company_number,
-        settings: DEFAULT_ORG.settings,
+      console.log('Ensuring organization exists for session:', orgId);
+      await api.organizations.ensureExists(orgId, {
+        name: orgData.name,
+        company_number: orgData.company_number,
+        settings: orgData.settings,
       });
       console.log('Organization check complete');
 
       // Create tender in database
       // Note: issuing_body is required (NOT NULL) in the DB, so we use a default value
-      console.log('Creating tender...');
+      console.log('Creating tender for org:', orgId);
       const tender = await api.tenders.create({
         tender_name: metadata.tenderName !== 'לא זוהה' ? metadata.tenderName : documents[0]?.name || 'מכרז חדש',
         tender_number: metadata.tenderNumber !== 'לא זוהה' ? metadata.tenderNumber : undefined,
@@ -402,7 +406,7 @@ export function TenderIntakePage() {
         category: metadata.category !== 'לא זוהה' ? metadata.category : undefined,
         quality_weight: metadata.qualityWeight !== 'לא זוהה' ? parseFloat(metadata.qualityWeight) || undefined : undefined,
         price_weight: metadata.priceWeight !== 'לא זוהה' ? parseFloat(metadata.priceWeight) || undefined : undefined,
-        org_id: DEFAULT_ORG.id,
+        org_id: orgId,
         status: 'ACTIVE',
         current_step: 'INTAKE',
       });

@@ -18,13 +18,16 @@ export function Dashboard() {
   useEffect(() => {
     async function loadData() {
       try {
-        // Fetch all tenders from database
+        // Fetch only tenders belonging to this session's organization
         const tendersData = await api.tenders.list();
-        setTenders(tendersData);
+        console.log('Loaded tenders for this session:', tendersData.length);
+        setTenders(tendersData || []);
 
         // Find and select the current tender
         const currentId = getCurrentTenderId();
-        const current = tendersData.find(t => t.id === currentId) || tendersData[0];
+        const current = currentId && currentId.length > 0
+          ? tendersData.find(t => t.id === currentId) || tendersData[0]
+          : tendersData[0];
 
         if (current) {
           setSelectedTender(current);

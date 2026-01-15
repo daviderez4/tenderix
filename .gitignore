@@ -20,6 +20,10 @@ backup_*/
 !frontend/package-lock.json
 !frontend/tsconfig.json
 !frontend/tsconfig.node.json
+!mcp-servers/**/package.json
+
+# Allow mcp-servers JS files
+!mcp-servers/**/*.js
 .vercel
 
 # Claude temp files

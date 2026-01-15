@@ -8,28 +8,58 @@ export const API_CONFIG = {
   OCR_SPACE_API_KEY: 'K87574009788957',
 };
 
-// Default test IDs (used when no tender is selected)
+// Generate a UUID v4
+function generateUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+// Get or create session org ID - each browser session gets its own org
+export function getSessionOrgId(): string {
+  let orgId = localStorage.getItem('tenderix_session_org_id');
+  if (!orgId) {
+    orgId = generateUUID();
+    localStorage.setItem('tenderix_session_org_id', orgId);
+    console.log('Created new session org:', orgId);
+  }
+  return orgId;
+}
+
+// Default test IDs (only used for testing, not production)
 export const TEST_IDS = {
   TENDER_ID: 'e1e1e1e1-0000-0000-0000-000000000001',
-  ORG_ID: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  ORG_ID: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', // Legacy - don't use
 };
 
-// Default organization data (created automatically if doesn't exist)
+// Get default organization data for current session
+export function getDefaultOrgData() {
+  return {
+    id: getSessionOrgId(),
+    name: 'הארגון שלי',
+    company_number: '000000000',
+    settings: { default_currency: 'ILS', language: 'he' },
+  };
+}
+
+// Backward compatibility - DEFAULT_ORG now uses session org
 export const DEFAULT_ORG = {
-  id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-  name: 'ארגון ראשי',
+  get id() { return getSessionOrgId(); },
+  name: 'הארגון שלי',
   company_number: '000000000',
   settings: { default_currency: 'ILS', language: 'he' },
 };
 
-// Get current tender ID from localStorage or use default
+// Get current tender ID from localStorage or empty string
 export function getCurrentTenderId(): string {
-  return localStorage.getItem('currentTenderId') || TEST_IDS.TENDER_ID;
+  return localStorage.getItem('currentTenderId') || '';
 }
 
-// Get current org ID (for now always the test org)
+// Get current org ID - now uses session-based org
 export function getCurrentOrgId(): string {
-  return TEST_IDS.ORG_ID;
+  return getSessionOrgId();
 }
 
 // Set current tender
