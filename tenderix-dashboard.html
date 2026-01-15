@@ -1465,12 +1465,30 @@
             console.log('[Gates Deep Analysis] Advantages:', conditions.filter(c => !c.is_mandatory).length);
 
             // Save to database with error handling
+            // Only include columns that exist in the database schema
             let savedCount = 0;
             const errors = [];
 
             for (const condition of conditions) {
                 try {
-                    const { error } = await supabase.from('gate_conditions').insert(condition);
+                    // Map to only known database columns
+                    const dbRecord = {
+                        tender_id: condition.tender_id,
+                        condition_number: condition.condition_number,
+                        condition_text: condition.condition_text,
+                        condition_type: condition.condition_type,
+                        is_mandatory: condition.is_mandatory,
+                        requirement_type: condition.requirement_type,
+                        required_amount: condition.required_amount,
+                        required_count: condition.required_count,
+                        required_years: condition.required_years,
+                        entity_type: condition.entity_type,
+                        source_page: condition.source_page,
+                        source_section: condition.source_section,
+                        status: condition.status || 'PENDING'
+                    };
+
+                    const { error } = await supabase.from('gate_conditions').insert(dbRecord);
                     if (!error) {
                         savedCount++;
                     } else {
@@ -3789,7 +3807,7 @@
                     : 'TENDER_INVITATION';
                 console.log('[Upload] Detected document type:', detectedDocType);
 
-                // Create document record
+                // Create document record (without file_size - column doesn't exist in DB)
                 const { data: doc, error: docError } = await supabase
                     .from('tender_documents')
                     .insert({
@@ -3797,7 +3815,6 @@
                         file_name: selectedFile.name,
                         original_filename: selectedFile.name,
                         file_type: selectedFile.type || 'application/pdf',
-                        file_size: selectedFile.size,
                         storage_path: filePath,
                         file_url: fileUrl,
                         document_type: detectedDocType,

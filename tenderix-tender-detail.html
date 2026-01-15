@@ -703,162 +703,46 @@
         // ============================================
         async function loadSpecification() {
             const container = document.getElementById('specifications');
-            try {
-                // Try to load from tender's extracted data
-                const { data: tender } = await supabaseClient
-                    .from('tenders')
-                    .select('specification_analysis, work_scope')
-                    .eq('id', tenderId)
-                    .single();
+            // Specification analysis is not yet implemented in database
+            // Show placeholder UI - will be populated by n8n workflow
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📋</div>
+                    <p>טרם נותח מפרט טכני</p>
+                    <p style="color: #666; margin-top: 10px;">ניתוח מפרט יתבצע דרך workflow ייעודי</p>
+                    <button onclick="triggerSpecAnalysis()" style="margin-top: 15px; padding: 10px 20px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); border: none; border-radius: 8px; color: white; cursor: pointer;">
+                        🔍 נתח מפרט טכני
+                    </button>
+                </div>
+            `;
+        }
 
-                if (tender?.specification_analysis) {
-                    const spec = tender.specification_analysis;
-                    container.innerHTML = `
-                        <div style="margin-bottom: 20px;">
-                            <h4 style="color: #00d4ff; margin-bottom: 10px;">דרישות כלליות (${spec.general_requirements?.length || 0})</h4>
-                            ${(spec.general_requirements || []).map(r => `
-                                <div style="padding: 8px; background: rgba(255,255,255,0.02); border-radius: 6px; margin-bottom: 6px; border-right: 2px solid #3b82f6;">
-                                    ${r.text || r}
-                                </div>
-                            `).join('') || '<p style="color: #666;">לא נמצאו</p>'}
-                        </div>
-                        <div style="margin-bottom: 20px;">
-                            <h4 style="color: #00d4ff; margin-bottom: 10px;">תקנים (${spec.standards?.length || 0})</h4>
-                            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                                ${(spec.standards || []).map(s => `
-                                    <span style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem;">
-                                        ${s.standard || s}
-                                    </span>
-                                `).join('') || '<p style="color: #666;">לא נמצאו תקנים</p>'}
-                            </div>
-                        </div>
-                        <div>
-                            <h4 style="color: #00d4ff; margin-bottom: 10px;">דרישות SLA (${spec.sla_requirements?.length || 0})</h4>
-                            ${(spec.sla_requirements || []).map(sla => `
-                                <div style="padding: 8px; background: rgba(34, 197, 94, 0.1); border-radius: 6px; margin-bottom: 6px;">
-                                    📊 ${sla.text || sla}
-                                </div>
-                            `).join('') || '<p style="color: #666;">לא נמצאו דרישות SLA</p>'}
-                        </div>
-                    `;
-                } else {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-state-icon">📋</div>
-                            <p>טרם נותח מפרט טכני</p>
-                            <p style="color: #666; margin-top: 10px;">לחץ על "נתח מפרט" להתחיל</p>
-                        </div>
-                    `;
-                }
-            } catch (err) {
-                console.error('Error loading specification:', err);
-                container.innerHTML = '<p style="color: #888;">שגיאה בטעינת מפרט</p>';
-            }
+        async function triggerSpecAnalysis() {
+            alert('ניתוח מפרט טכני ייתמך בקרוב דרך n8n workflow');
         }
 
         async function loadDiscrepancies() {
             const container = document.getElementById('discrepancies');
-            try {
-                const { data: tender } = await supabaseClient
-                    .from('tenders')
-                    .select('discrepancies')
-                    .eq('id', tenderId)
-                    .single();
-
-                if (tender?.discrepancies) {
-                    const disc = tender.discrepancies;
-                    container.innerHTML = `
-                        ${disc.in_spec_not_boq?.length > 0 ? `
-                            <div style="margin-bottom: 20px;">
-                                <h4 style="color: #ef4444; margin-bottom: 10px;">⚠️ במפרט ולא ב-BOQ (סיכון גבוה!)</h4>
-                                ${disc.in_spec_not_boq.map(d => `
-                                    <div style="padding: 10px; background: rgba(239, 68, 68, 0.1); border-radius: 6px; margin-bottom: 8px; border-right: 3px solid #ef4444;">
-                                        <strong>${d.item}</strong>
-                                        <p style="font-size: 0.85rem; color: #f87171; margin-top: 4px;">${d.reason}</p>
-                                        <p style="font-size: 0.8rem; color: #fca5a5; margin-top: 4px;">💡 ${d.recommendation}</p>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        ` : ''}
-                        ${disc.in_boq_not_spec?.length > 0 ? `
-                            <div>
-                                <h4 style="color: #f59e0b; margin-bottom: 10px;">⚡ ב-BOQ ולא במפרט</h4>
-                                ${disc.in_boq_not_spec.map(d => `
-                                    <div style="padding: 10px; background: rgba(245, 158, 11, 0.1); border-radius: 6px; margin-bottom: 8px;">
-                                        <strong>${d.item}</strong>
-                                        <p style="font-size: 0.85rem; color: #fbbf24; margin-top: 4px;">${d.reason || ''}</p>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        ` : ''}
-                        ${(!disc.in_spec_not_boq?.length && !disc.in_boq_not_spec?.length) ? `
-                            <div style="text-align: center; padding: 20px; color: #22c55e;">
-                                ✅ לא נמצאו אי-התאמות משמעותיות
-                            </div>
-                        ` : ''}
-                    `;
-                } else {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-state-icon">⚠️</div>
-                            <p>טרם זוהו אי-התאמות</p>
-                        </div>
-                    `;
-                }
-            } catch (err) {
-                console.error('Error loading discrepancies:', err);
-            }
+            // Discrepancies analysis not yet implemented - show placeholder
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">⚠️</div>
+                    <p>טרם זוהו אי-התאמות</p>
+                    <p style="color: #666; margin-top: 10px;">זיהוי אי-התאמות בין מפרט ל-BOQ</p>
+                </div>
+            `;
         }
 
         async function loadPricingRisks() {
             const container = document.getElementById('pricingRisks');
-            try {
-                const { data: tender } = await supabaseClient
-                    .from('tenders')
-                    .select('pricing_risks')
-                    .eq('id', tenderId)
-                    .single();
-
-                if (tender?.pricing_risks) {
-                    const risks = tender.pricing_risks;
-                    container.innerHTML = `
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px;">
-                            <div style="background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 2rem; color: #ef4444;">${risks.risk_items?.filter(r => r.risk_level === 'HIGH').length || 0}</div>
-                                <div style="color: #888; font-size: 0.85rem;">סיכון גבוה</div>
-                            </div>
-                            <div style="background: rgba(245, 158, 11, 0.1); padding: 15px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 2rem; color: #f59e0b;">${risks.risk_items?.filter(r => r.risk_level === 'MEDIUM').length || 0}</div>
-                                <div style="color: #888; font-size: 0.85rem;">סיכון בינוני</div>
-                            </div>
-                            <div style="background: rgba(34, 197, 94, 0.1); padding: 15px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 2rem; color: #22c55e;">${risks.recommendations?.reserve_percentage || 0}%</div>
-                                <div style="color: #888; font-size: 0.85rem;">רזרבה מומלצת</div>
-                            </div>
-                        </div>
-                        ${risks.smart_pricing?.opportunities?.length > 0 ? `
-                            <div style="background: rgba(34, 197, 94, 0.1); padding: 15px; border-radius: 8px;">
-                                <h4 style="color: #22c55e; margin-bottom: 10px;">💡 הזדמנויות תמחור חכם</h4>
-                                ${risks.smart_pricing.opportunities.map(o => `
-                                    <div style="margin-bottom: 8px;">
-                                        <strong>${o.description}</strong>
-                                        <p style="font-size: 0.85rem; color: #86efac;">${o.recommendation}</p>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        ` : ''}
-                    `;
-                } else {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-state-icon">💰</div>
-                            <p>טרם נותחו סיכוני תמחור</p>
-                        </div>
-                    `;
-                }
-            } catch (err) {
-                console.error('Error loading pricing risks:', err);
-            }
+            // Pricing risks analysis not yet implemented - show placeholder
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">💰</div>
+                    <p>טרם נותחו סיכוני תמחור</p>
+                    <p style="color: #666; margin-top: 10px;">ניתוח סיכונים יתבצע לאחר העלאת BOQ</p>
+                </div>
+            `;
         }
 
         // ============================================
@@ -931,86 +815,29 @@
             const forecastContainer = document.getElementById('participationForecast');
             const strategicContainer = document.getElementById('strategicQuestions');
 
-            try {
-                const { data: tender } = await supabaseClient
-                    .from('tenders')
-                    .select('competitor_analysis, strategic_questions')
-                    .eq('id', tenderId)
-                    .single();
+            // Competitor analysis not yet implemented - show placeholder
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🎯</div>
+                    <p>טרם בוצע ניתוח מתחרים</p>
+                    <p style="color: #666; margin-top: 10px;">ניתוח מתחרים יתבצע דרך workflow ייעודי</p>
+                </div>
+            `;
 
-                if (tender?.competitor_analysis) {
-                    const analysis = tender.competitor_analysis;
+            if (forecastContainer) {
+                forecastContainer.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #666;">
+                        תחזית השתתפות תוצג לאחר ניתוח מתחרים
+                    </div>
+                `;
+            }
 
-                    // Main competitors
-                    if (analysis.competitors?.length > 0) {
-                        container.innerHTML = `
-                            <div style="display: grid; gap: 15px;">
-                                ${analysis.competitors.map(c => `
-                                    <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; border-right: 3px solid #3b82f6;">
-                                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                                            <strong style="color: #00d4ff;">${c.name}</strong>
-                                            <span style="color: #888; font-size: 0.85rem;">${c.size || ''}</span>
-                                        </div>
-                                        ${c.specialization?.length > 0 ? `
-                                            <div style="margin-bottom: 8px;">
-                                                ${c.specialization.map(s => `<span style="background: rgba(139, 92, 246, 0.2); color: #a78bfa; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; margin-left: 4px;">${s}</span>`).join('')}
-                                            </div>
-                                        ` : ''}
-                                        <div style="font-size: 0.85rem; color: #888;">
-                                            ${c.pricing_strategy === 'aggressive' ? '💥 אגרסיבי במחיר' : c.pricing_strategy === 'conservative' ? '🛡️ שמרני' : ''}
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        `;
-                    }
-
-                    // Participation forecast
-                    if (analysis.participation_forecast?.length > 0) {
-                        forecastContainer.innerHTML = `
-                            <div style="display: grid; gap: 10px;">
-                                ${analysis.participation_forecast.map(f => `
-                                    <div style="display: flex; align-items: center; gap: 15px;">
-                                        <div style="width: 150px; color: #e0e0e0;">${f.competitor}</div>
-                                        <div style="flex: 1; background: rgba(255,255,255,0.1); border-radius: 10px; height: 20px; overflow: hidden;">
-                                            <div style="width: ${(f.probability * 100)}%; height: 100%; background: ${f.probability > 0.7 ? '#ef4444' : f.probability > 0.4 ? '#f59e0b' : '#22c55e'};"></div>
-                                        </div>
-                                        <div style="width: 50px; text-align: left; color: #888;">${Math.round(f.probability * 100)}%</div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        `;
-                    }
-                } else {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-state-icon">🎯</div>
-                            <p>טרם בוצע ניתוח מתחרים</p>
-                            <p style="color: #666; margin-top: 10px;">לחץ על "נתח מתחרים" להתחיל</p>
-                        </div>
-                    `;
-                }
-
-                // Strategic questions
-                if (tender?.strategic_questions?.length > 0) {
-                    strategicContainer.innerHTML = `
-                        <div style="display: grid; gap: 12px;">
-                            ${tender.strategic_questions.map((q, i) => `
-                                <div style="background: rgba(168, 85, 247, 0.1); padding: 15px; border-radius: 8px; border-right: 3px solid #a855f7;">
-                                    <div style="font-weight: bold; margin-bottom: 8px;">🎯 שאלה ${i + 1}</div>
-                                    <p style="margin-bottom: 8px;">${q.question}</p>
-                                    <p style="font-size: 0.85rem; color: #c4b5fd;">נימוק: ${q.justification}</p>
-                                    <div style="font-size: 0.8rem; color: #a855f7; margin-top: 8px;">
-                                        ${q.potential_impact === 'MAY_EXCLUDE_COMPETITORS' ? '⚡ עשוי להדיר מתחרים' : ''}
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    `;
-                }
-
-            } catch (err) {
-                console.error('Error loading competitors:', err);
+            if (strategicContainer) {
+                strategicContainer.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #666;">
+                        שאלות אסטרטגיות יופקו לאחר ניתוח תנאי סף ומתחרים
+                    </div>
+                `;
             }
         }
 
@@ -1023,141 +850,38 @@
             const docsContainer = document.getElementById('requiredDocuments');
             const actionContainer = document.getElementById('actionItems');
 
-            try {
-                const { data: report } = await supabaseClient
-                    .from('decision_reports')
-                    .select('*')
-                    .eq('tender_id', tenderId)
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .single();
+            // Decision report generation - show placeholder UI
+            // Decision reports table doesn't exist yet in database
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">✅</div>
+                    <p>טרם נוצר דוח החלטה</p>
+                    <p style="color: #666; margin-top: 10px;">נתח קודם את תנאי הסף לצורך יצירת דוח GO/NO-GO</p>
+                    <button onclick="generateDecisionReport()" style="margin-top: 15px; padding: 10px 20px; background: linear-gradient(135deg, #22c55e, #16a34a); border: none; border-radius: 8px; color: white; cursor: pointer;">
+                        📊 צור דוח החלטה
+                    </button>
+                </div>
+            `;
 
-                if (report?.report_data) {
-                    const r = report.report_data;
-
-                    // Main decision display
-                    const recColor = r.executive_summary.recommendation === 'GO' ? '#22c55e' :
-                                    r.executive_summary.recommendation === 'NO_GO' ? '#ef4444' : '#f59e0b';
-
-                    container.innerHTML = `
-                        <div style="text-align: center; margin-bottom: 30px;">
-                            <div style="font-size: 4rem; margin-bottom: 10px;">
-                                ${r.executive_summary.recommendation === 'GO' ? '✅' : r.executive_summary.recommendation === 'NO_GO' ? '❌' : '⚠️'}
-                            </div>
-                            <div style="font-size: 2.5rem; font-weight: bold; color: ${recColor};">
-                                ${r.executive_summary.recommendation === 'GO' ? 'GO - להגיש!' :
-                                  r.executive_summary.recommendation === 'NO_GO' ? 'NO GO - לא להגיש' : 'מותנה'}
-                            </div>
-                            <div style="font-size: 1.2rem; color: #888; margin-top: 10px;">
-                                רמת ביטחון: ${r.executive_summary.confidence_level}% | סיכון: ${r.executive_summary.overall_risk_level}
-                            </div>
-                        </div>
-
-                        <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-                            <p style="font-size: 1.1rem; text-align: center;">${r.executive_summary.one_sentence_summary}</p>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px;">
-                            <div style="background: rgba(59, 130, 246, 0.1); padding: 15px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 1.8rem; color: #3b82f6;">${r.requirements_summary.total}</div>
-                                <div style="color: #888; font-size: 0.85rem;">סה"כ תנאים</div>
-                            </div>
-                            <div style="background: rgba(34, 197, 94, 0.1); padding: 15px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 1.8rem; color: #22c55e;">${r.requirements_summary.passed}</div>
-                                <div style="color: #888; font-size: 0.85rem;">עומדים</div>
-                            </div>
-                            <div style="background: rgba(245, 158, 11, 0.1); padding: 15px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 1.8rem; color: #f59e0b;">${r.requirements_summary.risk}</div>
-                                <div style="color: #888; font-size: 0.85rem;">בסיכון</div>
-                            </div>
-                            <div style="background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 1.8rem; color: #ef4444;">${r.requirements_summary.failed}</div>
-                                <div style="color: #888; font-size: 0.85rem;">לא עומדים</div>
-                            </div>
-                        </div>
-
-                        ${r.requirements_summary.gaps_to_close?.length > 0 ? `
-                            <div style="background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 8px;">
-                                <h4 style="color: #ef4444; margin-bottom: 10px;">🔴 פערים לסגירה</h4>
-                                ${r.requirements_summary.gaps_to_close.map(g => `
-                                    <div style="padding: 8px; background: rgba(0,0,0,0.2); border-radius: 6px; margin-bottom: 6px;">
-                                        <span style="color: ${g.priority === 'P1' ? '#ef4444' : '#f59e0b'};">[${g.priority}]</span>
-                                        ${g.description.substring(0, 100)}...
-                                    </div>
-                                `).join('')}
-                            </div>
-                        ` : ''}
-
-                        <div style="text-align: left; color: #666; font-size: 0.8rem; margin-top: 20px;">
-                            נוצר: ${new Date(r.generated_at).toLocaleString('he-IL')}
-                        </div>
-                    `;
-                } else {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-state-icon">✅</div>
-                            <p>טרם נוצר דוח החלטה</p>
-                            <p style="color: #666; margin-top: 10px;">לחץ על "צור דוח GO/NO-GO" להתחיל</p>
-                        </div>
-                    `;
-                }
-
-                // Load clarification requests
-                const { data: tender } = await supabaseClient
-                    .from('tenders')
-                    .select('clarification_requests, required_documents')
-                    .eq('id', tenderId)
-                    .single();
-
-                if (tender?.clarification_requests?.to_issuer?.length > 0) {
-                    clarContainer.innerHTML = `
-                        <div style="display: grid; gap: 12px;">
-                            ${tender.clarification_requests.to_issuer.map((c, i) => `
-                                <div style="background: rgba(59, 130, 246, 0.1); padding: 15px; border-radius: 8px; border-right: 3px solid ${c.priority === 'P1' ? '#ef4444' : c.priority === 'P2' ? '#f59e0b' : '#3b82f6'};">
-                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                        <span style="font-weight: bold;">שאלה ${i + 1}</span>
-                                        <span style="color: ${c.priority === 'P1' ? '#ef4444' : '#f59e0b'};">[${c.priority}]</span>
-                                    </div>
-                                    <p>${c.request_text}</p>
-                                    <p style="font-size: 0.85rem; color: #888; margin-top: 8px;">מטרה: ${c.purpose}</p>
-                                </div>
-                            `).join('')}
-                        </div>
-                    `;
-                }
-
-                if (tender?.required_documents?.length > 0) {
-                    docsContainer.innerHTML = `
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead>
-                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                    <th style="padding: 10px; text-align: right; color: #888;">מסמך</th>
-                                    <th style="padding: 10px; text-align: right; color: #888;">פורמט</th>
-                                    <th style="padding: 10px; text-align: right; color: #888;">חותם</th>
-                                    <th style="padding: 10px; text-align: right; color: #888;">סטטוס</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${tender.required_documents.slice(0, 15).map(d => `
-                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                                        <td style="padding: 10px;">${d.document_type}</td>
-                                        <td style="padding: 10px; color: #888;">${d.required_format}</td>
-                                        <td style="padding: 10px; color: #888;">${d.signer}</td>
-                                        <td style="padding: 10px;">
-                                            <span style="background: ${d.status === 'EXISTS' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}; color: ${d.status === 'EXISTS' ? '#22c55e' : '#ef4444'}; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem;">
-                                                ${d.status === 'EXISTS' ? 'קיים' : 'חסר'}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    `;
-                }
-
-            } catch (err) {
-                console.error('Error loading decision report:', err);
+            if (clarContainer) {
+                clarContainer.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #666;">
+                        בקשות הבהרה יופקו לאחר ניתוח מלא של תנאי הסף
+                    </div>
+                `;
             }
+
+            if (docsContainer) {
+                docsContainer.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #666;">
+                        רשימת מסמכים תופק לאחר ניתוח דרישות המכרז
+                    </div>
+                `;
+            }
+        }
+
+        async function generateDecisionReport() {
+            alert('יצירת דוח החלטה תיתמך בקרוב - נא להשלים ניתוח תנאי סף קודם');
         }
 
         // ============================================
