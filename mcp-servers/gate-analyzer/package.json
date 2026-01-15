@@ -1,0 +1,19 @@
+{
+  "name": "@tenderix/gate-analyzer-mcp",
+  "version": "1.0.0",
+  "description": "MCP Server for AI-powered gate conditions analysis",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "keywords": ["mcp", "tenderix", "gate-conditions", "ai-analysis"],
+  "author": "Tenderix",
+  "license": "MIT"
+}
