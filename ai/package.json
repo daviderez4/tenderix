@@ -1,0 +1,31 @@
+{
+  "name": "@tenderix/ai",
+  "version": "1.0.0",
+  "description": "Tenderix AI Infrastructure - Agents, Processors, and NLP utilities",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "openai": "^4.28.0",
+    "@anthropic-ai/sdk": "^0.18.0",
+    "pdf-parse": "^1.1.1",
+    "mammoth": "^1.6.0",
+    "xlsx": "^0.18.5",
+    "natural": "^6.10.0",
+    "compromise": "^14.10.0",
+    "tiktoken": "^1.0.13",
+    "p-limit": "^5.0.0",
+    "p-retry": "^6.2.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "@types/node": "^20.11.0",
+    "vitest": "^1.2.0"
+  }
+}

@@ -1472,29 +1472,31 @@
             for (const condition of conditions) {
                 try {
                     // Map to only known database columns
+                    // Note: status should be 'UNKNOWN', 'MEETS', 'PARTIALLY_MEETS', 'DOES_NOT_MEET'
                     const dbRecord = {
                         tender_id: condition.tender_id,
                         condition_number: condition.condition_number,
                         condition_text: condition.condition_text,
-                        condition_type: condition.condition_type,
-                        is_mandatory: condition.is_mandatory,
+                        condition_type: condition.condition_type || 'GATE',
+                        is_mandatory: condition.is_mandatory ?? true,
                         requirement_type: condition.requirement_type,
-                        required_amount: condition.required_amount,
-                        required_count: condition.required_count,
-                        required_years: condition.required_years,
-                        entity_type: condition.entity_type,
-                        source_page: condition.source_page,
-                        source_section: condition.source_section,
-                        status: condition.status || 'PENDING'
+                        required_amount: condition.required_amount || null,
+                        required_count: condition.required_count || null,
+                        required_years: condition.required_years || null,
+                        source_page: condition.source_page || null,
+                        source_section: condition.source_section || null,
+                        status: 'UNKNOWN' // Initial status before company profile matching
                     };
 
                     const { error } = await supabase.from('gate_conditions').insert(dbRecord);
                     if (!error) {
                         savedCount++;
                     } else {
+                        console.warn('[Gates] Insert error for condition', condition.condition_number, ':', error.message);
                         errors.push({ condition: condition.condition_number, error: error.message });
                     }
                 } catch (err) {
+                    console.error('[Gates] Exception saving condition', condition.condition_number, ':', err);
                     errors.push({ condition: condition.condition_number, error: err.message });
                 }
             }

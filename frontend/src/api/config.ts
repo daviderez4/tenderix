@@ -34,12 +34,23 @@ export const TEST_IDS = {
   ORG_ID: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', // Legacy - don't use
 };
 
+// Generate unique company number based on session
+function getSessionCompanyNumber(): string {
+  let companyNum = localStorage.getItem('tenderix_session_company_number');
+  if (!companyNum) {
+    // Generate 9-digit unique number
+    companyNum = Math.floor(100000000 + Math.random() * 900000000).toString();
+    localStorage.setItem('tenderix_session_company_number', companyNum);
+  }
+  return companyNum;
+}
+
 // Get default organization data for current session
 export function getDefaultOrgData() {
   return {
     id: getSessionOrgId(),
     name: 'הארגון שלי',
-    company_number: '000000000',
+    company_number: getSessionCompanyNumber(),
     settings: { default_currency: 'ILS', language: 'he' },
   };
 }
@@ -48,7 +59,7 @@ export function getDefaultOrgData() {
 export const DEFAULT_ORG = {
   get id() { return getSessionOrgId(); },
   name: 'הארגון שלי',
-  company_number: '000000000',
+  get company_number() { return getSessionCompanyNumber(); },
   settings: { default_currency: 'ILS', language: 'he' },
 };
 

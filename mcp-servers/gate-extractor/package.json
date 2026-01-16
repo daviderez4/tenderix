@@ -1,0 +1,22 @@
+{
+  "name": "@tenderix/gate-extractor-mcp",
+  "version": "1.0.0",
+  "description": "MCP Server for iterative gate conditions extraction from Israeli tenders",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "http": "node http-server.js",
+    "http:dev": "node --watch http-server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@supabase/supabase-js": "^2.39.0",
+    "fast-levenshtein": "^3.0.0"
+  },
+  "keywords": ["mcp", "tenderix", "gate-extraction", "iterative", "hebrew"],
+  "author": "Tenderix",
+  "license": "MIT"
+}

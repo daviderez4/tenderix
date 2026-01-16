@@ -13,14 +13,18 @@ import { TenderIntakePage } from './pages/TenderIntakePage';
 import './index.css';
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // DEV MODE: Skip authentication for local development
+  const isDev = import.meta.env.DEV;
+  const [isAuthenticated, setIsAuthenticated] = useState(isDev);
 
   useEffect(() => {
-    const auth = localStorage.getItem('tenderix_auth');
-    if (auth === 'true') {
-      setIsAuthenticated(true);
+    if (!isDev) {
+      const auth = localStorage.getItem('tenderix_auth');
+      if (auth === 'true') {
+        setIsAuthenticated(true);
+      }
     }
-  }, []);
+  }, [isDev]);
 
   if (!isAuthenticated) {
     return <Login onLogin={() => setIsAuthenticated(true)} />;

@@ -42,8 +42,15 @@ export interface GateCondition {
   evidence?: string;
   gap_description?: string;
   closure_options?: string[];
+  // C1: עקיבות מלאה
   source_page?: number;
   source_section?: string;
+  source_quote?: string;      // ציטוט מדויק מהמסמך
+  source_file?: string;       // שם הקובץ המקורי
+  // AI Analysis
+  ai_summary?: string;
+  ai_confidence?: number;
+  ai_analyzed_at?: string;
 }
 
 export interface GateSummary {
@@ -112,6 +119,25 @@ export interface CompanyProject {
   sla_details?: string;
   location?: string;
   site_count?: number;
+  // P1.3: הגדרת סיום פרויקט
+  completion_type?: 'handover' | 'final_invoice' | 'warranty_end';
+  // היקפים נפרדים
+  construction_scope?: number;
+  maintenance_scope?: number;
+  maintenance_duration_months?: number;
+  // פרויקטים משיקים - פרויקטים קשורים שיכולים להיחשב כניסיון
+  tangent_projects?: TangentProject[];
+  // מקור הפרויקט (לחברות קבוצה)
+  source_company_id?: string;
+  source_company_name?: string;
+}
+
+// פרויקט משיק - פרויקט שיכול להיחשב כ"דומה" או "רלוונטי"
+export interface TangentProject {
+  related_project_id: string;
+  relationship_type: 'SIMILAR_SCOPE' | 'SAME_CLIENT' | 'SAME_TECHNOLOGY' | 'CONTINUATION';
+  similarity_score: number;  // 0-100
+  notes?: string;
 }
 
 export interface CompanyFinancial {
@@ -133,6 +159,28 @@ export interface CompanyCertification {
   issuing_body?: string;
   valid_from?: string;
   valid_until?: string;
+  // תאריך תוקף ובדיקה
+  is_valid?: boolean;  // נחשב אוטומטית לפי valid_until
+  renewal_reminder_days?: number;  // כמה ימים לפני לשלוח תזכורת
+  document_path?: string;  // נתיב לקובץ התעודה
+}
+
+// מסמך נדרש עם סטטוס ותוקף
+export interface RequiredDocument {
+  id: string;
+  tender_id: string;
+  document_name: string;
+  description?: string;
+  category: string;
+  source_condition?: string;  // מאיזה תנאי סף נגזר
+  status: 'AVAILABLE' | 'MISSING' | 'EXPIRED' | 'PENDING';
+  validity_date?: string;  // תאריך תוקף
+  is_expired?: boolean;
+  days_until_expiry?: number;
+  file_path?: string;
+  prep_time?: string;
+  responsible_person?: string;
+  notes?: string;
 }
 
 export interface Organization {
@@ -145,6 +193,24 @@ export interface Organization {
   email?: string;
   website?: string;
   settings?: Record<string, unknown>;
+  // התמחויות הארגון
+  specializations?: string;
+  // חברות קבוצה - C4
+  parent_org_id?: string;
+  group_companies?: GroupCompany[];
+}
+
+// חברות קבוצה - לשימוש בתנאי סף של "חברות קשורות"
+export interface GroupCompany {
+  id: string;
+  parent_org_id: string;
+  company_name: string;
+  company_number?: string;
+  relationship_type: 'SUBSIDIARY' | 'SISTER' | 'PARENT' | 'AFFILIATE';
+  ownership_percentage?: number;
+  can_use_experience: boolean;  // האם ניתן להשתמש בניסיון שלה
+  can_use_financials: boolean;  // האם ניתן להשתמש בדוחות הכספיים
+  notes?: string;
 }
 
 export interface TenderDocument {
@@ -178,6 +244,56 @@ export interface Personnel {
   hire_date?: string;
   professional_certifications?: string[];
   security_clearance?: string;
+}
+
+// ==================== MODULE 1.1.5: VERSION CONTROL ====================
+
+export interface TenderClarification {
+  id: string;
+  tender_id: string;
+  clarification_number: number;
+  publish_date?: string;
+  question_text?: string;
+  answer_text?: string;
+  impacts_gates: boolean;
+  impacts_boq: boolean;
+  impacts_schedule: boolean;
+  affected_sections?: string[];
+  created_at?: string;
+}
+
+export interface DocumentComparison {
+  id: string;
+  tender_id: string;
+  original_doc_id: string;
+  updated_doc_id: string;
+  comparison_type: 'CLARIFICATION' | 'AMENDMENT' | 'ADDENDUM';
+  changes: Array<{
+    section: string;
+    change_type: 'ADDED' | 'REMOVED' | 'MODIFIED';
+    original_text?: string;
+    new_text?: string;
+    impact_level: 'HIGH' | 'MEDIUM' | 'LOW';
+  }>;
+  summary: string;
+  created_at?: string;
+}
+
+export interface PreviousTenderAnalysis {
+  id: string;
+  tender_id: string;
+  previous_tender_number?: string;
+  previous_winner?: string;
+  previous_winning_price?: number;
+  previous_date?: string;
+  differences: Array<{
+    area: string;
+    current: string;
+    previous: string;
+  }>;
+  copy_percentage?: number;
+  insights?: string[];
+  created_at?: string;
 }
 
 // ==================== HELPERS ====================
@@ -234,6 +350,45 @@ async function callWebhook<T>(path: string, payload: object, timeoutMs = 120000)
     }
     throw error;
   }
+}
+
+// Helper function to extract requirement keywords from condition text
+function extractRequirementKeywords(text: string): string[] {
+  const keywords: string[] = [];
+  const patterns = [
+    /ניסיון\s+(?:ב)?([^\s,]{3,20})/gi,
+    /הסמכת?\s+([^\s,]{3,20})/gi,
+    /רישיון\s+([^\s,]{3,20})/gi,
+    /ISO\s*\d+/gi,
+    /מחזור\s+(?:של\s+)?(\d+)/gi,
+    /(\d+)\s+פרויקט/gi,
+    /(\d+)\s+שנ/gi,
+  ];
+
+  for (const pattern of patterns) {
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      const kw = match[0].trim().toLowerCase();
+      if (kw.length > 3 && !keywords.includes(kw)) {
+        keywords.push(kw);
+      }
+    }
+  }
+
+  // Also extract common requirement types
+  const commonKeywords = [
+    'ניסיון', 'מחזור', 'ISO', 'הסמכה', 'רישיון', 'ערבות',
+    'ביטוח', 'צוות', 'מהנדס', 'מנהל פרויקט', 'אבטחה', 'סייבר'
+  ];
+
+  const textLower = text.toLowerCase();
+  for (const kw of commonKeywords) {
+    if (textLower.includes(kw) && !keywords.includes(kw)) {
+      keywords.push(kw);
+    }
+  }
+
+  return keywords;
 }
 
 // ==================== API ====================
@@ -370,6 +525,95 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }).then(r => r[0]),
+
+    // ===== חברות קבוצה =====
+    getGroupCompanies: (orgId: string) =>
+      supabaseFetch<GroupCompany[]>(`group_companies?parent_org_id=eq.${orgId}`),
+
+    addGroupCompany: (data: Partial<GroupCompany>) =>
+      supabaseFetch<GroupCompany[]>('group_companies', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }).then(r => r[0]),
+
+    updateGroupCompany: (id: string, data: Partial<GroupCompany>) =>
+      supabaseFetch<GroupCompany[]>(`group_companies?id=eq.${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }).then(r => r[0]),
+
+    deleteGroupCompany: (id: string) =>
+      supabaseFetch<void>(`group_companies?id=eq.${id}`, { method: 'DELETE' }),
+
+    // קבלת כל הפרויקטים כולל מחברות קבוצה
+    getAllGroupProjects: async (orgId: string): Promise<CompanyProject[]> => {
+      const allProjects: CompanyProject[] = [];
+
+      // פרויקטים של החברה עצמה
+      const ownProjects = await api.company.getProjects(orgId);
+      allProjects.push(...ownProjects);
+
+      // פרויקטים של חברות קבוצה
+      try {
+        const groupCompanies = await api.company.getGroupCompanies(orgId);
+        for (const gc of groupCompanies) {
+          if (gc.can_use_experience) {
+            // נניח שיש טבלת פרויקטים לחברות קבוצה או שמשתמשים באותה טבלה
+            const gcProjects = await supabaseFetch<CompanyProject[]>(
+              `company_projects?source_company_id=eq.${gc.id}`
+            ).catch(() => []);
+
+            // מסמן את הפרויקטים כמגיעים מחברת קבוצה
+            for (const p of gcProjects) {
+              allProjects.push({
+                ...p,
+                source_company_id: gc.id,
+                source_company_name: gc.company_name,
+              });
+            }
+          }
+        }
+      } catch (e) {
+        console.log('Error getting group projects:', e);
+      }
+
+      return allProjects;
+    },
+
+    // בדיקת תוקף הסמכות
+    checkCertificationValidity: async (orgId: string): Promise<Array<{
+      cert: CompanyCertification;
+      status: 'VALID' | 'EXPIRING_SOON' | 'EXPIRED';
+      days_until_expiry?: number;
+    }>> => {
+      const certs = await api.company.getCertifications(orgId);
+      const today = new Date();
+      const results: Array<{
+        cert: CompanyCertification;
+        status: 'VALID' | 'EXPIRING_SOON' | 'EXPIRED';
+        days_until_expiry?: number;
+      }> = [];
+
+      for (const cert of certs) {
+        if (!cert.valid_until) {
+          results.push({ cert, status: 'VALID' });
+          continue;
+        }
+
+        const expiryDate = new Date(cert.valid_until);
+        const daysUntil = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (daysUntil < 0) {
+          results.push({ cert, status: 'EXPIRED', days_until_expiry: daysUntil });
+        } else if (daysUntil < 30) {
+          results.push({ cert, status: 'EXPIRING_SOON', days_until_expiry: daysUntil });
+        } else {
+          results.push({ cert, status: 'VALID', days_until_expiry: daysUntil });
+        }
+      }
+
+      return results;
+    },
   },
 
   // ==================== DOCUMENTS ====================
@@ -382,124 +626,465 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }).then(r => r[0]),
+
+    update: (id: string, data: Partial<TenderDocument>) =>
+      supabaseFetch<TenderDocument[]>(`tender_documents?id=eq.${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }).then(r => r[0]),
+
+    // Get document versions (all versions of a specific document type)
+    getVersions: (tenderId: string, docType: string) =>
+      supabaseFetch<TenderDocument[]>(`tender_documents?tender_id=eq.${tenderId}&doc_type=eq.${docType}&order=version.desc`),
+
+    // Create new version of existing document
+    createVersion: async (tenderId: string, docType: string, data: Partial<TenderDocument>) => {
+      // Get latest version number
+      const existing = await supabaseFetch<TenderDocument[]>(
+        `tender_documents?tender_id=eq.${tenderId}&doc_type=eq.${docType}&order=version.desc&limit=1`
+      );
+      const nextVersion = existing.length > 0 ? (existing[0].version || 1) + 1 : 1;
+
+      return supabaseFetch<TenderDocument[]>('tender_documents', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...data,
+          tender_id: tenderId,
+          doc_type: docType,
+          version: nextVersion,
+          is_original: false,
+        }),
+      }).then(r => r[0]);
+    },
+  },
+
+  // ==================== CLARIFICATIONS (Module 1.1.5) ====================
+  clarifications: {
+    list: (tenderId: string) =>
+      supabaseFetch<TenderClarification[]>(`tender_clarifications?tender_id=eq.${tenderId}&order=clarification_number`),
+
+    create: (data: Partial<TenderClarification>) =>
+      supabaseFetch<TenderClarification[]>('tender_clarifications', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }).then(r => r[0]),
+
+    update: (id: string, data: Partial<TenderClarification>) =>
+      supabaseFetch<TenderClarification[]>(`tender_clarifications?id=eq.${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }).then(r => r[0]),
+
+    // Get next clarification number for a tender
+    getNextNumber: async (tenderId: string): Promise<number> => {
+      const existing = await supabaseFetch<TenderClarification[]>(
+        `tender_clarifications?tender_id=eq.${tenderId}&order=clarification_number.desc&limit=1`
+      );
+      return existing.length > 0 ? existing[0].clarification_number + 1 : 1;
+    },
+
+    // Add clarification with auto-numbering
+    addClarification: async (tenderId: string, data: Omit<Partial<TenderClarification>, 'tender_id' | 'clarification_number'>) => {
+      const nextNum = await api.clarifications.getNextNumber(tenderId);
+      return supabaseFetch<TenderClarification[]>('tender_clarifications', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...data,
+          tender_id: tenderId,
+          clarification_number: nextNum,
+        }),
+      }).then(r => r[0]);
+    },
+  },
+
+  // ==================== DOCUMENT COMPARISONS (Module 1.1.5) ====================
+  comparisons: {
+    list: (tenderId: string) =>
+      supabaseFetch<DocumentComparison[]>(`document_comparisons?tender_id=eq.${tenderId}&order=created_at.desc`),
+
+    create: (data: Partial<DocumentComparison>) =>
+      supabaseFetch<DocumentComparison[]>('document_comparisons', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }).then(r => r[0]),
+
+    get: (id: string) =>
+      supabaseFetch<DocumentComparison[]>(`document_comparisons?id=eq.${id}`).then(r => r[0]),
+  },
+
+  // ==================== PREVIOUS TENDER ANALYSIS (Module 1.6) ====================
+  previousTenders: {
+    get: (tenderId: string) =>
+      supabaseFetch<PreviousTenderAnalysis[]>(`previous_tender_analysis?tender_id=eq.${tenderId}`).then(r => r[0] || null),
+
+    create: (data: Partial<PreviousTenderAnalysis>) =>
+      supabaseFetch<PreviousTenderAnalysis[]>('previous_tender_analysis', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }).then(r => r[0]),
+
+    update: (id: string, data: Partial<PreviousTenderAnalysis>) =>
+      supabaseFetch<PreviousTenderAnalysis[]>(`previous_tender_analysis?id=eq.${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }).then(r => r[0]),
   },
 
   // ==================== AI WORKFLOWS ====================
   workflows: {
-    // Gate Analysis - Local extraction with optional AI enhancement
+    // ==========================================================
+    // PROFESSIONAL GATE EXTRACTION - חילוץ תנאי סף מקצועי
+    // Iterative extraction using MCP Server via n8n workflow
+    // ==========================================================
     extractGates: async (tenderId: string, tenderText: string): Promise<{ success: boolean; conditions: GateCondition[] }> => {
       console.log(`extractGates called with ${tenderText.length} chars`);
 
-      // Local gate extraction using regex patterns
+      // ===== נסיון ראשון: חילוץ איטרטיבי דרך n8n =====
+      try {
+        console.log('Attempting iterative extraction via n8n webhook...');
+        const webhookUrl = `${API_CONFIG.WEBHOOK_BASE}/tdx-extract-gates-v2`;
+
+        const webhookResponse = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tender_id: tenderId }),
+        });
+
+        if (webhookResponse.ok) {
+          const result = await webhookResponse.json();
+          console.log('Iterative extraction result:', result);
+
+          if (result.success && result.conditions && result.conditions.length > 0) {
+            console.log(`Iterative extraction successful: ${result.conditions.length} conditions`);
+            console.log('Summary:', result.summary);
+
+            // Convert to GateCondition format
+            const conditions: GateCondition[] = result.conditions.map((c: any, i: number) => ({
+              id: c.id,
+              tender_id: tenderId,
+              condition_number: `${i + 1}`,
+              condition_text: c.text,
+              condition_type: c.type,
+              is_mandatory: c.is_mandatory !== false,
+              requirement_type: c.category || 'OTHER',
+              required_amount: c.quantitative?.amount,
+              required_years: c.quantitative?.years,
+              required_count: c.quantitative?.count,
+              source_quote: c.source_quote,
+              ai_confidence: c.confidence,
+              status: 'UNKNOWN',
+            }));
+
+            return { success: true, conditions };
+          }
+          console.log('Webhook returned no conditions, falling back to regex extraction');
+        } else {
+          console.log(`Webhook returned ${webhookResponse.status}, falling back to regex extraction`);
+        }
+      } catch (webhookError) {
+        console.log('Webhook not available, using regex extraction:', webhookError);
+      }
+
+      // ===== Fallback: חילוץ מבוסס regex =====
+      console.log('Using regex-based extraction...');
+
+      // ===== שלב 1: נרמול הטקסט =====
+      const normalizeText = (text: string): string => {
+        return text
+          // נרמול רווחים
+          .replace(/\s+/g, ' ')
+          // נרמול מקפים
+          .replace(/[-–—]/g, '-')
+          // נרמול גרשיים
+          .replace(/[''׳]/g, "'")
+          .replace(/[""״]/g, '"')
+          // נרמול מספרים עבריים
+          .replace(/מס'\s*/g, "מספר ")
+          .replace(/מס\.\s*/g, "מספר ")
+          // הסרת תווים מיוחדים מיותרים
+          .replace(/[\u200B-\u200D\uFEFF]/g, '')
+          .trim();
+      };
+
+      const normalizedText = normalizeText(tenderText);
+      console.log('Text normalized');
+
+      // ===== שלב 2: זיהוי אזור תנאי הסף במסמך =====
+      const findGateSection = (text: string): string => {
+        // חיפוש כותרת פרק תנאי סף
+        const sectionHeaders = [
+          /(?:פרק|סעיף|חלק)\s*[א-ת0-9.\-]*\s*[-–:]\s*תנאי\s*(?:סף|מוקדמים|להשתתפות)([\s\S]*?)(?=(?:פרק|סעיף|חלק)\s*[א-ת0-9.\-]*\s*[-–:]|$)/gi,
+          /תנאי\s*סף\s*(?:להשתתפות|במכרז)?\s*[-–:]([\s\S]*?)(?=(?:פרק|סעיף|חלק)\s*[א-ת0-9.\-]*\s*[-–:]|$)/gi,
+          /דרישות\s*(?:מקדמיות|סף)\s*[-–:]([\s\S]*?)(?=(?:פרק|סעיף|חלק)\s*[א-ת0-9.\-]*\s*[-–:]|$)/gi,
+          /תנאים\s*(?:מוקדמים|להשתתפות)\s*[-–:]([\s\S]*?)(?=(?:פרק|סעיף|חלק)\s*[א-ת0-9.\-]*\s*[-–:]|$)/gi,
+        ];
+
+        for (const pattern of sectionHeaders) {
+          pattern.lastIndex = 0;
+          const match = pattern.exec(text);
+          if (match && match[1] && match[1].length > 100) {
+            console.log(`Found gate section with ${match[1].length} chars`);
+            return match[1];
+          }
+        }
+
+        // אם לא נמצא פרק ספציפי, חפש באזור הרלוונטי
+        const gateAreaMatch = text.match(/תנאי\s*סף([\s\S]{500,8000}?)(?:כתב\s*כמויות|מפרט\s*טכני|תנאים\s*כלליים|נספח)/i);
+        if (gateAreaMatch) {
+          console.log(`Found gate area with ${gateAreaMatch[1].length} chars`);
+          return gateAreaMatch[1];
+        }
+
+        // fallback - כל הטקסט
+        console.log('Using full text for gate extraction');
+        return text;
+      };
+
+      const gateSection = findGateSection(normalizedText);
+
+      // ===== שלב 3: חילוץ תנאים בודדים =====
+      interface RawCondition {
+        text: string;
+        originalNumber?: string;
+        source: string;
+        position: number;
+      }
+
+      const rawConditions: RawCondition[] = [];
+
+      // Pattern 1: רשימה ממוספרת - 1.1, 1.2, 2.1 וכו'
+      const numberedPattern = /(\d+(?:\.\d+)?)\s*[.\)]\s*([^\n]{20,500})/g;
+      let match;
+      while ((match = numberedPattern.exec(gateSection)) !== null) {
+        const text = match[2].trim();
+        // סינון כותרות וטקסט לא רלוונטי
+        if (text.length >= 20 && !isHeaderOrTitle(text)) {
+          rawConditions.push({
+            text,
+            originalNumber: match[1],
+            source: 'numbered',
+            position: match.index,
+          });
+        }
+      }
+
+      // Pattern 2: נקודות (bullets)
+      const bulletPattern = /[•●○■□▪▫◦\-\*]\s*([^\n•●○■□▪▫◦\-\*]{20,500})/g;
+      while ((match = bulletPattern.exec(gateSection)) !== null) {
+        const text = match[1].trim();
+        if (text.length >= 20 && !isHeaderOrTitle(text) && !isDuplicate(text, rawConditions)) {
+          rawConditions.push({
+            text,
+            source: 'bullet',
+            position: match.index,
+          });
+        }
+      }
+
+      // Pattern 3: משפטים עם "על המציע"
+      const bidderPattern = /על\s*המציע\s+([^\n.]{15,400}[.])/gi;
+      while ((match = bidderPattern.exec(gateSection)) !== null) {
+        const text = `על המציע ${match[1]}`.trim();
+        if (!isDuplicate(text, rawConditions)) {
+          rawConditions.push({
+            text,
+            source: 'bidder_requirement',
+            position: match.index,
+          });
+        }
+      }
+
+      // Pattern 4: משפטים עם דרישה מפורשת
+      const requirementPattern = /(?:יש\s*להציג|יש\s*לצרף|נדרש|חובה\s*להמציא)\s+([^\n.]{15,400}[.])/gi;
+      while ((match = requirementPattern.exec(gateSection)) !== null) {
+        const text = match[0].trim();
+        if (!isDuplicate(text, rawConditions)) {
+          rawConditions.push({
+            text,
+            source: 'explicit_requirement',
+            position: match.index,
+          });
+        }
+      }
+
+      // Pattern 5: תנאים עם מספרים כמותיים
+      const quantitativePattern = /(?:לפחות|מינימום|לא\s*פחות\s*מ[-–]?)\s*(\d+)\s*([^\n.]{10,300}[.])/gi;
+      while ((match = quantitativePattern.exec(gateSection)) !== null) {
+        const text = match[0].trim();
+        if (!isDuplicate(text, rawConditions)) {
+          rawConditions.push({
+            text,
+            source: 'quantitative',
+            position: match.index,
+          });
+        }
+      }
+
+      console.log(`Raw extraction found ${rawConditions.length} potential conditions`);
+
+      // ===== שלב 4: ניקוי וסינון =====
+      function isHeaderOrTitle(text: string): boolean {
+        // כותרות קצרות
+        if (text.length < 25) return true;
+        // מתחיל באות גדולה עברית בלי הקשר
+        if (/^[א-ת]\s*[-–.]\s*$/.test(text)) return true;
+        // רק מספרים וסימנים
+        if (/^[\d.\-–\s]+$/.test(text)) return true;
+        // כותרות נפוצות
+        if (/^(?:כללי|הגדרות|מבוא|פרק|סעיף|נספח)\s*[-–:]?\s*$/i.test(text)) return true;
+        // טקסט ללא פועל או דרישה
+        if (!/(?:על|יש|נדרש|חובה|צריך|להמציא|להציג|לצרף|ביצע|ניסיון|מחזור|הסמכה|רישיון)/i.test(text)) return true;
+        return false;
+      }
+
+      function isDuplicate(text: string, existing: RawCondition[]): boolean {
+        const normalized = text.substring(0, 60).toLowerCase();
+        return existing.some(c => c.text.substring(0, 60).toLowerCase() === normalized);
+      }
+
+      function cleanConditionText(text: string): string {
+        return text
+          // הסרת מספור בהתחלה
+          .replace(/^\d+(?:\.\d+)?[.\)]\s*/, '')
+          // הסרת נקודות/bullets בהתחלה
+          .replace(/^[•●○■□▪▫◦\-\*]\s*/, '')
+          // הסרת רווחים כפולים
+          .replace(/\s+/g, ' ')
+          // הסרת תווים מיוחדים בסוף
+          .replace(/[:\s]+$/, '')
+          .trim();
+      }
+
+      // ===== שלב 5: סיווג וניתוח כל תנאי =====
+      function classifyCondition(text: string): {
+        type: string;
+        isMandatory: boolean;
+        years?: number;
+        amount?: number;
+        count?: number;
+        category: string;
+      } {
+        // סיווג לפי תוכן
+        let category = 'OTHER';
+        if (/ניסיון|פרויקט|ביצוע|עבודה|התקנ|הקמ|אספק/.test(text)) {
+          category = 'EXPERIENCE';
+        } else if (/מחזור|הכנסות|הון|כספי|פיננס|ערבות|בנקאי|דוחות?\s*כספי/.test(text)) {
+          category = 'FINANCIAL';
+        } else if (/תעודה|רישיון|הסמכה|ISO|סיווג|אישור|קבלן\s*רשום|תקן/.test(text)) {
+          category = 'CERTIFICATION';
+        } else if (/מנהל|צוות|עובד|מהנדס|יועץ|אחראי|בעל\s*תפקיד/.test(text)) {
+          category = 'PERSONNEL';
+        } else if (/ציוד|רכב|מכונ|כלי|מעבד/.test(text)) {
+          category = 'EQUIPMENT';
+        } else if (/משפטי|חוק|רשם|פירוק|כינוס|עיקול/.test(text)) {
+          category = 'LEGAL';
+        }
+
+        // בדיקת חובה/יתרון
+        const isMandatory = /תנאי\s*סף|חובה|פוסל|נדרש|על\s*המציע|יש\s*להמציא|יש\s*להציג|יש\s*לצרף/.test(text) ||
+                          /לא\s*יתקבל|לא\s*תתקבל|לא\s*ייכלל/.test(text);
+
+        // חילוץ מספרים
+        let years: number | undefined;
+        let amount: number | undefined;
+        let count: number | undefined;
+
+        // שנים
+        const yearsMatch = text.match(/(\d+)\s*שנ[יהות]/);
+        if (yearsMatch) years = parseInt(yearsMatch[1]);
+
+        // סכומים - תמיכה במיליון, אלף, ש"ח, ₪
+        const amountPatterns = [
+          /([\d,]+)\s*מיליון\s*(?:₪|ש"ח|שקל)/i,
+          /([\d,]+)\s*אלף\s*(?:₪|ש"ח|שקל)/i,
+          /([\d,]+)\s*(?:₪|ש"ח)/i,
+        ];
+        for (const pattern of amountPatterns) {
+          const amountMatch = text.match(pattern);
+          if (amountMatch) {
+            let val = parseFloat(amountMatch[1].replace(/,/g, ''));
+            if (/מיליון/.test(amountMatch[0])) val *= 1000000;
+            else if (/אלף/.test(amountMatch[0])) val *= 1000;
+            amount = val;
+            break;
+          }
+        }
+
+        // כמויות
+        const countMatch = text.match(/(\d+)\s*(?:פרויקט|עבודו?ת|חוז[הי])/);
+        if (countMatch) count = parseInt(countMatch[1]);
+
+        return { type: 'GATE', isMandatory, years, amount, count, category };
+      }
+
+      // ===== שלב 6: בניית תנאים סופיים =====
       const extractedConditions: Partial<GateCondition>[] = [];
       let conditionNumber = 1;
+      const seenTexts = new Set<string>();
 
-      // Pattern 1: Numbered conditions with "תנאי סף"
-      const gatePatterns = [
-        // Pattern: תנאי סף מס' X - description
-        /תנאי\s*סף\s*(?:מס['׳]?|מספר)?\s*(\d+(?:\.\d+)?)\s*[-–:]\s*([^\n]+)/gi,
-        // Pattern: numbered list after תנאי סף
-        /(\d+(?:\.\d+)?)\s*[.\)]\s*(?:על\s*המציע|נדרש|חובה|יש\s*להציג|יש\s*לצרף)\s*([^\n]+)/gi,
-        // Pattern: על המציע + requirement
-        /על\s*המציע\s*(?:להיות|להוכיח|להציג|לצרף|להמציא|לעמוד)\s*([^\n]{10,200})/gi,
-        // Pattern: תנאי חובה
-        /תנאי\s*חובה\s*[-–:]\s*([^\n]+)/gi,
-        // Pattern: דרישות סף
-        /דרישות?\s*סף\s*[-–:]\s*([^\n]+)/gi,
-      ];
+      for (const raw of rawConditions) {
+        const cleanText = cleanConditionText(raw.text);
 
-      // Track already extracted to avoid duplicates
-      const extractedTexts = new Set<string>();
+        // בדיקת כפילויות לאחר ניקוי
+        const signature = cleanText.substring(0, 80).toLowerCase();
+        if (seenTexts.has(signature)) continue;
+        seenTexts.add(signature);
 
-      for (const pattern of gatePatterns) {
-        let match;
-        const text = tenderText;
-        pattern.lastIndex = 0; // Reset regex
-        while ((match = pattern.exec(text)) !== null) {
-          const conditionText = (match[2] || match[1]).trim();
+        // סינון נוסף
+        if (cleanText.length < 25 || cleanText.length > 600) continue;
+        if (isHeaderOrTitle(cleanText)) continue;
 
-          // Skip short or duplicate conditions
-          if (conditionText.length < 15 || extractedTexts.has(conditionText.substring(0, 50))) {
-            continue;
-          }
-          extractedTexts.add(conditionText.substring(0, 50));
+        const classification = classifyCondition(cleanText);
 
-          // Determine requirement type
-          let requirementType = 'OTHER';
-          if (/ניסיון|פרויקט|ביצוע|עבודה|שנ[הות]/.test(conditionText)) {
-            requirementType = 'EXPERIENCE';
-          } else if (/מחזור|הכנסות|הון|כספי|פיננס|ערבות/.test(conditionText)) {
-            requirementType = 'FINANCIAL';
-          } else if (/תעודה|רישיון|הסמכה|ISO|סיווג|אישור/.test(conditionText)) {
-            requirementType = 'CERTIFICATION';
-          } else if (/מנהל|צוות|עובד|מהנדס|יועץ/.test(conditionText)) {
-            requirementType = 'PERSONNEL';
-          }
-
-          // Check if mandatory
-          const isMandatory = /חובה|תנאי\s*סף|פוסל|להגיש|נדרש/.test(conditionText) ||
-                            /על\s*המציע/.test(match[0]);
-
-          // Extract numbers if present
-          const numberMatch = conditionText.match(/(\d+)\s*(?:שנ|פרויקט|עבודו?ת)/);
-          const amountMatch = conditionText.match(/([\d,]+)\s*(?:₪|ש"ח|מיליון|אלף)/);
-
-          extractedConditions.push({
-            tender_id: tenderId,
-            condition_number: `${conditionNumber}`,
-            condition_text: conditionText,
-            condition_type: 'GATE',
-            is_mandatory: isMandatory,
-            requirement_type: requirementType,
-            required_years: numberMatch ? parseInt(numberMatch[1]) : undefined,
-            required_amount: amountMatch ? parseFloat(amountMatch[1].replace(/,/g, '')) : undefined,
-            status: 'UNKNOWN',
-          });
-          conditionNumber++;
-        }
+        extractedConditions.push({
+          tender_id: tenderId,
+          condition_number: raw.originalNumber || `${conditionNumber}`,
+          condition_text: cleanText,
+          condition_type: classification.type,
+          is_mandatory: classification.isMandatory,
+          requirement_type: classification.category,
+          required_years: classification.years,
+          required_amount: classification.amount,
+          required_count: classification.count,
+          status: 'UNKNOWN',
+          source_section: raw.source,
+        });
+        conditionNumber++;
       }
 
-      // Also look for section-based gate conditions
-      const sectionPattern = /(?:פרק|סעיף)\s*[-–]?\s*תנאי\s*סף([\s\S]{100,3000}?)(?=(?:פרק|סעיף)\s*[-–]|$)/gi;
-      let sectionMatch;
-      while ((sectionMatch = sectionPattern.exec(tenderText)) !== null) {
-        const sectionText = sectionMatch[1];
-        // Extract bullet points from section
-        const bulletPattern = /[•\-\*]\s*([^\n•\-\*]{15,200})/g;
-        let bulletMatch;
-        while ((bulletMatch = bulletPattern.exec(sectionText)) !== null) {
-          const conditionText = bulletMatch[1].trim();
-          if (!extractedTexts.has(conditionText.substring(0, 50))) {
-            extractedTexts.add(conditionText.substring(0, 50));
+      console.log(`After filtering: ${extractedConditions.length} valid conditions`);
 
-            let requirementType = 'OTHER';
-            if (/ניסיון|פרויקט/.test(conditionText)) requirementType = 'EXPERIENCE';
-            else if (/מחזור|כספי/.test(conditionText)) requirementType = 'FINANCIAL';
-            else if (/תעודה|רישיון|ISO/.test(conditionText)) requirementType = 'CERTIFICATION';
-            else if (/מנהל|צוות/.test(conditionText)) requirementType = 'PERSONNEL';
+      // ===== שלב 7: מיון לפי חשיבות =====
+      extractedConditions.sort((a, b) => {
+        // חובה קודם
+        if (a.is_mandatory && !b.is_mandatory) return -1;
+        if (!a.is_mandatory && b.is_mandatory) return 1;
+        // לפי קטגוריה - ניסיון ופיננסי קודמים
+        const order: Record<string, number> = { EXPERIENCE: 1, FINANCIAL: 2, CERTIFICATION: 3, PERSONNEL: 4, EQUIPMENT: 5, LEGAL: 6, OTHER: 7 };
+        return (order[a.requirement_type || 'OTHER'] || 7) - (order[b.requirement_type || 'OTHER'] || 7);
+      });
 
-            extractedConditions.push({
-              tender_id: tenderId,
-              condition_number: `${conditionNumber}`,
-              condition_text: conditionText,
-              condition_type: 'GATE',
-              is_mandatory: true,
-              requirement_type: requirementType,
-              status: 'UNKNOWN',
-            });
-            conditionNumber++;
-          }
-        }
-      }
+      // מספור מחדש אחרי מיון
+      extractedConditions.forEach((c, i) => {
+        c.condition_number = `${i + 1}`;
+      });
 
-      console.log(`Local extraction found ${extractedConditions.length} conditions`);
-
-      // Save conditions to database
+      // ===== שלב 8: שמירה לDB =====
       const savedConditions: GateCondition[] = [];
-      for (const condition of extractedConditions.slice(0, 30)) { // Limit to 30 conditions
+
+      // מחיקת תנאים קיימים למכרז זה (למניעת כפילויות)
+      try {
+        await supabaseFetch(`gate_conditions?tender_id=eq.${tenderId}`, { method: 'DELETE' });
+        console.log('Cleared existing conditions');
+      } catch (e) {
+        console.log('No existing conditions to clear');
+      }
+
+      // שמירת תנאים חדשים
+      for (const condition of extractedConditions.slice(0, 50)) { // מקסימום 50 תנאים
         try {
           const saved = await api.gates.create(condition);
-          savedConditions.push(saved);
+          if (saved) savedConditions.push(saved);
         } catch (err) {
           console.error('Error saving condition:', err);
         }
@@ -507,42 +1092,18 @@ export const api = {
 
       console.log(`Saved ${savedConditions.length} conditions to database`);
 
-      // Try webhook enhancement (optional, with short timeout)
-      try {
-        console.log('Attempting AI enhancement for gates (20s timeout)...');
-        const aiResult = await callWebhook<{ success: boolean; conditions?: Array<{ condition_text: string; status?: string }> }>(
-          'tdx-extract-gates',
-          { tender_id: tenderId, tender_text: tenderText.substring(0, 15000) },
-          20000 // 20 second timeout
-        );
+      // ===== שלב 9: סיכום (AI enhancement מושבת כרגע) =====
+      // ה-AI enhancement דורש webhook פעיל שעדיין לא קיים
+      // הניתוח המבוסס regex הוא מספיק לרוב המקרים
+      console.log(`Gate extraction complete: ${savedConditions.length} conditions extracted using regex patterns`);
 
-        if (aiResult?.success && aiResult.conditions?.length) {
-          console.log(`AI found ${aiResult.conditions.length} additional conditions`);
-          // Add any new conditions not already found
-          for (const aiCond of aiResult.conditions) {
-            const exists = savedConditions.some(c =>
-              c.condition_text.substring(0, 40) === aiCond.condition_text.substring(0, 40)
-            );
-            if (!exists && aiCond.condition_text.length > 15) {
-              try {
-                const saved = await api.gates.create({
-                  tender_id: tenderId,
-                  condition_number: `AI-${savedConditions.length + 1}`,
-                  condition_text: aiCond.condition_text,
-                  condition_type: 'GATE',
-                  is_mandatory: true,
-                  requirement_type: 'OTHER',
-                  status: aiCond.status || 'UNKNOWN',
-                });
-                savedConditions.push(saved);
-              } catch (err) {
-                console.error('Error saving AI condition:', err);
-              }
-            }
-          }
-        }
-      } catch (aiError) {
-        console.log('AI enhancement skipped (timeout or error):', aiError);
+      if (savedConditions.length === 0) {
+        console.warn('No conditions found - document may not contain gate conditions section or format is not recognized');
+      } else {
+        console.log('Categories:', savedConditions.reduce((acc, c) => {
+          acc[c.requirement_type || 'OTHER'] = (acc[c.requirement_type || 'OTHER'] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>));
       }
 
       return {
@@ -847,54 +1408,157 @@ export const api = {
       return { success: true, tender_id: tenderId, questions: questions.slice(0, 15) };
     },
 
-    // Strategic Questions - Local generation with optional AI
-    getStrategicQuestions: async (tenderId: string, _orgId: string): Promise<{
+    // Strategic Questions - Local generation with optional AI (Module 2.7.5)
+    // מייצר שאלות "בטוחות" (מועילות לכולם) ושאלות "מכוונות" (להחלשת מתחרים)
+    getStrategicQuestions: async (tenderId: string, orgId: string): Promise<{
       success: boolean;
       tender_id: string;
       total_questions: number;
-      safe_questions: Array<{ question: string; rationale: string }>;
-      strategic_questions: Array<{ question: string; rationale: string; target_competitor?: string }>;
+      safe_questions: Array<{ question: string; rationale: string; benefit_all: boolean }>;
+      strategic_questions: Array<{ question: string; rationale: string; target_competitor?: string; expected_impact: string }>;
+      optimization_questions: Array<{ question: string; rationale: string; from_analysis: string }>;
     }> => {
-      console.log(`getStrategicQuestions for tender ${tenderId}`);
+      console.log(`getStrategicQuestions for tender ${tenderId}, org ${orgId}`);
 
       const gates = await api.getGateConditions(tenderId);
-      const safeQuestions: Array<{ question: string; rationale: string }> = [];
-      const strategicQuestions: Array<{ question: string; rationale: string; target_competitor?: string }> = [];
+      const safeQuestions: Array<{ question: string; rationale: string; benefit_all: boolean }> = [];
+      const strategicQuestions: Array<{ question: string; rationale: string; target_competitor?: string; expected_impact: string }> = [];
+      const optimizationQuestions: Array<{ question: string; rationale: string; from_analysis: string }> = [];
 
-      // Generate safe questions based on tender requirements
+      // Get company profile for strategic analysis
+      const [projects, financials, certifications, competitors] = await Promise.all([
+        api.company.getProjects(orgId).catch(() => [] as CompanyProject[]),
+        api.company.getFinancials(orgId).catch(() => [] as CompanyFinancial[]),
+        api.company.getCertifications(orgId).catch(() => [] as CompanyCertification[]),
+        api.getCompetitors(orgId).catch(() => [] as Competitor[]),
+      ]);
+
+      // ===== שאלות בטוחות - מועילות לכולם =====
       const experienceGates = gates.filter(g => g.requirement_type === 'EXPERIENCE' || /ניסיון|פרויקט/.test(g.condition_text));
       if (experienceGates.length > 0) {
         safeQuestions.push({
           question: 'האם ניתן להציג ניסיון משותף עם קבלן משנה כחלק מהניסיון הנדרש?',
           rationale: 'מאפשר הרחבת אפשרויות הגשה עבור חברות עם ניסיון חלקי',
+          benefit_all: true,
         });
         safeQuestions.push({
           question: 'מהו סף הערך המינימלי של פרויקט בודד הנחשב כניסיון רלוונטי?',
           rationale: 'הגדרה ברורה תאפשר הכללת פרויקטים נוספים',
+          benefit_all: true,
+        });
+        safeQuestions.push({
+          question: 'האם פרויקטים בביצוע (טרם הושלמו) נחשבים כניסיון?',
+          rationale: 'הרחבת אפשרויות הצגת ניסיון',
+          benefit_all: true,
         });
       }
 
       const financialGates = gates.filter(g => g.requirement_type === 'FINANCIAL' || /מחזור|כספי/.test(g.condition_text));
       if (financialGates.length > 0) {
-        strategicQuestions.push({
-          question: 'האם ניתן להציג ערבות בנקאית במקום הון עצמי להוכחת איתנות פיננסית?',
-          rationale: 'מאפשר לחברות עם תזרים חזק אך הון עצמי נמוך להתמודד',
+        safeQuestions.push({
+          question: 'האם ניתן להציג דוחות כספיים לשנת 2023 או 2024?',
+          rationale: 'גמישות בשנות הדיווח',
+          benefit_all: true,
         });
       }
 
-      // Add general strategic questions
-      strategicQuestions.push({
-        question: 'האם יש משקל לחדשנות טכנולוגית בניקוד האיכות?',
-        rationale: 'יתרון לחברות עם פתרונות מתקדמים',
-      });
-      safeQuestions.push({
-        question: 'האם ניתן להגיש הצעה לחלק מהפרויקט בלבד?',
-        rationale: 'מאפשר התמודדות ממוקדת',
-      });
+      // General safe questions
       safeQuestions.push({
         question: 'האם יתקיים סיור קבלנים נוסף?',
         rationale: 'הזדמנות להכיר את האתר והדרישות',
+        benefit_all: true,
       });
+      safeQuestions.push({
+        question: 'האם ניתן לקבל הארכה במועד ההגשה?',
+        rationale: 'זמן נוסף לכל המציעים',
+        benefit_all: true,
+      });
+
+      // ===== שאלות אסטרטגיות - מכוונות להחלשת מתחרים =====
+
+      // אם יש לנו ניסיון עודף - נבקש להחמיר
+      if (projects.length >= 5) {
+        strategicQuestions.push({
+          question: 'האם ניסיון של 5 שנים לפחות בתחום נדרש כתנאי סף?',
+          rationale: 'העלאת רף הניסיון תפסול מתחרים חדשים',
+          expected_impact: 'צפוי לפסול חברות צעירות',
+        });
+      }
+
+      // אם יש לנו הסמכות רבות - נבקש לדרוש אותן
+      if (certifications.length >= 2) {
+        const certNames = certifications.map(c => c.cert_name).slice(0, 2).join(' ו-');
+        strategicQuestions.push({
+          question: `האם הסמכת ${certNames} נדרשת כתנאי סף?`,
+          rationale: 'דרישת הסמכות ספציפיות שיש לנו',
+          expected_impact: 'חברות ללא הסמכות לא יוכלו להשתתף',
+        });
+      }
+
+      // אם יש לנו מחזור גבוה - נבקש להחמיר
+      if (financials.length > 0 && financials[0].annual_revenue && financials[0].annual_revenue > 10000000) {
+        strategicQuestions.push({
+          question: 'האם מחזור מינימלי של 10 מיליון ש"ח נדרש?',
+          rationale: 'דרישה פיננסית גבוהה תפסול חברות קטנות',
+          expected_impact: 'מתחרים קטנים לא יעמדו בדרישה',
+        });
+      }
+
+      // שאלות מכוונות נגד מתחרים ספציפיים
+      if (competitors.length > 0) {
+        const weakCompetitors = competitors.filter(c => c.weaknesses && c.weaknesses.length > 0);
+        for (const comp of weakCompetitors.slice(0, 2)) {
+          const weakness = comp.weaknesses?.[0] || '';
+          if (weakness.includes('ניסיון')) {
+            strategicQuestions.push({
+              question: 'האם נדרש ניסיון ספציפי בפרויקטים ממשלתיים?',
+              rationale: `${comp.name} חלש בניסיון ממשלתי`,
+              target_competitor: comp.name,
+              expected_impact: `צפוי להקשות על ${comp.name}`,
+            });
+          } else if (weakness.includes('פיננס') || weakness.includes('מחזור')) {
+            strategicQuestions.push({
+              question: 'האם ערבות בנקאית אוטונומית נדרשת?',
+              rationale: `${comp.name} חלש פיננסית`,
+              target_competitor: comp.name,
+              expected_impact: `${comp.name} יתקשה להציג ערבות`,
+            });
+          }
+        }
+      }
+
+      // חדשנות טכנולוגית - אם יש לנו יתרון
+      strategicQuestions.push({
+        question: 'האם יש משקל לחדשנות טכנולוגית בניקוד האיכות?',
+        rationale: 'יתרון לחברות עם פתרונות מתקדמים',
+        expected_impact: 'מעלה משקל לטכנולוגיה על פני מחיר',
+      });
+
+      // ===== שאלות מאופטימיזציה (מ-Module 2.6.5) =====
+      // Get optimization analysis results if available
+      try {
+        const optimization = await api.workflows.analyzeGateScoringOptimization(tenderId, orgId);
+        if (optimization.success) {
+          // שאלות להמרת תנאי סף לניקוד
+          for (const item of optimization.gate_to_scoring.slice(0, 2)) {
+            optimizationQuestions.push({
+              question: item.question_template,
+              rationale: item.reason,
+              from_analysis: 'אופטימיזציית תנאי סף',
+            });
+          }
+          // שאלות להחמרת תנאי ניקוד לסף
+          for (const item of optimization.scoring_to_gate.slice(0, 2)) {
+            optimizationQuestions.push({
+              question: item.question_template,
+              rationale: item.reason,
+              from_analysis: 'אופטימיזציית תנאי ניקוד',
+            });
+          }
+        }
+      } catch (e) {
+        console.log('Optimization analysis not available:', e);
+      }
 
       // Try AI enhancement
       try {
@@ -902,20 +1566,25 @@ export const api = {
           success: boolean;
           safe_questions?: Array<{ question: string; rationale: string }>;
           strategic_questions?: Array<{ question: string; rationale: string }>;
-        }>('tdx-strategic-v3', { tender_id: tenderId, org_id: _orgId }, 15000);
+        }>('tdx-strategic-v3', { tender_id: tenderId, org_id: orgId }, 15000);
 
         if (aiResult?.success) {
-          if (aiResult.safe_questions) safeQuestions.push(...aiResult.safe_questions);
-          if (aiResult.strategic_questions) strategicQuestions.push(...aiResult.strategic_questions);
+          if (aiResult.safe_questions) {
+            safeQuestions.push(...aiResult.safe_questions.map(q => ({ ...q, benefit_all: true })));
+          }
+          if (aiResult.strategic_questions) {
+            strategicQuestions.push(...aiResult.strategic_questions.map(q => ({ ...q, expected_impact: 'מניתוח AI' })));
+          }
         }
       } catch { console.log('AI strategic questions skipped'); }
 
       return {
         success: true,
         tender_id: tenderId,
-        total_questions: safeQuestions.length + strategicQuestions.length,
-        safe_questions: safeQuestions.slice(0, 8),
-        strategic_questions: strategicQuestions.slice(0, 8),
+        total_questions: safeQuestions.length + strategicQuestions.length + optimizationQuestions.length,
+        safe_questions: safeQuestions.slice(0, 10),
+        strategic_questions: strategicQuestions.slice(0, 10),
+        optimization_questions: optimizationQuestions.slice(0, 5),
       };
     },
 
@@ -1222,6 +1891,914 @@ export const api = {
         insights: string[];
       }>('tdx-historical-bids', { tender_id: tenderId, org_id: orgId }),
 
+    // Module 2.6.5 - Gate vs Scoring Optimization
+    // מזהה תנאי סף שיכולים להפוך לתנאי ניקוד ולהיפך
+    analyzeGateScoringOptimization: async (tenderId: string, orgId: string): Promise<{
+      success: boolean;
+      tender_id: string;
+      org_id: string;
+      gate_to_scoring: Array<{
+        condition_number: string;
+        condition_text: string;
+        current_type: 'GATE';
+        recommended_type: 'SCORING';
+        reason: string;
+        potential_advantage: string;
+        question_template: string;
+      }>;
+      scoring_to_gate: Array<{
+        condition_number: string;
+        condition_text: string;
+        current_type: 'SCORING';
+        recommended_type: 'GATE';
+        reason: string;
+        competitor_impact: string;
+        question_template: string;
+      }>;
+      optimization_score: number;
+      summary: string;
+    }> => {
+      console.log(`analyzeGateScoringOptimization for tender ${tenderId}, org ${orgId}`);
+
+      // Get gate conditions
+      const gates = await api.getGateConditions(tenderId);
+      if (!gates || gates.length === 0) {
+        return {
+          success: false,
+          tender_id: tenderId,
+          org_id: orgId,
+          gate_to_scoring: [],
+          scoring_to_gate: [],
+          optimization_score: 0,
+          summary: 'לא נמצאו תנאי סף לניתוח',
+        };
+      }
+
+      // Get company profile to understand our position
+      const [projects, financials, certifications] = await Promise.all([
+        api.company.getProjects(orgId).catch(() => [] as CompanyProject[]),
+        api.company.getFinancials(orgId).catch(() => [] as CompanyFinancial[]),
+        api.company.getCertifications(orgId).catch(() => [] as CompanyCertification[]),
+      ]);
+
+      const gateToScoring: Array<{
+        condition_number: string;
+        condition_text: string;
+        current_type: 'GATE';
+        recommended_type: 'SCORING';
+        reason: string;
+        potential_advantage: string;
+        question_template: string;
+      }> = [];
+
+      const scoringToGate: Array<{
+        condition_number: string;
+        condition_text: string;
+        current_type: 'SCORING';
+        recommended_type: 'GATE';
+        reason: string;
+        competitor_impact: string;
+        question_template: string;
+      }> = [];
+
+      for (const gate of gates) {
+        const text = gate.condition_text.toLowerCase();
+        const condNum = gate.condition_number;
+
+        // Check if gate condition that we DON'T meet - suggest changing to scoring
+        if (gate.status === 'DOES_NOT_MEET' || gate.status === 'PARTIALLY_MEETS') {
+          // Experience requirements we almost meet
+          if (/ניסיון|פרויקט/.test(text) && gate.status === 'PARTIALLY_MEETS') {
+            gateToScoring.push({
+              condition_number: condNum,
+              condition_text: gate.condition_text,
+              current_type: 'GATE',
+              recommended_type: 'SCORING',
+              reason: 'אנו עומדים באופן חלקי בדרישה - המרה לניקוד תאפשר השתתפות',
+              potential_advantage: 'יאפשר לנו להתחרות עם ניקוד חלקי במקום פסילה',
+              question_template: `האם ניתן להמיר את דרישת הניסיון לתנאי ניקוד, כך שניסיון רב יותר יזכה בניקוד גבוה יותר?`,
+            });
+          }
+
+          // Financial requirements we don't meet
+          if (/מחזור|הכנסות|הון/.test(text) && gate.status === 'DOES_NOT_MEET') {
+            gateToScoring.push({
+              condition_number: condNum,
+              condition_text: gate.condition_text,
+              current_type: 'GATE',
+              recommended_type: 'SCORING',
+              reason: 'דרישה פיננסית שאנו לא עומדים בה - שינוי לניקוד יאפשר השתתפות',
+              potential_advantage: 'חברות קטנות יותר יוכלו להתחרות',
+              question_template: `האם ניתן להפוך את הדרישה הפיננסית לתנאי ניקוד? לדוגמה: מחזור גבוה יותר = ניקוד גבוה יותר`,
+            });
+          }
+        }
+
+        // Check if gate condition that we EXCEED - suggest strengthening to knock out competitors
+        if (gate.status === 'MEETS') {
+          // Experience we strongly exceed
+          if (/ניסיון|פרויקט/.test(text) && projects.length >= 5) {
+            scoringToGate.push({
+              condition_number: condNum,
+              condition_text: gate.condition_text,
+              current_type: 'SCORING',
+              recommended_type: 'GATE',
+              reason: 'לנו ניסיון עודף משמעותי - העלאת הרף תפסול מתחרים',
+              competitor_impact: 'צפוי לפסול חברות עם ניסיון מועט',
+              question_template: `האם ניתן להעלות את דרישת הניסיון ל-X פרויקטים מינימום?`,
+            });
+          }
+
+          // Certifications we have that others might not
+          if (/ISO|הסמכה|תעודה/.test(text) && certifications.length >= 3) {
+            scoringToGate.push({
+              condition_number: condNum,
+              condition_text: gate.condition_text,
+              current_type: 'SCORING',
+              recommended_type: 'GATE',
+              reason: 'יש לנו הסמכות מרובות - הדרישה תפסול מתחרים',
+              competitor_impact: 'חברות ללא הסמכות לא יוכלו להשתתף',
+              question_template: `האם תעודת ${certifications[0]?.cert_name || 'ISO'} היא תנאי סף הכרחי?`,
+            });
+          }
+
+          // Strong financials
+          if (/מחזור|הכנסות/.test(text) && financials.length > 0 && financials[0].annual_revenue) {
+            const revenue = financials[0].annual_revenue;
+            if (revenue > 10000000) { // מעל 10 מיליון
+              scoringToGate.push({
+                condition_number: condNum,
+                condition_text: gate.condition_text,
+                current_type: 'SCORING',
+                recommended_type: 'GATE',
+                reason: 'המחזור שלנו גבוה - העלאת סף פיננסי תפסול מתחרים קטנים',
+                competitor_impact: 'חברות קטנות לא יעמדו בדרישה',
+                question_template: `האם ניתן להגדיר מחזור מינימלי של ${(revenue * 0.8 / 1000000).toFixed(1)} מיליון ש"ח כתנאי סף?`,
+              });
+            }
+          }
+        }
+      }
+
+      // Calculate optimization score (0-100)
+      const totalSuggestions = gateToScoring.length + scoringToGate.length;
+      const optimizationScore = Math.min(100, totalSuggestions * 15);
+
+      return {
+        success: true,
+        tender_id: tenderId,
+        org_id: orgId,
+        gate_to_scoring: gateToScoring,
+        scoring_to_gate: scoringToGate,
+        optimization_score: optimizationScore,
+        summary: `נמצאו ${gateToScoring.length} תנאים להמרה לניקוד ו-${scoringToGate.length} תנאים להחמרה`,
+      };
+    },
+
+    // Module 3.4 - Spec vs BOQ Discrepancy Detection
+    // מזהה אי-התאמות בין מפרט טכני לכתב כמויות
+    detectSpecBoqDiscrepancies: async (tenderId: string, specText: string, boqText: string): Promise<{
+      success: boolean;
+      tender_id: string;
+      discrepancies: Array<{
+        id: string;
+        spec_reference: string;
+        boq_reference: string;
+        discrepancy_type: 'MISSING_IN_BOQ' | 'MISSING_IN_SPEC' | 'QUANTITY_MISMATCH' | 'DESCRIPTION_MISMATCH';
+        description: string;
+        severity: 'HIGH' | 'MEDIUM' | 'LOW';
+        recommendation: string;
+        question_template: string;
+      }>;
+      summary: {
+        total_discrepancies: number;
+        high_severity: number;
+        medium_severity: number;
+        low_severity: number;
+      };
+      recommendations: string[];
+    }> => {
+      console.log(`detectSpecBoqDiscrepancies for tender ${tenderId}`);
+
+      const discrepancies: Array<{
+        id: string;
+        spec_reference: string;
+        boq_reference: string;
+        discrepancy_type: 'MISSING_IN_BOQ' | 'MISSING_IN_SPEC' | 'QUANTITY_MISMATCH' | 'DESCRIPTION_MISMATCH';
+        description: string;
+        severity: 'HIGH' | 'MEDIUM' | 'LOW';
+        recommendation: string;
+        question_template: string;
+      }> = [];
+
+      let discrepancyId = 1;
+
+      // Extract items mentioned in spec
+      const specItems: Array<{ keyword: string; context: string }> = [];
+      const specKeywords = [
+        /מצלמ[הו]?ת?\s*(?:אבטחה|IP|PTZ|קבועה)?/gi,
+        /רכזת?\s*(?:תקשורת|רשת|switch)?/gi,
+        /שרת\s*(?:וידאו|הקלטה|VMS)?/gi,
+        /כבל\s*(?:Cat\d|אופטי|חשמל)?/gi,
+        /מסך\s*(?:תצוגה|LCD)?/gi,
+        /UPS|אל-פסק/gi,
+        /מקלדת\s*(?:שליטה)?/gi,
+        /קורא\s*(?:כרטיסים|ביומטרי)?/gi,
+      ];
+
+      for (const pattern of specKeywords) {
+        let match;
+        while ((match = pattern.exec(specText)) !== null) {
+          specItems.push({
+            keyword: match[0],
+            context: specText.substring(Math.max(0, match.index - 50), Math.min(specText.length, match.index + 100)),
+          });
+        }
+      }
+
+      // Check if spec items appear in BOQ
+      for (const item of specItems) {
+        const keyword = item.keyword.toLowerCase().trim();
+        if (keyword.length < 3) continue;
+
+        // Check if mentioned in BOQ
+        if (!boqText.toLowerCase().includes(keyword.substring(0, Math.min(keyword.length, 10)))) {
+          discrepancies.push({
+            id: `D${discrepancyId++}`,
+            spec_reference: item.context.substring(0, 80) + '...',
+            boq_reference: 'לא נמצא',
+            discrepancy_type: 'MISSING_IN_BOQ',
+            description: `פריט "${item.keyword}" מופיע במפרט אך לא נמצא בכתב הכמויות`,
+            severity: 'HIGH',
+            recommendation: 'יש לברר האם הפריט כלול במחיר אחר או חסר מכתב הכמויות',
+            question_template: `האם הפריט "${item.keyword}" המופיע במפרט הטכני כלול בכתב הכמויות? אם לא, כיצד יתומחר?`,
+          });
+        }
+      }
+
+      // Extract quantities from BOQ and look for mismatches
+      const quantityPattern = /(\d+)\s*(?:יח['׳]?|יחידות?|מ['׳]?|מטר|קומפ)/gi;
+      const boqQuantities: Array<{ number: number; context: string }> = [];
+      let qMatch;
+      while ((qMatch = quantityPattern.exec(boqText)) !== null) {
+        boqQuantities.push({
+          number: parseInt(qMatch[1]),
+          context: boqText.substring(Math.max(0, qMatch.index - 30), Math.min(boqText.length, qMatch.index + 50)),
+        });
+      }
+
+      // Look for same quantities in spec
+      for (const bq of boqQuantities) {
+        const specQuantityPattern = new RegExp(`(\\d+)\\s*(?:יח|יחידות?|מ['׳]?|מטר)`, 'gi');
+        let specMatch;
+        while ((specMatch = specQuantityPattern.exec(specText)) !== null) {
+          const specNum = parseInt(specMatch[1]);
+          // Check if there's a significant mismatch (more than 20% difference)
+          if (bq.number > 5 && specNum > 5 && Math.abs(bq.number - specNum) / Math.max(bq.number, specNum) > 0.2) {
+            // Check if they're in similar context
+            const boqContext = bq.context.toLowerCase();
+            const specContext = specText.substring(Math.max(0, specMatch.index - 30), Math.min(specText.length, specMatch.index + 50)).toLowerCase();
+
+            // Look for common keywords
+            const commonKeywords = ['מצלמ', 'כבל', 'רכזת', 'שרת', 'מסך'];
+            const hasCommonKeyword = commonKeywords.some(kw => boqContext.includes(kw) && specContext.includes(kw));
+
+            if (hasCommonKeyword) {
+              discrepancies.push({
+                id: `D${discrepancyId++}`,
+                spec_reference: `${specNum} יח' - ${specContext.substring(0, 50)}...`,
+                boq_reference: `${bq.number} יח' - ${bq.context.substring(0, 50)}...`,
+                discrepancy_type: 'QUANTITY_MISMATCH',
+                description: `אי-התאמה בכמות: המפרט מציין ${specNum} וכתב הכמויות מציין ${bq.number}`,
+                severity: Math.abs(bq.number - specNum) > 10 ? 'HIGH' : 'MEDIUM',
+                recommendation: 'יש לברר מהי הכמות הנכונה לתמחור',
+                question_template: `מהי הכמות הנכונה - ${specNum} לפי המפרט או ${bq.number} לפי כתב הכמויות?`,
+              });
+            }
+          }
+        }
+      }
+
+      // Add general recommendations if discrepancies found
+      const recommendations: string[] = [];
+      if (discrepancies.length > 0) {
+        recommendations.push('יש להגיש את כל השאלות בנוגע לאי-התאמות לפני מועד ההבהרות');
+        recommendations.push('מומלץ לתעד את כל אי-ההתאמות לצורך תמחור סיכונים');
+        if (discrepancies.filter(d => d.severity === 'HIGH').length > 2) {
+          recommendations.push('שימו לב: מספר גבוה של אי-התאמות חמורות - יש לשקול סיכון מוגבר בתמחור');
+        }
+      }
+
+      return {
+        success: true,
+        tender_id: tenderId,
+        discrepancies: discrepancies.slice(0, 20), // Limit to 20 discrepancies
+        summary: {
+          total_discrepancies: discrepancies.length,
+          high_severity: discrepancies.filter(d => d.severity === 'HIGH').length,
+          medium_severity: discrepancies.filter(d => d.severity === 'MEDIUM').length,
+          low_severity: discrepancies.filter(d => d.severity === 'LOW').length,
+        },
+        recommendations,
+      };
+    },
+
+    // Module 3.4.5 - Compare to Similar Tenders
+    // מוצא מכרזים דומים ומשווה תכולה לזיהוי חסרים
+    compareToSimilarTenders: async (tenderId: string, category: string): Promise<{
+      success: boolean;
+      tender_id: string;
+      similar_tenders: Array<{
+        id: string;
+        name: string;
+        issuing_body: string;
+        date: string;
+        similarity_score: number;
+        category: string;
+      }>;
+      missing_items: Array<{
+        item: string;
+        found_in_tenders: string[];
+        frequency: number;
+        recommendation: string;
+      }>;
+      extra_items: Array<{
+        item: string;
+        note: string;
+      }>;
+      insights: string[];
+    }> => {
+      console.log(`compareToSimilarTenders for tender ${tenderId}, category ${category}`);
+
+      // Get current tender
+      const currentTender = await api.getTender(tenderId);
+      if (!currentTender) {
+        return {
+          success: false,
+          tender_id: tenderId,
+          similar_tenders: [],
+          missing_items: [],
+          extra_items: [],
+          insights: ['לא נמצא מכרז'],
+        };
+      }
+
+      // Get all tenders in same category
+      const allTenders = await api.getTenders();
+      const categoryKeywords = category.toLowerCase().split(/[\s,]+/).filter(k => k.length > 2);
+
+      // Find similar tenders by category/name matching
+      const similarTenders: Array<{
+        id: string;
+        name: string;
+        issuing_body: string;
+        date: string;
+        similarity_score: number;
+        category: string;
+      }> = [];
+
+      for (const tender of allTenders) {
+        if (tender.id === tenderId) continue;
+
+        const tenderText = `${tender.tender_name} ${tender.category || ''} ${tender.issuing_body || ''}`.toLowerCase();
+        let matchCount = 0;
+
+        for (const keyword of categoryKeywords) {
+          if (tenderText.includes(keyword)) matchCount++;
+        }
+
+        const similarityScore = categoryKeywords.length > 0 ? (matchCount / categoryKeywords.length) * 100 : 0;
+
+        if (similarityScore >= 30) {
+          similarTenders.push({
+            id: tender.id,
+            name: tender.tender_name,
+            issuing_body: tender.issuing_body || 'לא ידוע',
+            date: tender.publish_date || tender.created_at || '',
+            similarity_score: Math.round(similarityScore),
+            category: tender.category || category,
+          });
+        }
+      }
+
+      // Sort by similarity
+      similarTenders.sort((a, b) => b.similarity_score - a.similarity_score);
+
+      // Get gate conditions from similar tenders to find common requirements
+      const requirementFrequency: Map<string, { count: number; tenders: string[] }> = new Map();
+
+      for (const similar of similarTenders.slice(0, 5)) {
+        try {
+          const gates = await api.getGateConditions(similar.id);
+          for (const gate of gates) {
+            // Extract key requirement keywords
+            const keywords = extractRequirementKeywords(gate.condition_text);
+            for (const kw of keywords) {
+              const existing = requirementFrequency.get(kw);
+              if (existing) {
+                existing.count++;
+                if (!existing.tenders.includes(similar.name)) {
+                  existing.tenders.push(similar.name);
+                }
+              } else {
+                requirementFrequency.set(kw, { count: 1, tenders: [similar.name] });
+              }
+            }
+          }
+        } catch (e) {
+          console.log(`Could not get gates for ${similar.id}:`, e);
+        }
+      }
+
+      // Get current tender gates
+      const currentGates = await api.getGateConditions(tenderId);
+      const currentKeywords = new Set<string>();
+      for (const gate of currentGates) {
+        const keywords = extractRequirementKeywords(gate.condition_text);
+        keywords.forEach(kw => currentKeywords.add(kw));
+      }
+
+      // Find missing items (in similar but not in current)
+      const missingItems: Array<{
+        item: string;
+        found_in_tenders: string[];
+        frequency: number;
+        recommendation: string;
+      }> = [];
+
+      for (const [keyword, data] of requirementFrequency.entries()) {
+        if (data.count >= 2 && !currentKeywords.has(keyword)) {
+          missingItems.push({
+            item: keyword,
+            found_in_tenders: data.tenders,
+            frequency: data.count,
+            recommendation: data.count >= 3
+              ? 'דרישה נפוצה מאוד - מומלץ לברר עם המזמין'
+              : 'דרישה שכיחה - כדאי לבדוק',
+          });
+        }
+      }
+
+      // Sort by frequency
+      missingItems.sort((a, b) => b.frequency - a.frequency);
+
+      // Find extra items (in current but rare in similar)
+      const extraItems: Array<{ item: string; note: string }> = [];
+      for (const kw of currentKeywords) {
+        const freq = requirementFrequency.get(kw);
+        if (!freq || freq.count <= 1) {
+          extraItems.push({
+            item: kw,
+            note: 'דרישה ייחודית למכרז זה - לא נפוצה במכרזים דומים',
+          });
+        }
+      }
+
+      // Generate insights
+      const insights: string[] = [];
+      if (similarTenders.length === 0) {
+        insights.push('לא נמצאו מכרזים דומים להשוואה');
+      } else {
+        insights.push(`נמצאו ${similarTenders.length} מכרזים דומים להשוואה`);
+      }
+      if (missingItems.length > 0) {
+        insights.push(`זוהו ${missingItems.length} דרישות שכיחות במכרזים דומים שלא מופיעות במכרז זה`);
+      }
+      if (extraItems.length > 0) {
+        insights.push(`המכרז כולל ${extraItems.length} דרישות ייחודיות שלא נפוצות במכרזים דומים`);
+      }
+
+      return {
+        success: true,
+        tender_id: tenderId,
+        similar_tenders: similarTenders.slice(0, 10),
+        missing_items: missingItems.slice(0, 15),
+        extra_items: extraItems.slice(0, 10),
+        insights,
+      };
+    },
+
+    // Module 2.7.6 - Analyze Competitor Questions
+    // מנתח שאלות הבהרה של מתחרים לחשיפת אסטרטגיה
+    analyzeCompetitorQuestions: async (tenderId: string, clarificationDoc: string): Promise<{
+      success: boolean;
+      tender_id: string;
+      total_questions: number;
+      question_categories: Array<{
+        category: string;
+        count: number;
+        examples: string[];
+      }>;
+      competitor_signals: Array<{
+        signal_type: 'WEAKNESS' | 'STRATEGY' | 'CONCERN' | 'ADVANTAGE';
+        description: string;
+        source_question: string;
+        our_action: string;
+      }>;
+      market_insights: string[];
+      recommendations: string[];
+    }> => {
+      console.log(`analyzeCompetitorQuestions for tender ${tenderId}`);
+
+      // Parse questions from clarification document
+      const questions: string[] = [];
+      const questionPatterns = [
+        /שאלה\s*(?:מס['׳]?)?\s*\d+\s*[:\-]?\s*([^\n]+)/gi,
+        /\d+\s*[.\)]\s*([^\n]{20,300})\?/g,
+        /האם\s+([^\n]{10,200})\?/gi,
+        /מה\s+([^\n]{10,200})\?/gi,
+        /כיצד\s+([^\n]{10,200})\?/gi,
+        /מהו\s+([^\n]{10,200})\?/gi,
+      ];
+
+      for (const pattern of questionPatterns) {
+        let match;
+        while ((match = pattern.exec(clarificationDoc)) !== null) {
+          const question = match[1]?.trim() || match[0].trim();
+          if (question.length > 15 && !questions.includes(question)) {
+            questions.push(question);
+          }
+        }
+      }
+
+      // Categorize questions
+      const categories: Map<string, string[]> = new Map([
+        ['ניסיון', []],
+        ['פיננסי', []],
+        ['טכני', []],
+        ['לוח זמנים', []],
+        ['תמחור', []],
+        ['משפטי', []],
+        ['אחר', []],
+      ]);
+
+      for (const q of questions) {
+        const qLower = q.toLowerCase();
+        if (/ניסיון|פרויקט|עבודה קודמת|רפרנס/.test(qLower)) {
+          categories.get('ניסיון')!.push(q);
+        } else if (/מחזור|הכנסות|ערבות|פיננס|כספי/.test(qLower)) {
+          categories.get('פיננסי')!.push(q);
+        } else if (/טכני|מפרט|תקן|ISO|הסמכה/.test(qLower)) {
+          categories.get('טכני')!.push(q);
+        } else if (/זמן|לוח|תאריך|מועד|משך/.test(qLower)) {
+          categories.get('לוח זמנים')!.push(q);
+        } else if (/מחיר|תמחור|עלות|תשלום/.test(qLower)) {
+          categories.get('תמחור')!.push(q);
+        } else if (/חוזה|הסכם|תנאי|סעיף|משפט/.test(qLower)) {
+          categories.get('משפטי')!.push(q);
+        } else {
+          categories.get('אחר')!.push(q);
+        }
+      }
+
+      // Convert to array format
+      const questionCategories = Array.from(categories.entries())
+        .filter(([_, qs]) => qs.length > 0)
+        .map(([category, qs]) => ({
+          category,
+          count: qs.length,
+          examples: qs.slice(0, 3),
+        }));
+
+      // Detect competitor signals
+      const competitorSignals: Array<{
+        signal_type: 'WEAKNESS' | 'STRATEGY' | 'CONCERN' | 'ADVANTAGE';
+        description: string;
+        source_question: string;
+        our_action: string;
+      }> = [];
+
+      for (const q of questions) {
+        const qLower = q.toLowerCase();
+
+        // Weakness signals - questions asking for relaxed requirements
+        if (/האם ניתן|האם אפשר|להקל|לוותר|חלופ|במקום/.test(qLower)) {
+          if (/ניסיון|פרויקט/.test(qLower)) {
+            competitorSignals.push({
+              signal_type: 'WEAKNESS',
+              description: 'מתחרה מבקש הקלה בדרישות ניסיון - כנראה חסר ניסיון',
+              source_question: q.substring(0, 100),
+              our_action: 'לבקש החמרת דרישות הניסיון אם אנו עומדים בהן',
+            });
+          } else if (/מחזור|פיננס|כספי/.test(qLower)) {
+            competitorSignals.push({
+              signal_type: 'WEAKNESS',
+              description: 'מתחרה מבקש הקלה בדרישות פיננסיות',
+              source_question: q.substring(0, 100),
+              our_action: 'לבקש שמירה או החמרת הדרישות הפיננסיות',
+            });
+          }
+        }
+
+        // Strategy signals - questions about scoring
+        if (/משקל|ניקוד|הערכה|יתרון/.test(qLower)) {
+          competitorSignals.push({
+            signal_type: 'STRATEGY',
+            description: 'מתחרה מנסה להבין את שיטת הניקוד',
+            source_question: q.substring(0, 100),
+            our_action: 'להתמקד בקריטריונים שיש לנו יתרון בהם',
+          });
+        }
+
+        // Concern signals - risk questions
+        if (/סיכון|אחריות|ביטוח|קנס|פיצוי/.test(qLower)) {
+          competitorSignals.push({
+            signal_type: 'CONCERN',
+            description: 'מתחרה מודאג מסיכונים בפרויקט',
+            source_question: q.substring(0, 100),
+            our_action: 'לכלול רזרבה לסיכונים בתמחור',
+          });
+        }
+      }
+
+      // Generate market insights
+      const marketInsights: string[] = [];
+      const experienceQuestions = categories.get('ניסיון')!.length;
+      const financialQuestions = categories.get('פיננסי')!.length;
+
+      if (experienceQuestions > 3) {
+        marketInsights.push(`ריבוי שאלות על ניסיון (${experienceQuestions}) מעיד על מתחרים חלשים בתחום זה`);
+      }
+      if (financialQuestions > 2) {
+        marketInsights.push(`שאלות פיננסיות רבות (${financialQuestions}) מעידות על מתחרים קטנים בשוק`);
+      }
+      if (questions.length > 20) {
+        marketInsights.push('מספר גבוה של שאלות מעיד על עניין רב במכרז');
+      }
+
+      // Recommendations
+      const recommendations: string[] = [];
+      if (competitorSignals.filter(s => s.signal_type === 'WEAKNESS').length > 0) {
+        recommendations.push('זוהו חולשות של מתחרים - להשתמש בהן בשאלות אסטרטגיות');
+      }
+      if (experienceQuestions > financialQuestions) {
+        recommendations.push('להדגיש ניסיון בהצעה - זה נראה כקריטי');
+      }
+      recommendations.push('לעקוב אחר תשובות ההבהרה ולעדכן אסטרטגיה בהתאם');
+
+      return {
+        success: true,
+        tender_id: tenderId,
+        total_questions: questions.length,
+        question_categories: questionCategories,
+        competitor_signals: competitorSignals.slice(0, 10),
+        market_insights: marketInsights,
+        recommendations,
+      };
+    },
+
+    // Module 3.5 - Pricing Risk Analysis & Recommendations
+    // ניתוח סיכוני תמחור והמלצות
+    analyzePricingRisks: async (tenderId: string, boqItems: BOQItem[]): Promise<{
+      success: boolean;
+      tender_id: string;
+      risk_analysis: Array<{
+        item_number: string;
+        description: string;
+        risk_level: 'HIGH' | 'MEDIUM' | 'LOW';
+        risk_type: string;
+        recommendation: string;
+        suggested_markup_percent: number;
+      }>;
+      overall_risk_score: number;
+      reserve_recommendation: {
+        min_percent: number;
+        recommended_percent: number;
+        max_percent: number;
+        reasoning: string;
+      };
+      pricing_strategy: {
+        approach: 'AGGRESSIVE' | 'CONSERVATIVE' | 'BALANCED';
+        reasoning: string;
+        key_items_to_focus: string[];
+      };
+      warnings: string[];
+    }> => {
+      console.log(`analyzePricingRisks for tender ${tenderId}`);
+
+      const riskAnalysis: Array<{
+        item_number: string;
+        description: string;
+        risk_level: 'HIGH' | 'MEDIUM' | 'LOW';
+        risk_type: string;
+        recommendation: string;
+        suggested_markup_percent: number;
+      }> = [];
+
+      let totalRiskScore = 0;
+      const warnings: string[] = [];
+
+      for (const item of boqItems) {
+        const desc = (item.description || '').toLowerCase();
+        let riskLevel: 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
+        let riskType = '';
+        let recommendation = '';
+        let suggestedMarkup = 5;
+
+        // זיהוי סיכונים לפי סוג פריט
+        if (/תשתית|חפירה|בטון|יסודות/.test(desc)) {
+          riskLevel = 'HIGH';
+          riskType = 'עבודות תשתית - תלוי בתנאי שטח';
+          recommendation = 'לבקר באתר ולהוסיף רזרבה לבלתי צפוי';
+          suggestedMarkup = 15;
+          totalRiskScore += 20;
+        } else if (/כבלים|תשתית תקשורת|צנרת/.test(desc)) {
+          riskLevel = 'MEDIUM';
+          riskType = 'תלוי במרחקים ומסלולים';
+          recommendation = 'לוודא אורכים מדויקים במפרט';
+          suggestedMarkup = 10;
+          totalRiskScore += 10;
+        } else if (/התקנה|עבודה|שירות/.test(desc)) {
+          riskLevel = 'MEDIUM';
+          riskType = 'עבודה - תלוי בזמינות צוות';
+          recommendation = 'לתמחר לפי שעות צפויות + 20%';
+          suggestedMarkup = 10;
+          totalRiskScore += 8;
+        } else if (/ציוד|מכשיר|מצלמה|רכזת/.test(desc)) {
+          riskLevel = 'LOW';
+          riskType = 'ציוד - מחיר יציב';
+          recommendation = 'לבדוק מול ספקים לפני תמחור סופי';
+          suggestedMarkup = 5;
+          totalRiskScore += 3;
+        }
+
+        // בדיקת כמויות גדולות
+        if (item.quantity && item.quantity > 100) {
+          riskLevel = riskLevel === 'LOW' ? 'MEDIUM' : riskLevel;
+          riskType += ' + כמות גדולה';
+          recommendation += ' | לבקש הנחת כמות מספק';
+          totalRiskScore += 5;
+        }
+
+        // בדיקת פריטים ללא מחיר
+        if (!item.unit_price || item.unit_price === 0) {
+          warnings.push(`פריט ${item.item_number} ללא מחיר - יש לתמחר`);
+        }
+
+        if (riskType) {
+          riskAnalysis.push({
+            item_number: item.item_number,
+            description: item.description.substring(0, 80),
+            risk_level: riskLevel,
+            risk_type: riskType,
+            recommendation,
+            suggested_markup_percent: suggestedMarkup,
+          });
+        }
+      }
+
+      // חישוב המלצת רזרבה
+      const normalizedRiskScore = Math.min(100, totalRiskScore);
+      let minReserve = 3;
+      let recommendedReserve = 5;
+      let maxReserve = 10;
+      let reserveReasoning = 'פרויקט עם סיכון נמוך';
+
+      if (normalizedRiskScore > 60) {
+        minReserve = 10;
+        recommendedReserve = 15;
+        maxReserve = 20;
+        reserveReasoning = 'פרויקט עם סיכון גבוה - הרבה עבודות תשתית או אי-ודאויות';
+      } else if (normalizedRiskScore > 30) {
+        minReserve = 5;
+        recommendedReserve = 10;
+        maxReserve = 15;
+        reserveReasoning = 'פרויקט עם סיכון בינוני - כולל עבודות מורכבות';
+      }
+
+      // אסטרטגיית תמחור
+      const highRiskItems = riskAnalysis.filter(r => r.risk_level === 'HIGH').length;
+      let approach: 'AGGRESSIVE' | 'CONSERVATIVE' | 'BALANCED' = 'BALANCED';
+      let strategyReasoning = 'גישה מאוזנת מומלצת';
+
+      if (highRiskItems > boqItems.length * 0.3) {
+        approach = 'CONSERVATIVE';
+        strategyReasoning = 'יותר מ-30% פריטים בסיכון גבוה - מומלץ תמחור שמרני';
+      } else if (highRiskItems === 0 && normalizedRiskScore < 20) {
+        approach = 'AGGRESSIVE';
+        strategyReasoning = 'פרויקט עם סיכון נמוך - ניתן לתמחר אגרסיבי יותר לזכייה';
+      }
+
+      return {
+        success: true,
+        tender_id: tenderId,
+        risk_analysis: riskAnalysis,
+        overall_risk_score: normalizedRiskScore,
+        reserve_recommendation: {
+          min_percent: minReserve,
+          recommended_percent: recommendedReserve,
+          max_percent: maxReserve,
+          reasoning: reserveReasoning,
+        },
+        pricing_strategy: {
+          approach,
+          reasoning: strategyReasoning,
+          key_items_to_focus: riskAnalysis
+            .filter(r => r.risk_level === 'HIGH')
+            .map(r => r.item_number)
+            .slice(0, 5),
+        },
+        warnings,
+      };
+    },
+
+    // Module 2.7 - Questions with Priorities
+    // שאלות עם עדיפויות P1/P2/P3
+    generatePrioritizedQuestions: async (tenderId: string, orgId: string): Promise<{
+      success: boolean;
+      tender_id: string;
+      p1_critical: Array<{ question: string; rationale: string; deadline: string }>;
+      p2_important: Array<{ question: string; rationale: string }>;
+      p3_nice_to_have: Array<{ question: string; rationale: string }>;
+      total_questions: number;
+    }> => {
+      console.log(`generatePrioritizedQuestions for tender ${tenderId}, org ${orgId}`);
+
+      const [gates, orgData] = await Promise.all([
+        api.getGateConditions(tenderId),
+        api.organizations.get(orgId),
+      ]);
+      const p1: Array<{ question: string; rationale: string; deadline: string }> = [];
+      const p2: Array<{ question: string; rationale: string }> = [];
+      const p3: Array<{ question: string; rationale: string }> = [];
+
+      for (const gate of gates) {
+        const text = gate.condition_text.toLowerCase();
+
+        // P1 - שאלות קריטיות (משנות GO/NO-GO)
+        if (gate.status === 'DOES_NOT_MEET' && gate.is_mandatory) {
+          p1.push({
+            question: `בנוגע לתנאי "${gate.condition_text.substring(0, 50)}..." - האם ניתן להקל בדרישה או להציג חלופה?`,
+            rationale: 'תנאי סף שאיננו עומדים בו - חוסם!',
+            deadline: 'לפני מועד ההבהרות',
+          });
+        }
+
+        // P1 - אי בהירות בתנאי מנדטורי
+        if (gate.is_mandatory && gate.status === 'UNKNOWN') {
+          if (/ניסיון/.test(text)) {
+            p1.push({
+              question: `מהי ההגדרה המדויקת של "ניסיון" הנדרש בתנאי ${gate.condition_number}?`,
+              rationale: 'חוסר בהירות בתנאי סף קריטי',
+              deadline: 'לפני מועד ההבהרות',
+            });
+          }
+        }
+
+        // P2 - שאלות חשובות (משפיעות על ניקוד/תמחור)
+        if (gate.status === 'PARTIALLY_MEETS') {
+          p2.push({
+            question: `האם עמידה חלקית בתנאי ${gate.condition_number} מקבלת ניקוד יחסי?`,
+            rationale: 'הבנת שיטת הניקוד תשפיע על אסטרטגיה',
+          });
+        }
+
+        // P2 - שאלות על היקף
+        if (/היקף|כמות|גודל/.test(text)) {
+          p2.push({
+            question: `האם ההיקף המצוין בתנאי ${gate.condition_number} הוא מינימום או טווח?`,
+            rationale: 'השפעה על תמחור',
+          });
+        }
+
+        // P3 - שאלות משניות (לשיפור הצעה)
+        if (/יתרון|העדפה|בונוס/.test(text)) {
+          p3.push({
+            question: `מהו המשקל היחסי של "${gate.condition_text.substring(0, 30)}..." בניקוד?`,
+            rationale: 'אופטימיזציה של ההצעה',
+          });
+        }
+      }
+
+      // הוספת שאלות כלליות
+      p2.push({
+        question: 'מהו לוח הזמנים המשוער לביצוע הפרויקט?',
+        rationale: 'תכנון משאבים',
+      });
+
+      p3.push({
+        question: 'האם יש התייחסות להצעות חדשניות?',
+        rationale: 'הזדמנות לבידול',
+      });
+
+      // שאלות ספציפיות לארגון
+      if (orgData && orgData.specializations) {
+        p3.push({
+          question: `האם ניסיון ב-${orgData.specializations} מקנה יתרון בניקוד?`,
+          rationale: 'מינוף התמחות הארגון',
+        });
+      }
+
+      return {
+        success: true,
+        tender_id: tenderId,
+        p1_critical: p1.slice(0, 10),
+        p2_important: p2.slice(0, 10),
+        p3_nice_to_have: p3.slice(0, 10),
+        total_questions: p1.length + p2.length + p3.length,
+      };
+    },
+
     // Module 1.1 - Document Analysis (uses local regex parsing with optional AI enhancement)
     analyzeDocument: async (documentText: string, fileName: string) => {
       console.log(`analyzeDocument called with ${documentText.length} chars, file: ${fileName}`);
@@ -1371,7 +2948,21 @@ export const api = {
         });
         console.log(`Organization ${id} created successfully`);
         return created[0];
-      } catch (error) {
+      } catch (error: unknown) {
+        // Handle duplicate company_number - generate a new one and retry
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        if (errorMsg.includes('23505') || errorMsg.includes('duplicate key')) {
+          console.log('Duplicate company_number, generating new one...');
+          const newCompanyNumber = Math.floor(100000000 + Math.random() * 900000000).toString();
+          localStorage.setItem('tenderix_session_company_number', newCompanyNumber);
+          const retryData = { ...defaultData, company_number: newCompanyNumber };
+          const created = await supabaseFetch<Organization[]>('organizations', {
+            method: 'POST',
+            body: JSON.stringify({ id, ...retryData }),
+          });
+          console.log(`Organization ${id} created with new company_number`);
+          return created[0];
+        }
         console.error('Error ensuring organization exists:', error);
         throw error;
       }
