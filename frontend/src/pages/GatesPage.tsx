@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CheckSquare, RefreshCw, FileQuestion, Lightbulb, FileCheck, AlertCircle, FileText, Zap, RotateCcw, ListOrdered, DollarSign } from 'lucide-react';
+import { CheckSquare, RefreshCw, FileQuestion, Lightbulb, FileCheck, AlertCircle, FileText, Zap, RotateCcw, ListOrdered, DollarSign, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { api } from '../api/tenderix';
 import type { GateCondition, Tender } from '../api/tenderix';
 import { getCurrentTenderId, getCurrentOrgId, getTenderExtractedText } from '../api/config';
@@ -19,6 +19,8 @@ export function GatesPage() {
   const [hasExtractedText, setHasExtractedText] = useState(false);
   const [extractingGates, setExtractingGates] = useState(false);
   const [clarificationText, setClarificationText] = useState('');
+  const [analyzingGateId, setAnalyzingGateId] = useState<string | null>(null);
+  const [expandedGates, setExpandedGates] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadData();
@@ -83,6 +85,46 @@ export function GatesPage() {
       console.error('Error extracting gates:', error);
     } finally {
       setExtractingGates(false);
+    }
+  }
+
+  // Toggle expanded state for a gate
+  function toggleGateExpanded(gateId: string) {
+    setExpandedGates(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(gateId)) {
+        newSet.delete(gateId);
+      } else {
+        newSet.add(gateId);
+      }
+      return newSet;
+    });
+  }
+
+  // Analyze a single gate condition with AI
+  async function analyzeGate(gate: GateCondition) {
+    const orgId = getCurrentOrgId();
+    setAnalyzingGateId(gate.id);
+
+    try {
+      // Match this specific gate against company profile
+      const result = await api.workflows.matchGates(gate.tender_id, orgId);
+
+      if (result.success) {
+        // Find the updated gate in the result
+        const updatedGate = result.conditions.find(c => c.id === gate.id);
+        if (updatedGate) {
+          // Update local state
+          setGates(prev => prev.map(g => g.id === gate.id ? { ...g, ...updatedGate } : g));
+        }
+      }
+
+      // Expand to show results
+      setExpandedGates(prev => new Set([...prev, gate.id]));
+    } catch (error) {
+      console.error('Error analyzing gate:', error);
+    } finally {
+      setAnalyzingGateId(null);
     }
   }
 
@@ -151,6 +193,12 @@ export function GatesPage() {
     partial: gates.filter(g => g.status === 'PARTIALLY_MEETS').length,
     fails: gates.filter(g => g.status === 'DOES_NOT_MEET').length,
     mandatory: gates.filter(g => g.is_mandatory).length,
+    aiAnalyzed: gates.filter(g => g.status && g.status !== 'UNKNOWN').length,
+    byCategory: {
+      experience: gates.filter(g => g.requirement_type === 'EXPERIENCE').length,
+      financial: gates.filter(g => g.requirement_type === 'FINANCIAL').length,
+      certification: gates.filter(g => g.requirement_type === 'CERTIFICATION').length,
+    }
   };
 
   return (
@@ -193,8 +241,8 @@ export function GatesPage() {
       {/* Stats */}
       <div className="grid grid-4" style={{ marginBottom: '1.5rem' }}>
         <div className="stat-card">
-          <div className="stat-value">{gateStats.total}</div>
-          <div className="stat-label">סה"כ תנאים</div>
+          <div className="stat-value" style={{ color: 'var(--primary)' }}>{gateStats.aiAnalyzed}/{gateStats.total}</div>
+          <div className="stat-label">נותחו AI</div>
         </div>
         <div className="stat-card">
           <div className="stat-value" style={{ color: 'var(--success)' }}>{gateStats.meets}</div>
@@ -206,9 +254,42 @@ export function GatesPage() {
         </div>
         <div className="stat-card">
           <div className="stat-value" style={{ color: 'var(--warning)' }}>{gateStats.mandatory}</div>
-          <div className="stat-label">חובה</div>
+          <div className="stat-label">תנאי חובה</div>
         </div>
       </div>
+
+      {/* Category breakdown */}
+      {(gateStats.byCategory.experience > 0 || gateStats.byCategory.financial > 0 || gateStats.byCategory.certification > 0) && (
+        <div className="card" style={{ marginBottom: '1rem', padding: '0.75rem 1rem' }}>
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ color: 'var(--gray-500)', fontSize: '0.9rem' }}>לפי קטגוריה:</span>
+            {gateStats.byCategory.experience > 0 && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#7c3aed' }}></span>
+                <span>{gateStats.byCategory.experience} ניסיון</span>
+              </span>
+            )}
+            {gateStats.byCategory.financial > 0 && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#059669' }}></span>
+                <span>{gateStats.byCategory.financial} כספי</span>
+              </span>
+            )}
+            {gateStats.byCategory.certification > 0 && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#d97706' }}></span>
+                <span>{gateStats.byCategory.certification} הסמכות</span>
+              </span>
+            )}
+            {gateStats.total - gateStats.byCategory.experience - gateStats.byCategory.financial - gateStats.byCategory.certification > 0 && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#6b7280' }}></span>
+                <span>{gateStats.total - gateStats.byCategory.experience - gateStats.byCategory.financial - gateStats.byCategory.certification} אחר</span>
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="card">
@@ -316,20 +397,185 @@ export function GatesPage() {
       {/* Tab Content */}
       {activeTab === 'conditions' && (
         <div>
-          {gates.map((gate) => (
-            <div key={gate.id} className="gate-item">
-              <div className="gate-number">{gate.condition_number}</div>
-              <div className="gate-content">
-                <div className="gate-text">{gate.condition_text}</div>
-                <div className="gate-meta">
-                  <StatusBadge status={gate.status || 'UNKNOWN'} />
-                  {gate.is_mandatory && <span className="badge badge-danger">חובה</span>}
-                  {gate.evidence && <span style={{ color: 'var(--success)' }}>ראיה: {gate.evidence.substring(0, 50)}...</span>}
-                  {gate.gap_description && <span style={{ color: 'var(--danger)' }}>פער: {gate.gap_description.substring(0, 50)}...</span>}
+          {/* Summary badges */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+            <span className="badge" style={{ background: 'var(--primary)', color: 'white' }}>
+              {gates.length} תנאים
+            </span>
+            <span className="badge badge-danger">{gateStats.mandatory} חובה</span>
+            {gates.filter(g => g.requirement_type === 'EXPERIENCE').length > 0 && (
+              <span className="badge" style={{ background: '#7c3aed', color: 'white' }}>
+                {gates.filter(g => g.requirement_type === 'EXPERIENCE').length} ניסיון
+              </span>
+            )}
+            {gates.filter(g => g.requirement_type === 'FINANCIAL').length > 0 && (
+              <span className="badge" style={{ background: '#059669', color: 'white' }}>
+                {gates.filter(g => g.requirement_type === 'FINANCIAL').length} כספי
+              </span>
+            )}
+            {gates.filter(g => g.requirement_type === 'CERTIFICATION').length > 0 && (
+              <span className="badge" style={{ background: '#d97706', color: 'white' }}>
+                {gates.filter(g => g.requirement_type === 'CERTIFICATION').length} הסמכות
+              </span>
+            )}
+          </div>
+
+          {gates.map((gate) => {
+            const isExpanded = expandedGates.has(gate.id);
+            const isAnalyzing = analyzingGateId === gate.id;
+            const categoryColors: Record<string, string> = {
+              EXPERIENCE: '#7c3aed',
+              FINANCIAL: '#059669',
+              CERTIFICATION: '#d97706',
+              PERSONNEL: '#0891b2',
+              EQUIPMENT: '#6366f1',
+              LEGAL: '#dc2626',
+              OTHER: '#6b7280',
+            };
+            const categoryLabels: Record<string, string> = {
+              EXPERIENCE: 'ניסיון',
+              FINANCIAL: 'כספי',
+              CERTIFICATION: 'הסמכה',
+              PERSONNEL: 'כח אדם',
+              EQUIPMENT: 'ציוד',
+              LEGAL: 'משפטי',
+              OTHER: 'אחר',
+            };
+
+            return (
+              <div key={gate.id} className="card" style={{ marginBottom: '0.75rem', padding: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+                  {/* Number badge */}
+                  <div style={{
+                    background: 'linear-gradient(135deg, var(--primary), #6d28d9)',
+                    color: 'white',
+                    borderRadius: '8px',
+                    padding: '0.5rem 0.75rem',
+                    fontWeight: 'bold',
+                    minWidth: '45px',
+                    textAlign: 'center'
+                  }}>
+                    #{gate.condition_number}
+                  </div>
+
+                  {/* Content */}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ marginBottom: '0.5rem' }}>{gate.condition_text}</div>
+
+                    {/* Meta row */}
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                      <StatusBadge status={gate.status || 'UNKNOWN'} />
+                      {gate.is_mandatory && <span className="badge badge-danger">חובה</span>}
+                      {gate.requirement_type && (
+                        <span className="badge" style={{
+                          background: categoryColors[gate.requirement_type] || '#6b7280',
+                          color: 'white'
+                        }}>
+                          {categoryLabels[gate.requirement_type] || gate.requirement_type}
+                        </span>
+                      )}
+                      {gate.required_years && (
+                        <span className="badge" style={{ background: 'var(--gray-700)', color: 'white' }}>
+                          {gate.required_years} שנים
+                        </span>
+                      )}
+                      {gate.required_amount && (
+                        <span className="badge" style={{ background: 'var(--gray-700)', color: 'white' }}>
+                          {(gate.required_amount / 1000000).toFixed(1)}M ₪
+                        </span>
+                      )}
+                      {gate.required_count && (
+                        <span className="badge" style={{ background: 'var(--gray-700)', color: 'white' }}>
+                          {gate.required_count} פרויקטים
+                        </span>
+                      )}
+                      {gate.source_section && (
+                        <span style={{ fontSize: '0.8rem', color: 'var(--gray-500)' }}>
+                          📄 עמוד {gate.source_page || '?'} | סעיף {gate.source_section}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Expanded details */}
+                    {isExpanded && (
+                      <div style={{
+                        marginTop: '1rem',
+                        padding: '1rem',
+                        background: 'rgba(124, 58, 237, 0.1)',
+                        borderRadius: '8px',
+                        borderRight: '3px solid var(--primary)'
+                      }}>
+                        {gate.evidence && (
+                          <div style={{ marginBottom: '0.75rem' }}>
+                            <strong style={{ color: 'var(--success)' }}>✓ ראיה:</strong>
+                            <p style={{ margin: '0.25rem 0 0', color: 'var(--gray-300)' }}>{gate.evidence}</p>
+                          </div>
+                        )}
+                        {gate.gap_description && (
+                          <div style={{ marginBottom: '0.75rem' }}>
+                            <strong style={{ color: 'var(--danger)' }}>✗ פער:</strong>
+                            <p style={{ margin: '0.25rem 0 0', color: 'var(--gray-300)' }}>{gate.gap_description}</p>
+                          </div>
+                        )}
+                        {gate.legal_classification && (
+                          <div style={{ marginBottom: '0.75rem' }}>
+                            <strong>פרשנות משפטית:</strong>
+                            <span className="badge" style={{ marginRight: '0.5rem' }}>
+                              {gate.legal_classification === 'strict' ? 'קשיח' :
+                               gate.legal_classification === 'open' ? 'פתוח לפרשנות' : 'תלוי הוכחות'}
+                            </span>
+                            {gate.legal_reasoning && <span style={{ color: 'var(--gray-400)' }}>{gate.legal_reasoning}</span>}
+                          </div>
+                        )}
+                        {gate.technical_requirement && (
+                          <div>
+                            <strong>דרישה טכנית:</strong>
+                            <p style={{ margin: '0.25rem 0 0', color: 'var(--gray-300)' }}>{gate.technical_requirement}</p>
+                          </div>
+                        )}
+                        {gate.bearer_entity && (
+                          <div style={{ marginTop: '0.5rem' }}>
+                            <strong>נושא הדרישה:</strong>
+                            <span className="badge" style={{ marginRight: '0.5rem' }}>
+                              {gate.bearer_entity === 'bidder_only' ? 'המציע בלבד' :
+                               gate.bearer_entity === 'consortium_member' ? 'שותף במיזם' : 'קבלן משנה מותר'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => analyzeGate(gate)}
+                      disabled={isAnalyzing || runningWorkflow !== null}
+                      style={{
+                        padding: '0.5rem 0.75rem',
+                        fontSize: '0.85rem',
+                        background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                        color: 'white',
+                        border: 'none'
+                      }}
+                    >
+                      {isAnalyzing ? <div className="spinner" style={{ width: '14px', height: '14px' }} /> : <Sparkles size={14} />}
+                      נתח תנאי זה
+                    </button>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => toggleGateExpanded(gate.id)}
+                      style={{ padding: '0.5rem 0.75rem', fontSize: '0.85rem' }}
+                    >
+                      {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      {isExpanded ? 'הסתר' : 'פרטים'}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
