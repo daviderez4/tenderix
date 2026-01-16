@@ -1184,6 +1184,7 @@ export const api = {
       tender_id: string;
       org_id: string;
       conditions: Array<{
+        id?: string;
         condition_number: string;
         condition_text: string;
         status: string;

@@ -111,8 +111,10 @@ export function GatesPage() {
       const result = await api.workflows.matchGates(gate.tender_id, orgId);
 
       if (result.success) {
-        // Find the updated gate in the result
-        const updatedGate = result.conditions.find(c => c.id === gate.id);
+        // Find the updated gate in the result by condition_number
+        const updatedGate = result.conditions.find(c =>
+          c.condition_number === gate.condition_number || c.id === gate.id
+        );
         if (updatedGate) {
           // Update local state
           setGates(prev => prev.map(g => g.id === gate.id ? { ...g, ...updatedGate } : g));
