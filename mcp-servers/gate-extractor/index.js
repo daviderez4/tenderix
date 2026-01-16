@@ -1,16 +1,24 @@
 #!/usr/bin/env node
 
 /**
- * Tenderix Gate Extractor MCP Server
+ * Tenderix Gate Extractor MCP Server - Professional Edition
  *
- * מערכת חילוץ תנאי סף איטרטיבית למכרזים ישראליים
+ * מערכת חילוץ תנאי סף מקצועית למכרזים ישראליים
+ * ארכיטקטורה: 4 סוכני AI
  *
  * כלים זמינים:
  * - chunk_document: חיתוך מסמך לחלקים עם חפיפה
- * - extract_gates_from_chunk: חילוץ תנאי סף מ-chunk
+ * - extract_gates_from_chunk: חילוץ תנאי סף מ-chunk (legacy)
  * - validate_extraction_coverage: בדיקת כיסוי החילוץ
  * - merge_and_dedupe_conditions: מיזוג והסרת כפילויות
  * - save_extracted_conditions: שמירה ל-Supabase
+ *
+ * NEW - Professional Tools:
+ * - professional_gate_extraction: חילוץ מקצועי עם 4 סוכני AI
+ * - extract_definitions: חילוץ מילון הגדרות (Agent 0)
+ * - scan_for_conditions: סריקה שורה שורה (Agent 1)
+ * - analyze_conditions: ניתוח מעמיק עם פרשנות כפולה (Agent 2)
+ * - validate_and_finalize: אימות כיסוי ומיזוג (Agent 3)
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -23,10 +31,20 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import {
+  // New professional prompts
+  DEFINITIONS_SYSTEM_PROMPT,
+  DEFINITIONS_PROMPT,
+  SCANNER_SYSTEM_PROMPT,
+  SCANNER_PROMPT,
+  ANALYZER_SYSTEM_PROMPT,
+  ANALYZER_PROMPT,
+  VALIDATOR_SYSTEM_PROMPT,
+  VALIDATOR_PROMPT,
+  // Legacy prompts
   SYSTEM_PROMPT,
   EXTRACTION_PROMPT,
-  VALIDATION_PROMPT,
   MERGE_PROMPT,
+  // Keywords and patterns
   GATE_KEYWORDS,
   SECTION_BOUNDARIES
 } from './prompts.js';
@@ -138,7 +156,296 @@ function extractJsonFromResponse(text) {
 }
 
 // ============================================
-// TOOL IMPLEMENTATIONS
+// PROFESSIONAL AGENT FUNCTIONS
+// ============================================
+
+/**
+ * Agent 0: Extract Definitions
+ * מחלץ את מילון ההגדרות מהמכרז
+ */
+async function extractDefinitions(documentText) {
+  if (!anthropic) throw new Error('Anthropic API not initialized');
+
+  console.error('[Agent 0] Extracting definitions from document...');
+
+  const prompt = DEFINITIONS_PROMPT.replace('{document_text}', documentText);
+
+  const response = await anthropic.messages.create({
+    model: CLAUDE_MODEL,
+    max_tokens: 4096,
+    system: DEFINITIONS_SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: prompt }]
+  });
+
+  const responseText = response.content[0].text;
+
+  try {
+    const result = extractJsonFromResponse(responseText);
+    console.error(`[Agent 0] Found ${result.definitions?.length || 0} definitions`);
+    return {
+      success: true,
+      ...result
+    };
+  } catch (e) {
+    console.error(`[Agent 0] Failed to parse response: ${e.message}`);
+    return {
+      success: false,
+      definitions_found: false,
+      definitions: [],
+      error: e.message
+    };
+  }
+}
+
+/**
+ * Agent 1: Scanner
+ * סורק את המסמך שורה שורה ומזהה משפטים פוטנציאליים
+ */
+async function scanForConditions(documentText) {
+  if (!anthropic) throw new Error('Anthropic API not initialized');
+
+  console.error('[Agent 1] Scanning document for potential conditions...');
+
+  const prompt = SCANNER_PROMPT.replace('{document_text}', documentText);
+
+  const response = await anthropic.messages.create({
+    model: CLAUDE_MODEL,
+    max_tokens: 8192,
+    system: SCANNER_SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: prompt }]
+  });
+
+  const responseText = response.content[0].text;
+
+  try {
+    const result = extractJsonFromResponse(responseText);
+    console.error(`[Agent 1] Found ${result.potential_conditions?.length || 0} potential conditions`);
+    return {
+      success: true,
+      ...result
+    };
+  } catch (e) {
+    console.error(`[Agent 1] Failed to parse response: ${e.message}`);
+    return {
+      success: false,
+      potential_conditions: [],
+      error: e.message
+    };
+  }
+}
+
+/**
+ * Agent 2: Analyzer
+ * מנתח כל משפט לעומק עם פרשנות כפולה
+ */
+async function analyzeConditions(potentialConditions, definitions) {
+  if (!anthropic) throw new Error('Anthropic API not initialized');
+
+  console.error(`[Agent 2] Analyzing ${potentialConditions.length} conditions...`);
+
+  const definitionsJson = JSON.stringify(definitions || [], null, 2);
+  const conditionsJson = JSON.stringify(potentialConditions, null, 2);
+
+  const prompt = ANALYZER_PROMPT
+    .replace('{definitions_json}', definitionsJson)
+    .replace('{conditions_json}', conditionsJson);
+
+  const response = await anthropic.messages.create({
+    model: CLAUDE_MODEL,
+    max_tokens: 8192,
+    system: ANALYZER_SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: prompt }]
+  });
+
+  const responseText = response.content[0].text;
+
+  try {
+    const result = extractJsonFromResponse(responseText);
+    console.error(`[Agent 2] Analyzed ${result.analyzed_conditions?.length || 0} conditions, rejected ${result.rejected_conditions?.length || 0}`);
+    return {
+      success: true,
+      ...result
+    };
+  } catch (e) {
+    console.error(`[Agent 2] Failed to parse response: ${e.message}`);
+    return {
+      success: false,
+      analyzed_conditions: [],
+      rejected_conditions: [],
+      error: e.message
+    };
+  }
+}
+
+/**
+ * Agent 3: Validator
+ * מאמת כיסוי, מזהה כפילויות, מייצר דוח סופי
+ */
+async function validateAndFinalize(documentText, analyzedConditions) {
+  if (!anthropic) throw new Error('Anthropic API not initialized');
+
+  console.error(`[Agent 3] Validating ${analyzedConditions.length} conditions...`);
+
+  const conditionsJson = JSON.stringify(analyzedConditions, null, 2);
+
+  const prompt = VALIDATOR_PROMPT
+    .replace('{document_text}', documentText)
+    .replace('{analyzed_conditions_json}', conditionsJson);
+
+  const response = await anthropic.messages.create({
+    model: CLAUDE_MODEL,
+    max_tokens: 8192,
+    system: VALIDATOR_SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: prompt }]
+  });
+
+  const responseText = response.content[0].text;
+
+  try {
+    const result = extractJsonFromResponse(responseText);
+    console.error(`[Agent 3] Final conditions: ${result.final_conditions?.length || 0}, coverage: ${result.validation_result?.coverage_percentage || 0}%`);
+    return {
+      success: true,
+      ...result
+    };
+  } catch (e) {
+    console.error(`[Agent 3] Failed to parse response: ${e.message}`);
+    return {
+      success: false,
+      validation_result: { coverage_percentage: 0 },
+      final_conditions: analyzedConditions, // Return what we have
+      error: e.message
+    };
+  }
+}
+
+/**
+ * Professional Gate Extraction Pipeline
+ * מריץ את כל 4 הסוכנים ברצף ומחזיר תוצאה מלאה
+ */
+async function professionalGateExtraction(tenderId, documentText) {
+  console.error(`[Pipeline] Starting professional extraction for tender ${tenderId}`);
+  console.error(`[Pipeline] Document length: ${documentText.length} characters`);
+
+  const startTime = Date.now();
+
+  // Step 0: Extract definitions
+  console.error('[Pipeline] Step 0: Extracting definitions...');
+  const definitionsResult = await extractDefinitions(documentText);
+
+  // Step 1: Scan for potential conditions
+  console.error('[Pipeline] Step 1: Scanning for conditions...');
+  const scanResult = await scanForConditions(documentText);
+
+  if (!scanResult.success || !scanResult.potential_conditions?.length) {
+    return {
+      success: false,
+      error: 'Scanner found no potential conditions',
+      definitions: definitionsResult,
+      scan_result: scanResult
+    };
+  }
+
+  // Step 2: Analyze conditions with definitions context
+  console.error('[Pipeline] Step 2: Analyzing conditions...');
+  const analyzeResult = await analyzeConditions(
+    scanResult.potential_conditions,
+    definitionsResult.definitions || []
+  );
+
+  if (!analyzeResult.success || !analyzeResult.analyzed_conditions?.length) {
+    return {
+      success: false,
+      error: 'Analyzer could not process conditions',
+      definitions: definitionsResult,
+      scan_result: scanResult,
+      analyze_result: analyzeResult
+    };
+  }
+
+  // Step 3: Validate and finalize
+  console.error('[Pipeline] Step 3: Validating and finalizing...');
+  const validateResult = await validateAndFinalize(
+    documentText,
+    analyzeResult.analyzed_conditions
+  );
+
+  const endTime = Date.now();
+  const durationSec = ((endTime - startTime) / 1000).toFixed(1);
+
+  console.error(`[Pipeline] Completed in ${durationSec}s`);
+
+  // Prepare final conditions with IDs
+  const finalConditions = (validateResult.final_conditions || analyzeResult.analyzed_conditions).map((c, i) => ({
+    id: randomUUID(),
+    tender_id: tenderId,
+    condition_number: i + 1,
+    // Map to database schema
+    condition_text: c.original_text || c.text,
+    requirement_type: c.category || 'OTHER',
+    is_mandatory: c.is_mandatory !== false,
+    // Quantitative
+    required_amount: c.quantitative?.amount || null,
+    required_years: c.quantitative?.years || null,
+    required_count: c.quantitative?.count || null,
+    // Traceability
+    source_page: c.traceability?.source_page || null,
+    source_section: c.traceability?.source_section || null,
+    source_quote: c.traceability?.source_quote || c.original_text?.substring(0, 200),
+    source_file: c.traceability?.source_file || null,
+    // New fields
+    bearer_entity: c.bearer?.entity || 'bidder_only',
+    subcontractor_allowed: c.bearer?.subcontractor_allowed || false,
+    subcontractor_limit: c.bearer?.subcontractor_limit || null,
+    group_companies_allowed: c.bearer?.group_companies_allowed || false,
+    legal_classification: c.interpretation?.legal?.classification || null,
+    legal_reasoning: c.interpretation?.legal?.reasoning || null,
+    technical_requirement: c.interpretation?.technical?.what_is_required || null,
+    equivalent_options: c.interpretation?.technical?.equivalent_options || [],
+    definition_applied: c.interpretation?.technical?.definition_applied || null,
+    // Meta
+    ai_confidence: c.confidence || 0.8,
+    extraction_method: 'professional_4_agent',
+    extracted_at: new Date().toISOString(),
+    // Keep full analysis for reference
+    _full_analysis: c
+  }));
+
+  return {
+    success: true,
+    tender_id: tenderId,
+    extraction_method: 'professional_4_agent',
+    duration_seconds: parseFloat(durationSec),
+    // Definitions
+    definitions: {
+      found: definitionsResult.definitions_found || false,
+      count: definitionsResult.definitions?.length || 0,
+      items: definitionsResult.definitions || [],
+      critical: definitionsResult.critical_definitions || [],
+      missing: definitionsResult.missing_definitions || []
+    },
+    // Validation
+    validation: {
+      coverage_percentage: validateResult.validation_result?.coverage_percentage || 0,
+      missed_sections: validateResult.validation_result?.missed_sections || [],
+      duplicates_merged: validateResult.validation_result?.duplicates_found?.length || 0,
+      contradictions: validateResult.validation_result?.contradictions || [],
+      overall_confidence: validateResult.validation_result?.overall_confidence || 0.8
+    },
+    // Summary
+    summary: {
+      scanned: scanResult.potential_conditions?.length || 0,
+      analyzed: analyzeResult.analyzed_conditions?.length || 0,
+      rejected: analyzeResult.rejected_conditions?.length || 0,
+      final: finalConditions.length
+    },
+    // Final conditions
+    conditions: finalConditions
+  };
+}
+
+// ============================================
+// LEGACY TOOL IMPLEMENTATIONS
 // ============================================
 
 /**
@@ -209,7 +516,7 @@ async function chunkDocument(text, chunkSize = 4000, overlap = 500) {
 }
 
 /**
- * Tool 2: extract_gates_from_chunk
+ * Tool 2: extract_gates_from_chunk (legacy)
  * חילוץ תנאי סף מ-chunk עם Claude
  */
 async function extractGatesFromChunk(chunkText, tenderId, existingConditions = []) {
@@ -224,6 +531,7 @@ async function extractGatesFromChunk(chunkText, tenderId, existingConditions = [
 
   const prompt = EXTRACTION_PROMPT
     .replace('{chunk_text}', chunkText)
+    .replace('{document_text}', chunkText)
     .replace('{existing_conditions_section}', existingConditionsSection);
 
   const response = await anthropic.messages.create({
@@ -239,7 +547,7 @@ async function extractGatesFromChunk(chunkText, tenderId, existingConditions = [
     const result = extractJsonFromResponse(responseText);
 
     // Add IDs and tender_id to each condition
-    const conditions = (result.conditions || []).map(c => ({
+    const conditions = (result.conditions || result.potential_conditions || []).map(c => ({
       id: randomUUID(),
       tender_id: tenderId,
       ...c
@@ -248,7 +556,7 @@ async function extractGatesFromChunk(chunkText, tenderId, existingConditions = [
     return {
       success: true,
       conditions: conditions,
-      extraction_notes: result.extraction_notes || null,
+      extraction_notes: result.extraction_notes || result.scanning_notes || null,
       chunk_length: chunkText.length,
       conditions_found: conditions.length
     };
@@ -300,14 +608,15 @@ async function validateExtractionCoverage(documentText, extractedConditions) {
     `- [${c.category}] ${c.text?.substring(0, 150)}...`
   ).join('\n');
 
-  const prompt = VALIDATION_PROMPT
-    .replace('{document_excerpts}', excerptText)
-    .replace('{extracted_conditions}', conditionsText);
+  // Use new validator prompt
+  const prompt = VALIDATOR_PROMPT
+    .replace('{document_text}', excerptText)
+    .replace('{analyzed_conditions_json}', JSON.stringify(extractedConditions, null, 2));
 
   const response = await anthropic.messages.create({
     model: CLAUDE_MODEL,
-    max_tokens: 2048,
-    system: SYSTEM_PROMPT,
+    max_tokens: 4096,
+    system: VALIDATOR_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: prompt }]
   });
 
@@ -318,8 +627,8 @@ async function validateExtractionCoverage(documentText, extractedConditions) {
 
     return {
       success: true,
-      coverage_percentage: result.coverage_percentage || 0,
-      missed_sections: result.missed_sections || [],
+      coverage_percentage: result.validation_result?.coverage_percentage || result.coverage_percentage || 0,
+      missed_sections: result.validation_result?.missed_sections || result.missed_sections || [],
       validation_notes: result.validation_notes || null,
       excerpts_analyzed: limitedExcerpts.length,
       total_keyword_matches: excerpts.length
@@ -345,11 +654,10 @@ async function mergeAndDedupeConditions(allConditions) {
   const similarityThreshold = 0.85;
 
   for (const condition of allConditions) {
+    const conditionText = condition.text || condition.original_text || '';
     const isDuplicate = uniqueConditions.some(existing => {
-      const textSimilarity = similarityRatio(
-        condition.text || '',
-        existing.text || ''
-      );
+      const existingText = existing.text || existing.original_text || '';
+      const textSimilarity = similarityRatio(conditionText, existingText);
       return textSimilarity >= similarityThreshold;
     });
 
@@ -362,7 +670,7 @@ async function mergeAndDedupeConditions(allConditions) {
   if (uniqueConditions.length < allConditions.length * 0.8 || uniqueConditions.length > 10) {
     const conditionsJson = JSON.stringify(uniqueConditions.map(c => ({
       id: c.id,
-      text: c.text?.substring(0, 300),
+      text: (c.text || c.original_text)?.substring(0, 300),
       type: c.type,
       category: c.category,
       is_mandatory: c.is_mandatory,
@@ -436,23 +744,37 @@ async function saveExtractedConditions(tenderId, conditions) {
     const record = {
       id: condition.id || randomUUID(),
       tender_id: tenderId,
-      condition_number: i + 1,
-      condition_text: condition.text,
-      requirement_type: condition.category || 'OTHER',
+      condition_number: condition.condition_number || i + 1,
+      condition_text: condition.condition_text || condition.text || condition.original_text,
+      requirement_type: condition.requirement_type || condition.category || 'OTHER',
       is_mandatory: condition.is_mandatory !== false,
-      ai_confidence: condition.confidence || 0.8,
-      source_quote: condition.source_quote || condition.text?.substring(0, 200),
+      ai_confidence: condition.ai_confidence || condition.confidence || 0.8,
+      source_quote: condition.source_quote || condition.condition_text?.substring(0, 200),
+      source_page: condition.source_page || null,
+      source_section: condition.source_section || null,
+      source_file: condition.source_file || null,
       ai_analyzed_at: new Date().toISOString(),
-      extracted_by: 'gate-extractor-mcp',
+      extracted_by: condition.extraction_method || 'gate-extractor-mcp',
       extraction_pass: condition.extraction_pass || 1
     };
 
     // Add quantitative data if present
+    if (condition.required_amount) record.required_amount = condition.required_amount;
+    if (condition.required_years) record.required_years = condition.required_years;
+    if (condition.required_count) record.required_count = condition.required_count;
+
+    // Legacy quantitative format
     if (condition.quantitative) {
       if (condition.quantitative.amount) record.required_amount = condition.quantitative.amount;
       if (condition.quantitative.years) record.required_years = condition.quantitative.years;
       if (condition.quantitative.count) record.required_count = condition.quantitative.count;
     }
+
+    // New professional fields (if columns exist in DB)
+    if (condition.bearer_entity) record.bearer_entity = condition.bearer_entity;
+    if (condition.subcontractor_allowed !== undefined) record.subcontractor_allowed = condition.subcontractor_allowed;
+    if (condition.legal_classification) record.legal_classification = condition.legal_classification;
+    if (condition.technical_requirement) record.technical_requirement = condition.technical_requirement;
 
     const { data, error } = await supabase
       .from('gate_conditions')
@@ -494,7 +816,7 @@ async function saveExtractedConditions(tenderId, conditions) {
 const server = new Server(
   {
     name: 'tenderix-gate-extractor',
-    version: '1.0.0',
+    version: '2.0.0',
   },
   {
     capabilities: {
@@ -507,6 +829,95 @@ const server = new Server(
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
+      // NEW: Professional extraction tool
+      {
+        name: 'professional_gate_extraction',
+        description: 'חילוץ תנאי סף מקצועי עם 4 סוכני AI: מילון הגדרות, סריקה, ניתוח מעמיק, ואימות. מחזיר תוצאות עם עקיבות מלאה ופרשנות כפולה.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            tender_id: {
+              type: 'string',
+              description: 'מזהה המכרז (UUID)'
+            },
+            document_text: {
+              type: 'string',
+              description: 'הטקסט המלא של מסמך המכרז'
+            }
+          },
+          required: ['tender_id', 'document_text']
+        }
+      },
+      // Individual agent tools for manual control
+      {
+        name: 'extract_definitions',
+        description: 'Agent 0: חילוץ מילון הגדרות מהמכרז',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            document_text: {
+              type: 'string',
+              description: 'הטקסט המלא של המסמך'
+            }
+          },
+          required: ['document_text']
+        }
+      },
+      {
+        name: 'scan_for_conditions',
+        description: 'Agent 1: סריקה שורה שורה לזיהוי משפטים פוטנציאליים',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            document_text: {
+              type: 'string',
+              description: 'הטקסט המלא של המסמך'
+            }
+          },
+          required: ['document_text']
+        }
+      },
+      {
+        name: 'analyze_conditions',
+        description: 'Agent 2: ניתוח מעמיק של תנאים עם פרשנות משפטית וטכנית',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            potential_conditions: {
+              type: 'array',
+              description: 'רשימת משפטים פוטנציאליים מה-Scanner',
+              items: { type: 'object' }
+            },
+            definitions: {
+              type: 'array',
+              description: 'מילון הגדרות מהמכרז',
+              items: { type: 'object' },
+              default: []
+            }
+          },
+          required: ['potential_conditions']
+        }
+      },
+      {
+        name: 'validate_and_finalize',
+        description: 'Agent 3: אימות כיסוי, מיזוג כפילויות, ויצירת דוח סופי',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            document_text: {
+              type: 'string',
+              description: 'הטקסט המלא של המסמך'
+            },
+            analyzed_conditions: {
+              type: 'array',
+              description: 'תנאים מנותחים מה-Analyzer',
+              items: { type: 'object' }
+            }
+          },
+          required: ['document_text', 'analyzed_conditions']
+        }
+      },
+      // Legacy tools
       {
         name: 'chunk_document',
         description: 'חיתוך מסמך לחלקים עם חפיפות לעיבוד איטרטיבי. מזהה גבולות סעיפים בעברית.',
@@ -533,7 +944,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: 'extract_gates_from_chunk',
-        description: 'חילוץ תנאי סף מ-chunk בודד עם Claude Opus. מחזיר תנאים ללא כפילויות.',
+        description: '[Legacy] חילוץ תנאי סף מ-chunk בודד. מומלץ להשתמש ב-professional_gate_extraction במקום.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -630,6 +1041,37 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     let result;
 
     switch (name) {
+      // New professional tools
+      case 'professional_gate_extraction':
+        result = await professionalGateExtraction(
+          args.tender_id,
+          args.document_text
+        );
+        break;
+
+      case 'extract_definitions':
+        result = await extractDefinitions(args.document_text);
+        break;
+
+      case 'scan_for_conditions':
+        result = await scanForConditions(args.document_text);
+        break;
+
+      case 'analyze_conditions':
+        result = await analyzeConditions(
+          args.potential_conditions,
+          args.definitions || []
+        );
+        break;
+
+      case 'validate_and_finalize':
+        result = await validateAndFinalize(
+          args.document_text,
+          args.analyzed_conditions
+        );
+        break;
+
+      // Legacy tools
       case 'chunk_document':
         result = await chunkDocument(
           args.text,
@@ -697,7 +1139,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error('Tenderix Gate Extractor MCP Server running on stdio');
+  console.error('Tenderix Gate Extractor MCP Server v2.0 (Professional) running on stdio');
 }
 
 main().catch(console.error);

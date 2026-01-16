@@ -51,6 +51,18 @@ export interface GateCondition {
   ai_summary?: string;
   ai_confidence?: number;
   ai_analyzed_at?: string;
+  // Professional extraction fields (4-agent system)
+  bearer_entity?: 'bidder_only' | 'consortium_member' | 'subcontractor_allowed';
+  subcontractor_allowed?: boolean;
+  subcontractor_limit?: number;
+  group_companies_allowed?: boolean;
+  scope_type?: 'ordered' | 'executed' | 'paid';
+  cumulative?: boolean;
+  legal_classification?: 'strict' | 'open' | 'proof_dependent';
+  legal_reasoning?: string;
+  technical_requirement?: string;
+  equivalent_options?: string[];
+  extraction_method?: string;
 }
 
 export interface GateSummary {
@@ -739,9 +751,64 @@ export const api = {
     extractGates: async (tenderId: string, tenderText: string): Promise<{ success: boolean; conditions: GateCondition[] }> => {
       console.log(`extractGates called with ${tenderText.length} chars`);
 
-      // ===== נסיון ראשון: חילוץ איטרטיבי דרך n8n =====
+      // ===== נסיון ראשון: חילוץ מקצועי 4 סוכנים דרך n8n =====
       try {
-        console.log('Attempting iterative extraction via n8n webhook...');
+        console.log('Attempting professional 4-agent extraction via n8n webhook...');
+        const professionalWebhookUrl = `${API_CONFIG.WEBHOOK_BASE}/tdx-professional-gates`;
+
+        const professionalResponse = await fetch(professionalWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tender_id: tenderId,
+            tender_text: tenderText
+          }),
+        });
+
+        if (professionalResponse.ok) {
+          const result = await professionalResponse.json();
+          console.log('Professional extraction result:', result);
+
+          if (result.success && result.conditions && result.conditions.length > 0) {
+            console.log(`Professional extraction successful: ${result.conditions.length} conditions`);
+            console.log('Validation:', result.validation);
+            console.log('Definitions found:', result.definitions?.length || 0);
+
+            // Convert to GateCondition format
+            const conditions: GateCondition[] = result.conditions.map((c: any, i: number) => ({
+              id: c.id || `gate-${tenderId}-${i}`,
+              tender_id: tenderId,
+              condition_number: `${c.condition_number || i + 1}`,
+              condition_text: c.condition_text || c.original_text || c.text,
+              condition_type: c.type || 'GATE',
+              is_mandatory: c.is_mandatory !== false,
+              requirement_type: c.category || 'OTHER',
+              required_amount: c.required_amount || c.quantitative?.amount,
+              required_years: c.required_years || c.quantitative?.years,
+              required_count: c.required_count || c.quantitative?.count,
+              source_quote: c.source_section || c.source_quote,
+              ai_confidence: c.ai_confidence || c.confidence,
+              bearer_entity: c.bearer_entity,
+              subcontractor_allowed: c.subcontractor_allowed,
+              legal_classification: c.legal_classification,
+              legal_reasoning: c.legal_reasoning,
+              technical_requirement: c.technical_requirement,
+              status: 'UNKNOWN',
+            }));
+
+            return { success: true, conditions };
+          }
+          console.log('Professional webhook returned no conditions, falling back to v2...');
+        } else {
+          console.log(`Professional webhook returned ${professionalResponse.status}, falling back to v2...`);
+        }
+      } catch (professionalError) {
+        console.log('Professional webhook not available, trying v2:', professionalError);
+      }
+
+      // ===== נסיון שני: חילוץ v2 דרך n8n =====
+      try {
+        console.log('Attempting v2 extraction via n8n webhook...');
         const webhookUrl = `${API_CONFIG.WEBHOOK_BASE}/tdx-extract-gates-v2`;
 
         const webhookResponse = await fetch(webhookUrl, {
