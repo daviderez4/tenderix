@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Upload, FileText, CheckCircle, ArrowLeft, Loader2 } from 'lucide-react';
+import { api } from '../api/tenderix';
 import { API_CONFIG } from '../api/config';
 
 interface NewTender {
@@ -79,18 +80,11 @@ export function NewTenderPage() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_CONFIG.WEBHOOK_BASE}/tdx-extract-gates`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tender_id: createdTenderId,
-          gates_text: tender.gates_text,
-        }),
-      });
+      // שימוש ב-API המרכזי שמנסה קודם את ה-4-agent workflow
+      const result = await api.workflows.extractGates(createdTenderId, tender.gates_text);
 
-      const result = await res.json();
-      if (result.success && result.conditions_created) {
-        setExtractedGates(result.conditions_created);
+      if (result.success && result.conditions.length > 0) {
+        setExtractedGates(result.conditions.length);
         setStep(3);
       } else {
         alert('שגיאה בחילוץ תנאי סף');

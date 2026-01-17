@@ -4,8 +4,8 @@ export const API_CONFIG = {
   SUPABASE_URL: 'https://rerfjgjwjqodevkvhkxu.supabase.co',
   // Using service_role key for full access (same as n8n workflows)
   SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34',
-  // OCR.space API - free tier (500 requests/day, 5MB max)
-  OCR_SPACE_API_KEY: 'K87574009788957',
+  // OCR disabled - PDF.js handles client-side extraction
+  OCR_ENABLED: false,
 };
 
 // Generate a UUID v4

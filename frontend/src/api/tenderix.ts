@@ -1179,6 +1179,108 @@ export const api = {
       };
     },
 
+    // ==========================================================
+    // AI GATE ANALYSIS - ניתוח תנאי סף בודד עם AI
+    // Module 2.6: השוואה לפרופיל חברה + פרשנות כפולה (Module 2.5)
+    // ==========================================================
+    analyzeGateWithAI: async (
+      tenderId: string,
+      conditionId: string,
+      conditionText: string,
+      orgId: string
+    ): Promise<{
+      success: boolean;
+      condition_id: string;
+      status: string;
+      evidence: string;
+      gap_description?: string;
+      interpretation?: {
+        legal: { classification: string; reasoning: string };
+        technical: { what_is_required: string; equivalent_options: string[] };
+      };
+      gap_closure?: {
+        has_gap: boolean;
+        closure_options: Array<{
+          method: string;
+          description: string;
+          feasibility: string;
+          time_estimate_days: number;
+        }>;
+        recommended_action?: string;
+      };
+      clarification_questions?: Array<{
+        question: string;
+        rationale: string;
+        priority: string;
+      }>;
+      risk_assessment?: { level: string; factors: string[] };
+      ai_confidence: number;
+      ai_summary?: string;
+    }> => {
+      console.log(`analyzeGateWithAI called for condition ${conditionId}`);
+
+      try {
+        // Get company profile for context
+        const [projects, financials, certifications] = await Promise.all([
+          api.company.getProjects(orgId).catch(() => [] as CompanyProject[]),
+          api.company.getFinancials(orgId).catch(() => [] as CompanyFinancial[]),
+          api.company.getCertifications(orgId).catch(() => [] as CompanyCertification[]),
+        ]);
+
+        const companyProfile = {
+          projects: projects.slice(0, 10), // Limit to avoid token overflow
+          financials: financials.slice(0, 3),
+          certifications: certifications.slice(0, 10),
+        };
+
+        // Call n8n webhook for AI analysis
+        const webhookUrl = `${API_CONFIG.WEBHOOK_BASE}/tdx-analyze-gate`;
+        console.log(`Calling AI analysis webhook: ${webhookUrl}`);
+
+        const response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tender_id: tenderId,
+            condition_id: conditionId,
+            condition_text: conditionText,
+            org_id: orgId,
+            company_profile: companyProfile,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Webhook returned ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log('AI analysis result:', result);
+
+        return {
+          success: result.success || false,
+          condition_id: conditionId,
+          status: result.status || 'UNKNOWN',
+          evidence: result.evidence || '',
+          gap_description: result.gap_description,
+          interpretation: result.interpretation,
+          gap_closure: result.gap_closure,
+          clarification_questions: result.clarification_questions,
+          risk_assessment: result.risk_assessment,
+          ai_confidence: result.ai_confidence || 0,
+          ai_summary: result.ai_summary,
+        };
+      } catch (error) {
+        console.error('AI analysis error:', error);
+        return {
+          success: false,
+          condition_id: conditionId,
+          status: 'UNKNOWN',
+          evidence: '',
+          ai_confidence: 0,
+        };
+      }
+    },
+
     matchGates: async (tenderId: string, orgId: string): Promise<{
       success: boolean;
       tender_id: string;
@@ -1331,7 +1433,7 @@ export const api = {
             status,
             evidence: evidence || undefined,
             gap_description: gapDescription || undefined,
-            closure_options: closureOptions.length > 0 ? closureOptions : undefined,
+            // Note: closure_options column doesn't exist in Supabase schema
           });
         } catch (err) {
           console.error('Error updating gate:', err);
@@ -3044,7 +3146,120 @@ export const api = {
     supabaseFetch<GateCondition[]>(`gate_conditions?tender_id=eq.${tenderId}&order=condition_number`),
   getCompetitors: (orgId: string) =>
     supabaseFetch<Competitor[]>(`competitors?org_id=eq.${orgId}`),
+
+  createCompetitor: (competitor: Omit<Competitor, 'id'>) =>
+    supabaseFetch<Competitor>('competitors', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ id: crypto.randomUUID(), ...competitor }),
+    }).then(data => Array.isArray(data) ? data[0] : data),
+
+  deleteCompetitor: (id: string) =>
+    supabaseFetch<void>(`competitors?id=eq.${id}`, { method: 'DELETE' }),
 };
+
+// ==================== SAMPLE COMPETITORS DATA ====================
+
+const SAMPLE_COMPETITORS: Omit<Competitor, 'id' | 'org_id'>[] = [
+  {
+    name: 'אלקטרא בע"מ',
+    company_number: '520038466',
+    size_category: 'large',
+    strengths: ['ניסיון רב בפרויקטים ממשלתיים', 'יציבות פיננסית גבוהה', 'צוות הנדסי מנוסה', 'קשרים עם גורמי ממשל'],
+    weaknesses: ['מחירים גבוהים יחסית', 'זמני תגובה ארוכים', 'פחות גמישות בפרויקטים קטנים'],
+    typical_domains: ['תשתיות', 'מערכות חשמל', 'בניה ציבורית', 'פרויקטי ממשלה'],
+    pricing_strategy: 'פרימיום - מתמחרים גבוה עם דגש על איכות',
+    win_rate: 35,
+    notes: 'מתחרה עיקרי במכרזי ממשלה גדולים',
+  },
+  {
+    name: 'שפיר הנדסה בע"מ',
+    company_number: '520033756',
+    size_category: 'large',
+    strengths: ['יכולת ביצוע פרויקטים גדולים', 'ניסיון בתשתיות תחבורה', 'הון עצמי גבוה'],
+    weaknesses: ['פחות נוכחות בפרויקטים קטנים', 'תלות בקבלני משנה'],
+    typical_domains: ['תשתיות תחבורה', 'כבישים', 'מנהור', 'רכבת'],
+    pricing_strategy: 'תחרותי - מתמחרים לפי השוק',
+    win_rate: 40,
+    notes: 'דומיננטי בתחום התחבורה',
+  },
+  {
+    name: 'דניה סיבוס בע"מ',
+    company_number: '520026990',
+    size_category: 'large',
+    strengths: ['מומחיות בבנייה רוויה', 'ניסיון בפרויקטי מגורים', 'קשרי משקיעים'],
+    weaknesses: ['פחות ניסיון בתשתיות', 'מיקוד בנדל"ן פרטי'],
+    typical_domains: ['בנייה רוויה', 'מגורים', 'מסחר', 'משרדים'],
+    pricing_strategy: 'מאוזן - איזון בין מחיר לאיכות',
+    win_rate: 30,
+    notes: 'שחקן מוביל בשוק הנדל"ן',
+  },
+  {
+    name: 'מיטרוניקס בע"מ',
+    company_number: '512345678',
+    size_category: 'medium',
+    strengths: ['התמחות בטכנולוגיה', 'חדשנות', 'צוות טכני איכותי', 'גמישות גבוהה'],
+    weaknesses: ['פחות ניסיון בפרויקטים גדולים', 'משאבים מוגבלים'],
+    typical_domains: ['מערכות מידע', 'IT', 'סייבר', 'תוכנה'],
+    pricing_strategy: 'אגרסיבי - מתמחרים נמוך לכניסה לשוק',
+    win_rate: 45,
+    notes: 'מתחרה צומח בתחום הטכנולוגיה',
+  },
+  {
+    name: 'א.ש. בר בע"מ',
+    company_number: '513456789',
+    size_category: 'medium',
+    strengths: ['מומחיות באינסטלציה', 'מחירים תחרותיים', 'זמינות גבוהה'],
+    weaknesses: ['טווח שירותים מצומצם', 'פחות ניסיון בפרויקטים מורכבים'],
+    typical_domains: ['אינסטלציה', 'תשתיות מים', 'ביוב'],
+    pricing_strategy: 'נמוך - מתחרה על מחיר',
+    win_rate: 55,
+    notes: 'מתמחה בעבודות אינסטלציה',
+  },
+  {
+    name: 'גלי-תכנון בע"מ',
+    company_number: '514567890',
+    size_category: 'small',
+    strengths: ['מומחיות בתכנון', 'יצירתיות', 'שירות אישי', 'מחירים הוגנים'],
+    weaknesses: ['יכולת ביצוע מוגבלת', 'צוות קטן'],
+    typical_domains: ['תכנון', 'אדריכלות', 'ניהול פרויקטים'],
+    pricing_strategy: 'פרימיום - מתמחרים על איכות התכנון',
+    win_rate: 25,
+    notes: 'משרד תכנון בוטיק',
+  },
+];
+
+/**
+ * Populate sample competitors for an organization
+ * This is useful for testing and demonstration purposes
+ */
+export async function populateSampleCompetitors(orgId: string): Promise<Competitor[]> {
+  const existingCompetitors = await api.getCompetitors(orgId);
+
+  // Check if competitors already exist
+  if (existingCompetitors.length > 0) {
+    console.log(`Organization ${orgId} already has ${existingCompetitors.length} competitors`);
+    return existingCompetitors;
+  }
+
+  const createdCompetitors: Competitor[] = [];
+
+  for (const competitorData of SAMPLE_COMPETITORS) {
+    try {
+      const competitor = await api.createCompetitor({
+        ...competitorData,
+        org_id: orgId,
+      });
+      createdCompetitors.push(competitor);
+      console.log(`Created competitor: ${competitor.name}`);
+    } catch (error) {
+      console.error(`Failed to create competitor ${competitorData.name}:`, error);
+    }
+  }
+
+  console.log(`Created ${createdCompetitors.length} sample competitors for org ${orgId}`);
+  return createdCompetitors;
+}
 
 // ==================== FULL ANALYSIS PIPELINE ====================
 

@@ -101,24 +101,40 @@ export function GatesPage() {
     });
   }
 
-  // Analyze a single gate condition with AI
+  // Analyze a single gate condition with AI (Module 2.6 + 2.5)
   async function analyzeGate(gate: GateCondition) {
     const orgId = getCurrentOrgId();
     setAnalyzingGateId(gate.id);
 
     try {
-      // Match this specific gate against company profile
-      const result = await api.workflows.matchGates(gate.tender_id, orgId);
+      // Call the new AI analysis endpoint for this specific condition
+      const result = await api.workflows.analyzeGateWithAI(
+        gate.tender_id,
+        gate.id,
+        gate.condition_text,
+        orgId
+      );
 
       if (result.success) {
-        // Find the updated gate in the result by condition_number
-        const updatedGate = result.conditions.find(c =>
-          c.condition_number === gate.condition_number || c.id === gate.id
-        );
-        if (updatedGate) {
-          // Update local state
-          setGates(prev => prev.map(g => g.id === gate.id ? { ...g, ...updatedGate } : g));
-        }
+        // Update local state with the analysis results
+        setGates(prev => prev.map(g => {
+          if (g.id === gate.id) {
+            return {
+              ...g,
+              status: result.status,
+              evidence: result.evidence,
+              gap_description: result.gap_description,
+              legal_classification: result.interpretation?.legal?.classification as 'strict' | 'open' | 'proof_dependent' | undefined,
+              legal_reasoning: result.interpretation?.legal?.reasoning,
+              technical_requirement: result.interpretation?.technical?.what_is_required,
+              equivalent_options: result.interpretation?.technical?.equivalent_options,
+              ai_confidence: result.ai_confidence,
+              ai_summary: result.ai_summary,
+              ai_analyzed_at: new Date().toISOString(),
+            };
+          }
+          return g;
+        }));
       }
 
       // Expand to show results

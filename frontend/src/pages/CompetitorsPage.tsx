@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Users, DollarSign, Target, AlertCircle } from 'lucide-react';
-import { api } from '../api/tenderix';
+import { Users, DollarSign, Target, Plus } from 'lucide-react';
+import { api, populateSampleCompetitors } from '../api/tenderix';
 import type { Competitor, Tender } from '../api/tenderix';
 import { getCurrentTenderId, getCurrentOrgId } from '../api/config';
 import { Loading } from '../components/Loading';
@@ -15,6 +15,7 @@ export function CompetitorsPage() {
   const [activeTab, setActiveTab] = useState<TabType>('list');
   const [runningWorkflow, setRunningWorkflow] = useState<string | null>(null);
   const [workflowResults, setWorkflowResults] = useState<Record<string, unknown>>({});
+  const [populatingCompetitors, setPopulatingCompetitors] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -70,23 +71,23 @@ export function CompetitorsPage() {
     }
   }
 
+  async function handlePopulateSampleCompetitors() {
+    const orgId = getCurrentOrgId();
+    setPopulatingCompetitors(true);
+    try {
+      const newCompetitors = await populateSampleCompetitors(orgId);
+      setCompetitors(newCompetitors);
+    } catch (error) {
+      console.error('Error populating competitors:', error);
+    } finally {
+      setPopulatingCompetitors(false);
+    }
+  }
+
   if (loading) return <Loading />;
 
-  // Show message if no tender is selected
-  if (!tender) {
-    return (
-      <div className="page">
-        <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-          <AlertCircle size={48} style={{ color: 'var(--warning)', marginBottom: '1rem' }} />
-          <h2>לא נבחר מכרז</h2>
-          <p style={{ color: 'var(--gray-500)', marginBottom: '1.5rem' }}>
-            יש לבחור מכרז מהדשבורד או להעלות מכרז חדש
-          </p>
-          <a href="/" className="btn btn-primary">חזור לדשבורד</a>
-        </div>
-      </div>
-    );
-  }
+  // Show competitors list even without tender (competitors belong to org, not tender)
+  // Only AI analysis features require a tender
 
   return (
     <div>
@@ -95,93 +96,121 @@ export function CompetitorsPage() {
           <Users size={28} style={{ marginLeft: '0.5rem', verticalAlign: 'middle' }} />
           מתחרים
         </h1>
-        <p className="page-subtitle">
-          {tender.tender_name}
-          {tender.tender_number && ` | מכרז ${tender.tender_number}`}
-        </p>
+        {tender ? (
+          <p className="page-subtitle">
+            {tender.tender_name}
+            {tender.tender_number && ` | מכרז ${tender.tender_number}`}
+          </p>
+        ) : (
+          <p className="page-subtitle">מאגר מתחרים של הארגון</p>
+        )}
       </div>
 
-      {/* Actions */}
-      <div className="card">
-        <h3 className="card-title" style={{ marginBottom: '1rem' }}>ניתוח AI</h3>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <button
-            className="btn btn-primary"
-            onClick={() => runWorkflow('mapping')}
-            disabled={runningWorkflow !== null}
-          >
-            {runningWorkflow === 'mapping' ? <div className="spinner" /> : <Users size={18} />}
-            מיפוי מתחרים
-          </button>
-          <button
-            className="btn btn-secondary"
-            onClick={() => runWorkflow('pricing')}
-            disabled={runningWorkflow !== null}
-          >
-            {runningWorkflow === 'pricing' ? <div className="spinner" /> : <DollarSign size={18} />}
-            מודיעין תמחור
-          </button>
-          <button
-            className="btn btn-secondary"
-            onClick={() => runWorkflow('intel')}
-            disabled={runningWorkflow !== null}
-          >
-            {runningWorkflow === 'intel' ? <div className="spinner" /> : <Target size={18} />}
-            מודיעין תחרותי
-          </button>
+      {/* AI Actions - only show when tender is selected */}
+      {tender && (
+        <div className="card">
+          <h3 className="card-title" style={{ marginBottom: '1rem' }}>ניתוח AI</h3>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-primary"
+              onClick={() => runWorkflow('mapping')}
+              disabled={runningWorkflow !== null}
+            >
+              {runningWorkflow === 'mapping' ? <div className="spinner" /> : <Users size={18} />}
+              מיפוי מתחרים
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => runWorkflow('pricing')}
+              disabled={runningWorkflow !== null}
+            >
+              {runningWorkflow === 'pricing' ? <div className="spinner" /> : <DollarSign size={18} />}
+              מודיעין תמחור
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => runWorkflow('intel')}
+              disabled={runningWorkflow !== null}
+            >
+              {runningWorkflow === 'intel' ? <div className="spinner" /> : <Target size={18} />}
+              מודיעין תחרותי
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Tabs */}
       <div className="tabs">
         <button className={`tab ${activeTab === 'list' ? 'active' : ''}`} onClick={() => setActiveTab('list')}>
           מאגר מתחרים ({competitors.length})
         </button>
-        <button className={`tab ${activeTab === 'mapping' ? 'active' : ''}`} onClick={() => setActiveTab('mapping')}>
-          מיפוי למכרז
-        </button>
-        <button className={`tab ${activeTab === 'pricing' ? 'active' : ''}`} onClick={() => setActiveTab('pricing')}>
-          מודיעין תמחור
-        </button>
-        <button className={`tab ${activeTab === 'intel' ? 'active' : ''}`} onClick={() => setActiveTab('intel')}>
-          מודיעין תחרותי
-        </button>
+        {tender && (
+          <>
+            <button className={`tab ${activeTab === 'mapping' ? 'active' : ''}`} onClick={() => setActiveTab('mapping')}>
+              מיפוי למכרז
+            </button>
+            <button className={`tab ${activeTab === 'pricing' ? 'active' : ''}`} onClick={() => setActiveTab('pricing')}>
+              מודיעין תמחור
+            </button>
+            <button className={`tab ${activeTab === 'intel' ? 'active' : ''}`} onClick={() => setActiveTab('intel')}>
+              מודיעין תחרותי
+            </button>
+          </>
+        )}
       </div>
 
       {/* Tab Content */}
       {activeTab === 'list' && (
-        <div className="grid grid-2">
-          {competitors.map((comp) => (
-            <div key={comp.id} className="card">
-              <h4 style={{ marginBottom: '0.75rem' }}>{comp.name}</h4>
-              {comp.company_number && (
-                <div style={{ fontSize: '0.875rem', color: 'var(--gray-500)', marginBottom: '0.75rem' }}>
-                  ח.פ. {comp.company_number}
+        competitors.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
+            <Users size={48} style={{ color: 'var(--gray-400)', marginBottom: '1rem' }} />
+            <h3>אין מתחרים במאגר</h3>
+            <p style={{ color: 'var(--gray-500)', marginBottom: '1.5rem' }}>
+              הוסף מתחרים למאגר או טען נתונים לדוגמה
+            </p>
+            <button
+              className="btn btn-primary"
+              onClick={handlePopulateSampleCompetitors}
+              disabled={populatingCompetitors}
+            >
+              {populatingCompetitors ? <div className="spinner" /> : <Plus size={18} />}
+              טען מתחרים לדוגמה
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-2">
+            {competitors.map((comp) => (
+              <div key={comp.id} className="card">
+                <h4 style={{ marginBottom: '0.75rem' }}>{comp.name}</h4>
+                {comp.company_number && (
+                  <div style={{ fontSize: '0.875rem', color: 'var(--gray-500)', marginBottom: '0.75rem' }}>
+                    ח.פ. {comp.company_number}
+                  </div>
+                )}
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <strong>תחומים:</strong>
+                  <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                    {comp.typical_domains?.map((d, i) => (
+                      <span key={i} className="badge badge-gray">{d}</span>
+                    ))}
+                  </div>
                 </div>
-              )}
-              <div style={{ marginBottom: '0.5rem' }}>
-                <strong>תחומים:</strong>
-                <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
-                  {comp.typical_domains?.map((d, i) => (
-                    <span key={i} className="badge badge-gray">{d}</span>
-                  ))}
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <strong>חוזקות:</strong>
+                  <ul style={{ margin: '0.25rem 0 0 1rem', fontSize: '0.875rem' }}>
+                    {comp.strengths?.slice(0, 3).map((s, i) => <li key={i}>{s}</li>)}
+                  </ul>
+                </div>
+                <div>
+                  <strong>חולשות:</strong>
+                  <ul style={{ margin: '0.25rem 0 0 1rem', fontSize: '0.875rem' }}>
+                    {comp.weaknesses?.slice(0, 3).map((w, i) => <li key={i}>{w}</li>)}
+                  </ul>
                 </div>
               </div>
-              <div style={{ marginBottom: '0.5rem' }}>
-                <strong>חוזקות:</strong>
-                <ul style={{ margin: '0.25rem 0 0 1rem', fontSize: '0.875rem' }}>
-                  {comp.strengths?.slice(0, 3).map((s, i) => <li key={i}>{s}</li>)}
-                </ul>
-              </div>
-              <div>
-                <strong>חולשות:</strong>
-                <ul style={{ margin: '0.25rem 0 0 1rem', fontSize: '0.875rem' }}>
-                  {comp.weaknesses?.slice(0, 3).map((w, i) => <li key={i}>{w}</li>)}
-                </ul>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )
       )}
 
       {activeTab === 'mapping' && (
