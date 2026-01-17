@@ -448,11 +448,42 @@ export const api = {
         body: JSON.stringify(data),
       }).then(r => r[0]),
 
-    create: (data: Partial<GateCondition>) =>
-      supabaseFetch<GateCondition[]>('gate_conditions', {
+    create: (data: Partial<GateCondition>) => {
+      // Filter to only include columns that exist in the database table
+      const dbData = {
+        id: data.id,
+        tender_id: data.tender_id,
+        condition_number: data.condition_number,
+        condition_text: data.condition_text,
+        condition_type: data.condition_type,
+        is_mandatory: data.is_mandatory,
+        requirement_type: data.requirement_type,
+        required_amount: data.required_amount,
+        required_count: data.required_count,
+        required_years: data.required_years,
+        status: data.status,
+        evidence: data.evidence,
+        gap_description: data.gap_description,
+        closure_options: data.closure_options,
+        source_page: data.source_page,
+        source_section: data.source_section,
+        source_quote: data.source_quote,
+        source_file: data.source_file,
+        ai_summary: data.ai_summary,
+        ai_confidence: data.ai_confidence,
+        ai_analyzed_at: data.ai_analyzed_at,
+        // Note: bearer_entity and other professional extraction fields
+        // are NOT in the database schema yet
+      };
+      // Remove undefined values
+      const cleanData = Object.fromEntries(
+        Object.entries(dbData).filter(([_, v]) => v !== undefined)
+      );
+      return supabaseFetch<GateCondition[]>('gate_conditions', {
         method: 'POST',
-        body: JSON.stringify(data),
-      }).then(r => r[0]),
+        body: JSON.stringify(cleanData),
+      }).then(r => r[0]);
+    },
   },
 
   // ==================== BOQ ITEMS ====================
