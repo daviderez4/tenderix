@@ -21,6 +21,8 @@ export function GatesPage() {
   const [clarificationText, setClarificationText] = useState('');
   const [analyzingGateId, setAnalyzingGateId] = useState<string | null>(null);
   const [expandedGates, setExpandedGates] = useState<Set<string>>(new Set());
+  const [analyzingAllGates, setAnalyzingAllGates] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState({ current: 0, total: 0 });
 
   useEffect(() => {
     loadData();
@@ -143,6 +145,65 @@ export function GatesPage() {
       console.error('Error analyzing gate:', error);
     } finally {
       setAnalyzingGateId(null);
+    }
+  }
+
+  // Analyze all gates with AI one by one
+  async function analyzeAllGates() {
+    const orgId = getCurrentOrgId();
+    const unanalyzedGates = gates.filter(g => !g.status || g.status === 'UNKNOWN');
+
+    if (unanalyzedGates.length === 0) {
+      alert('כל התנאים כבר נותחו');
+      return;
+    }
+
+    setAnalyzingAllGates(true);
+    setAnalysisProgress({ current: 0, total: unanalyzedGates.length });
+
+    try {
+      for (let i = 0; i < unanalyzedGates.length; i++) {
+        const gate = unanalyzedGates[i];
+        setAnalysisProgress({ current: i + 1, total: unanalyzedGates.length });
+
+        try {
+          const result = await api.workflows.analyzeGateWithAI(
+            gate.tender_id,
+            gate.id,
+            gate.condition_text,
+            orgId
+          );
+
+          if (result.success) {
+            setGates(prev => prev.map(g => {
+              if (g.id === gate.id) {
+                return {
+                  ...g,
+                  status: result.status,
+                  evidence: result.evidence,
+                  gap_description: result.gap_description,
+                  legal_classification: result.interpretation?.legal?.classification as 'strict' | 'open' | 'proof_dependent' | undefined,
+                  legal_reasoning: result.interpretation?.legal?.reasoning,
+                  technical_requirement: result.interpretation?.technical?.what_is_required,
+                  equivalent_options: result.interpretation?.technical?.equivalent_options,
+                  ai_confidence: result.ai_confidence,
+                  ai_summary: result.ai_summary,
+                  ai_analyzed_at: new Date().toISOString(),
+                };
+              }
+              return g;
+            }));
+          }
+        } catch (error) {
+          console.error(`Error analyzing gate ${gate.id}:`, error);
+        }
+
+        // Small delay between requests
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    } finally {
+      setAnalyzingAllGates(false);
+      setAnalysisProgress({ current: 0, total: 0 });
     }
   }
 
@@ -327,16 +388,34 @@ export function GatesPage() {
           )}
           <button
             className="btn btn-primary"
+            onClick={analyzeAllGates}
+            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates || gates.length === 0}
+            style={{ background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none' }}
+          >
+            {analyzingAllGates ? (
+              <>
+                <div className="spinner" />
+                {analysisProgress.current}/{analysisProgress.total}
+              </>
+            ) : (
+              <>
+                <Sparkles size={18} />
+                נתח את כל התנאים עם AI
+              </>
+            )}
+          </button>
+          <button
+            className="btn btn-secondary"
             onClick={() => runWorkflow('match')}
-            disabled={runningWorkflow !== null || extractingGates}
+            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates}
           >
             {runningWorkflow === 'match' ? <div className="spinner" /> : <RefreshCw size={18} />}
-            התאמה לפרופיל
+            התאמה מהירה לפרופיל
           </button>
           <button
             className="btn btn-secondary"
             onClick={() => { runWorkflow('clarifications'); setActiveTab('clarifications'); }}
-            disabled={runningWorkflow !== null || extractingGates}
+            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates}
           >
             {runningWorkflow === 'clarifications' ? <div className="spinner" /> : <FileQuestion size={18} />}
             שאלות הבהרה
@@ -344,7 +423,7 @@ export function GatesPage() {
           <button
             className="btn btn-secondary"
             onClick={() => { runWorkflow('strategic'); setActiveTab('strategic'); }}
-            disabled={runningWorkflow !== null || extractingGates}
+            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates}
           >
             {runningWorkflow === 'strategic' ? <div className="spinner" /> : <Lightbulb size={18} />}
             שאלות אסטרטגיות
@@ -352,7 +431,7 @@ export function GatesPage() {
           <button
             className="btn btn-secondary"
             onClick={() => { runWorkflow('documents'); setActiveTab('documents'); }}
-            disabled={runningWorkflow !== null || extractingGates}
+            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates}
           >
             {runningWorkflow === 'documents' ? <div className="spinner" /> : <FileCheck size={18} />}
             מסמכים נדרשים
@@ -360,7 +439,7 @@ export function GatesPage() {
           <button
             className="btn btn-secondary"
             onClick={() => setActiveTab('reanalysis')}
-            disabled={runningWorkflow !== null || extractingGates}
+            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates}
             style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: 'white', border: 'none' }}
           >
             <RotateCcw size={18} />
@@ -369,7 +448,7 @@ export function GatesPage() {
           <button
             className="btn btn-secondary"
             onClick={() => { runWorkflow('priorities'); setActiveTab('priorities'); }}
-            disabled={runningWorkflow !== null || extractingGates}
+            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates}
             style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white', border: 'none' }}
           >
             {runningWorkflow === 'priorities' ? <div className="spinner" /> : <ListOrdered size={18} />}
@@ -378,7 +457,7 @@ export function GatesPage() {
           <button
             className="btn btn-secondary"
             onClick={() => { runWorkflow('pricing'); setActiveTab('pricing'); }}
-            disabled={runningWorkflow !== null || extractingGates}
+            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates}
             style={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', color: 'white', border: 'none' }}
           >
             {runningWorkflow === 'pricing' ? <div className="spinner" /> : <DollarSign size={18} />}
