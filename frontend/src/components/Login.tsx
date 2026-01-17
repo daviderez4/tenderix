@@ -21,8 +21,52 @@ export function Login({ onLogin }: LoginProps) {
 
   // Check for existing Supabase session on mount
   useEffect(() => {
+    // Handle OAuth callback - check for access_token in URL hash
+    const handleOAuthCallback = () => {
+      const hash = window.location.hash;
+      if (hash && hash.includes('access_token=')) {
+        // Parse the access token from the URL
+        const params = new URLSearchParams(hash.substring(1));
+        const accessToken = params.get('access_token');
+        if (accessToken) {
+          // Decode the JWT to get user info (without verification - just for display)
+          try {
+            const payload = JSON.parse(atob(accessToken.split('.')[1]));
+            const email = payload.email || payload.user_metadata?.email || 'google_user';
+            console.log('OAuth callback - user:', email);
+            localStorage.setItem('tenderix_auth', 'true');
+            localStorage.setItem('tenderix_user', email);
+            // Clear the hash to avoid issues
+            window.history.replaceState(null, '', window.location.pathname);
+            onLogin();
+            return true;
+          } catch (e) {
+            console.error('Error parsing token:', e);
+          }
+        }
+      }
+      return false;
+    };
+
+    // Check OAuth callback first
+    if (handleOAuthCallback()) {
+      return;
+    }
+
+    // Listen for auth state changes (for OAuth redirect)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state change:', event, session?.user?.email);
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
+        localStorage.setItem('tenderix_auth', 'true');
+        localStorage.setItem('tenderix_user', session.user.email || 'google_user');
+        onLogin();
+      }
+    });
+
+    // Then check for existing session
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+      console.log('Check session:', session?.user?.email);
       if (session) {
         localStorage.setItem('tenderix_auth', 'true');
         localStorage.setItem('tenderix_user', session.user.email || 'google_user');
@@ -30,15 +74,6 @@ export function Login({ onLogin }: LoginProps) {
       }
     };
     checkSession();
-
-    // Listen for auth state changes (for OAuth redirect)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        localStorage.setItem('tenderix_auth', 'true');
-        localStorage.setItem('tenderix_user', session.user.email || 'google_user');
-        onLogin();
-      }
-    });
 
     return () => subscription.unsubscribe();
   }, [onLogin]);

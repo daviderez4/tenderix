@@ -19,7 +19,10 @@ import {
   ArrowRight,
   Link as LinkIcon,
   Download,
-  FolderOpen
+  FolderOpen,
+  Cloud,
+  ExternalLink,
+  RefreshCw
 } from 'lucide-react';
 import { api } from '../api/tenderix';
 import { setCurrentTender, setTenderExtractedText, getDefaultOrgData, getCurrentOrgId } from '../api/config';
@@ -94,6 +97,20 @@ export function TenderIntakePage() {
     submission_deadline?: string;
     category?: string;
   } | null>(null);
+
+  // Google Drive states
+  const [driveMode, setDriveMode] = useState(false);
+  const [driveFolderId, setDriveFolderId] = useState<string | null>(null);
+  const [driveFolderUrl, setDriveFolderUrl] = useState<string | null>(null);
+  const [driveFiles, setDriveFiles] = useState<Array<{
+    id: string;
+    name: string;
+    mimeType: string;
+    webViewLink: string;
+    selected: boolean;
+  }>>([]);
+  const [isLoadingDrive, setIsLoadingDrive] = useState(false);
+  const [driveError, setDriveError] = useState<string | null>(null);
 
   // Extract text from PDF using PDF.js (works with digital PDFs with embedded text)
   const extractTextFromPDF = async (file: File): Promise<string> => {
@@ -442,6 +459,108 @@ export function TenderIntakePage() {
       setIsScrapingUrl(false);
       setExtractionProgress('');
     }
+  };
+
+  // Load files from Google Drive folder
+  const loadDriveFiles = async (folderId: string) => {
+    setIsLoadingDrive(true);
+    setDriveError(null);
+
+    try {
+      const result = await api.drive.listFiles(folderId);
+
+      if (result.success) {
+        setDriveFiles(result.files.map(f => ({
+          ...f,
+          selected: true,
+        })));
+      } else {
+        throw new Error(result.error || 'Failed to list files');
+      }
+    } catch (error) {
+      console.error('Drive list error:', error);
+      setDriveError(error instanceof Error ? error.message : 'שגיאה בטעינת קבצים מ-Drive');
+    } finally {
+      setIsLoadingDrive(false);
+    }
+  };
+
+  // Process selected Drive files
+  const processDriveFiles = async () => {
+    const selected = driveFiles.filter(f => f.selected);
+    if (selected.length === 0) {
+      setDriveError('יש לבחור לפחות קובץ אחד');
+      return;
+    }
+
+    setIsLoadingDrive(true);
+    setDriveError(null);
+
+    try {
+      // Add files to document list with processing status
+      const newDocs: UploadedDocument[] = selected.map((file, index) => ({
+        id: `drive-${Date.now()}-${index}`,
+        name: file.name,
+        type: file.mimeType,
+        size: 0,
+        status: 'processing' as const,
+        detectedType: api.scraper.classifyDocument(file.name).doc_type.toLowerCase(),
+      }));
+
+      setDocuments(prev => [...prev, ...newDocs]);
+
+      // Process each file
+      for (let i = 0; i < selected.length; i++) {
+        const file = selected[i];
+        const docId = newDocs[i].id;
+
+        try {
+          setExtractionProgress(`מעבד ${i + 1}/${selected.length}: ${file.name}...`);
+
+          const result = await api.drive.downloadAndProcess(
+            savedTenderId || '',
+            file.id,
+            file.name
+          );
+
+          if (result.success) {
+            setDocuments(prev => prev.map(d =>
+              d.id === docId
+                ? {
+                    ...d,
+                    status: 'done',
+                    extractedText: result.extracted_text || '',
+                    pages: result.page_count || 1,
+                  }
+                : d
+            ));
+          } else {
+            throw new Error(result.error);
+          }
+        } catch (err) {
+          console.error(`Error processing ${file.name}:`, err);
+          setDocuments(prev => prev.map(d =>
+            d.id === docId ? { ...d, status: 'error' } : d
+          ));
+        }
+      }
+
+      setDriveFiles([]);
+      setExtractionProgress('');
+    } catch (error) {
+      console.error('Drive processing error:', error);
+      setDriveError('שגיאה בעיבוד הקבצים');
+    } finally {
+      setIsLoadingDrive(false);
+      setExtractionProgress('');
+    }
+  };
+
+  // Toggle Drive file selection
+  const toggleDriveFileSelection = (index: number) => {
+    setDriveFiles(prev => prev.map((f, i) =>
+      i === index ? { ...f, selected: !f.selected } : f
+    ));
   };
 
   const startProcessing = async () => {
@@ -892,6 +1011,375 @@ export function TenderIntakePage() {
               )}
             </div>
           </div>
+        )}
+      </div>
+
+      {/* Google Drive Section */}
+      <div className="card" style={{ marginBottom: '1.5rem' }}>
+        <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Cloud size={20} style={{ color: '#4285f4' }} />
+          Google Drive - תיקיית מכרז
+        </h3>
+
+        {/* Toggle Drive mode */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+          <button
+            onClick={() => setDriveMode(!driveMode)}
+            className={`btn ${driveMode ? 'btn-primary' : ''}`}
+            style={{
+              background: driveMode ? 'linear-gradient(135deg, #4285f4, #3367d6)' : 'transparent',
+              border: driveMode ? 'none' : '1px solid #333',
+            }}
+          >
+            <Cloud size={18} />
+            {driveMode ? 'מצב Drive פעיל' : 'הפעל מצב Drive'}
+          </button>
+          {driveFolderUrl && (
+            <a
+              href={driveFolderUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                color: '#4285f4',
+                fontSize: '0.9rem',
+              }}
+            >
+              <ExternalLink size={16} />
+              פתח תיקייה ב-Drive
+            </a>
+          )}
+        </div>
+
+        {driveMode && (
+          <>
+            {/* Folder ID or create new */}
+            {!driveFolderId ? (
+              <div style={{ marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                  <input
+                    type="text"
+                    placeholder="הזן מזהה תיקייה קיימת (folder ID)"
+                    onChange={(e) => {
+                      const value = e.target.value.trim();
+                      if (value) {
+                        setDriveFolderId(value);
+                        setDriveFolderUrl(`https://drive.google.com/drive/folders/${value}`);
+                      }
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '0.75rem 1rem',
+                      borderRadius: '8px',
+                      border: '1px solid #333',
+                      background: 'rgba(255,255,255,0.05)',
+                      color: '#fff',
+                      fontSize: '0.95rem',
+                    }}
+                    dir="ltr"
+                  />
+                  <button
+                    onClick={async () => {
+                      if (!savedTenderId || !metadata) {
+                        setDriveError('יש לשמור את המכרז קודם');
+                        return;
+                      }
+                      setIsLoadingDrive(true);
+                      setDriveError(null);
+                      try {
+                        const result = await api.drive.getOrCreateFolder(
+                          savedTenderId,
+                          metadata.tenderName,
+                          metadata.tenderNumber !== 'לא זוהה' ? metadata.tenderNumber : undefined
+                        );
+                        if (result.success && result.folder_id) {
+                          setDriveFolderId(result.folder_id);
+                          setDriveFolderUrl(result.folder_url || `https://drive.google.com/drive/folders/${result.folder_id}`);
+                          await loadDriveFiles(result.folder_id);
+                        } else {
+                          throw new Error(result.error || 'Failed to create folder');
+                        }
+                      } catch (err) {
+                        setDriveError(err instanceof Error ? err.message : 'שגיאה ביצירת תיקייה');
+                      } finally {
+                        setIsLoadingDrive(false);
+                      }
+                    }}
+                    disabled={isLoadingDrive || !savedTenderId}
+                    className="btn btn-primary"
+                    style={{
+                      whiteSpace: 'nowrap',
+                      background: 'linear-gradient(135deg, #4285f4, #3367d6)',
+                    }}
+                  >
+                    {isLoadingDrive ? (
+                      <>
+                        <Loader2 size={18} className="spin" />
+                        יוצר...
+                      </>
+                    ) : (
+                      <>
+                        <FolderOpen size={18} />
+                        צור תיקייה חדשה
+                      </>
+                    )}
+                  </button>
+                </div>
+                {!savedTenderId && (
+                  <p style={{ color: '#f59e0b', fontSize: '0.85rem' }}>
+                    יש לשמור את המכרז קודם כדי ליצור תיקיית Drive
+                  </p>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Folder connected - show files */}
+                <div style={{
+                  padding: '0.75rem 1rem',
+                  background: 'rgba(66, 133, 244, 0.1)',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '1rem',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <CheckCircle size={18} style={{ color: '#4285f4' }} />
+                    <span>תיקייה מחוברת: {driveFolderId.substring(0, 20)}...</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      onClick={() => loadDriveFiles(driveFolderId)}
+                      disabled={isLoadingDrive}
+                      style={{
+                        padding: '0.4rem 0.75rem',
+                        background: 'transparent',
+                        border: '1px solid #4285f4',
+                        borderRadius: '6px',
+                        color: '#4285f4',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      <RefreshCw size={14} className={isLoadingDrive ? 'spin' : ''} />
+                      רענן
+                    </button>
+                    <button
+                      onClick={() => {
+                        setDriveFolderId(null);
+                        setDriveFolderUrl(null);
+                        setDriveFiles([]);
+                      }}
+                      style={{
+                        padding: '0.4rem 0.75rem',
+                        background: 'transparent',
+                        border: '1px solid #666',
+                        borderRadius: '6px',
+                        color: '#888',
+                        cursor: 'pointer',
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      נתק
+                    </button>
+                  </div>
+                </div>
+
+                {/* Files list */}
+                {driveFiles.length > 0 ? (
+                  <div>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '0.75rem',
+                    }}>
+                      <span style={{ fontWeight: 500 }}>
+                        {driveFiles.length} קבצים בתיקייה
+                      </span>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          onClick={() => setDriveFiles(prev => prev.map(f => ({ ...f, selected: true })))}
+                          style={{
+                            padding: '0.25rem 0.75rem',
+                            background: 'transparent',
+                            border: '1px solid #333',
+                            borderRadius: '6px',
+                            color: '#888',
+                            fontSize: '0.8rem',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          בחר הכל
+                        </button>
+                        <button
+                          onClick={() => setDriveFiles(prev => prev.map(f => ({ ...f, selected: false })))}
+                          style={{
+                            padding: '0.25rem 0.75rem',
+                            background: 'transparent',
+                            border: '1px solid #333',
+                            borderRadius: '6px',
+                            color: '#888',
+                            fontSize: '0.8rem',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          נקה בחירה
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{
+                      maxHeight: '300px',
+                      overflowY: 'auto',
+                      border: '1px solid #333',
+                      borderRadius: '8px',
+                    }}>
+                      {driveFiles.map((file, index) => (
+                        <div
+                          key={file.id}
+                          onClick={() => toggleDriveFileSelection(index)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            padding: '0.75rem 1rem',
+                            borderBottom: index < driveFiles.length - 1 ? '1px solid #333' : 'none',
+                            cursor: 'pointer',
+                            background: file.selected ? 'rgba(66, 133, 244, 0.1)' : 'transparent',
+                            transition: 'background 0.2s',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={file.selected}
+                            onChange={() => {}}
+                            style={{ cursor: 'pointer' }}
+                          />
+                          <div style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '8px',
+                            background: file.mimeType.includes('pdf')
+                              ? 'rgba(239, 68, 68, 0.2)'
+                              : file.mimeType.includes('spreadsheet') || file.mimeType.includes('excel')
+                                ? 'rgba(16, 185, 129, 0.2)'
+                                : file.mimeType.includes('document') || file.mimeType.includes('word')
+                                  ? 'rgba(66, 133, 244, 0.2)'
+                                  : 'rgba(255,255,255,0.1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}>
+                            <FileText size={18} style={{
+                              color: file.mimeType.includes('pdf')
+                                ? '#ef4444'
+                                : file.mimeType.includes('spreadsheet')
+                                  ? '#10b981'
+                                  : '#4285f4'
+                            }} />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                              fontWeight: 500,
+                              fontSize: '0.9rem',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}>
+                              {file.name}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: '#888' }}>
+                              {api.scraper.classifyDocument(file.name).doc_type}
+                            </div>
+                          </div>
+                          <a
+                            href={file.webViewLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ color: '#4285f4' }}
+                          >
+                            <ExternalLink size={16} />
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={processDriveFiles}
+                      disabled={isLoadingDrive || driveFiles.filter(f => f.selected).length === 0}
+                      className="btn btn-primary"
+                      style={{
+                        width: '100%',
+                        marginTop: '1rem',
+                        background: 'linear-gradient(135deg, #4285f4, #3367d6)',
+                      }}
+                    >
+                      {isLoadingDrive ? (
+                        <>
+                          <Loader2 size={18} className="spin" />
+                          מעבד קבצים...
+                        </>
+                      ) : (
+                        <>
+                          <Download size={18} />
+                          עבד {driveFiles.filter(f => f.selected).length} קבצים מ-Drive
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{
+                    padding: '2rem',
+                    textAlign: 'center',
+                    color: '#888',
+                    background: 'rgba(255,255,255,0.02)',
+                    borderRadius: '8px',
+                  }}>
+                    {isLoadingDrive ? (
+                      <>
+                        <Loader2 size={24} className="spin" style={{ marginBottom: '0.5rem', color: '#4285f4' }} />
+                        <p>טוען קבצים...</p>
+                      </>
+                    ) : (
+                      <>
+                        <FolderOpen size={24} style={{ marginBottom: '0.5rem' }} />
+                        <p>התיקייה ריקה - העלה קבצים ל-Drive ולחץ רענן</p>
+                      </>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+
+            {driveError && (
+              <div style={{
+                marginTop: '1rem',
+                padding: '0.75rem 1rem',
+                background: 'rgba(239, 68, 68, 0.1)',
+                borderRadius: '8px',
+                color: '#ef4444',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+              }}>
+                <AlertCircle size={16} />
+                {driveError}
+              </div>
+            )}
+          </>
+        )}
+
+        {!driveMode && (
+          <p style={{ color: '#888', fontSize: '0.9rem' }}>
+            חבר תיקיית Google Drive לניהול מסמכי המכרז בענן. ניתן לעבוד על קבצים מכל מקום ולשתף עם חברי הצוות.
+          </p>
         )}
       </div>
 

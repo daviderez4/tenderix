@@ -12,19 +12,45 @@ import { CompanyProfilePage } from './pages/CompanyProfilePage';
 import { TenderIntakePage } from './pages/TenderIntakePage';
 import './index.css';
 
+// Check for OAuth token in URL hash and handle it immediately
+function handleOAuthHash(): boolean {
+  const hash = window.location.hash;
+  if (hash && hash.includes('access_token=')) {
+    try {
+      const params = new URLSearchParams(hash.substring(1));
+      const accessToken = params.get('access_token');
+      if (accessToken) {
+        const payload = JSON.parse(atob(accessToken.split('.')[1]));
+        const email = payload.email || payload.user_metadata?.email || 'google_user';
+        console.log('App: OAuth callback detected, user:', email);
+        localStorage.setItem('tenderix_auth', 'true');
+        localStorage.setItem('tenderix_user', email);
+        window.history.replaceState(null, '', window.location.pathname);
+        return true;
+      }
+    } catch (e) {
+      console.error('App: Error parsing OAuth token:', e);
+    }
+  }
+  return false;
+}
+
 function App() {
   // DEV MODE: Skip authentication for local development
   const isDev = import.meta.env.DEV;
-  const [isAuthenticated, setIsAuthenticated] = useState(isDev);
+
+  // Check OAuth hash synchronously before first render
+  const hasOAuthToken = handleOAuthHash();
+  const initialAuth = isDev || hasOAuthToken || localStorage.getItem('tenderix_auth') === 'true';
+
+  const [isAuthenticated, setIsAuthenticated] = useState(initialAuth);
 
   useEffect(() => {
-    if (!isDev) {
-      const auth = localStorage.getItem('tenderix_auth');
-      if (auth === 'true') {
-        setIsAuthenticated(true);
-      }
+    // Re-check in case localStorage was updated
+    if (!isAuthenticated && localStorage.getItem('tenderix_auth') === 'true') {
+      setIsAuthenticated(true);
     }
-  }, [isDev]);
+  }, [isAuthenticated]);
 
   if (!isAuthenticated) {
     return <Login onLogin={() => setIsAuthenticated(true)} />;

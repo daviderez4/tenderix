@@ -953,6 +953,251 @@ export const api = {
     },
   },
 
+  // ==================== GOOGLE DRIVE INTEGRATION ====================
+  drive: {
+    // Create folder structure for a tender
+    createTenderFolder: async (tenderId: string, tenderName: string, tenderNumber?: string): Promise<{
+      success: boolean;
+      folder_id?: string;
+      folder_url?: string;
+      subfolders?: {
+        documents: string;
+        drawings: string;
+        clarifications: string;
+        submissions: string;
+      };
+      error?: string;
+    }> => {
+      console.log(`Creating Drive folder for tender: ${tenderName}`);
+
+      try {
+        const response = await fetch(`${API_CONFIG.WEBHOOK_BASE}/tdx-drive-create-folder`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tender_id: tenderId,
+            tender_name: tenderName,
+            tender_number: tenderNumber,
+            // Folder structure
+            subfolders: ['מסמכי מכרז', 'תוכניות', 'הבהרות', 'הגשה'],
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Drive API returned ${response.status}`);
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Drive folder creation error:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    },
+
+    // Upload file to Drive
+    uploadFile: async (
+      tenderId: string,
+      folderId: string,
+      file: File,
+      docType?: string
+    ): Promise<{
+      success: boolean;
+      file_id?: string;
+      file_url?: string;
+      web_view_link?: string;
+      error?: string;
+    }> => {
+      console.log(`Uploading ${file.name} to Drive folder ${folderId}`);
+
+      try {
+        // Convert file to base64 for webhook
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.split(',')[1]); // Remove data:...;base64, prefix
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        const response = await fetch(`${API_CONFIG.WEBHOOK_BASE}/tdx-drive-upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tender_id: tenderId,
+            folder_id: folderId,
+            file_name: file.name,
+            file_type: file.type,
+            file_size: file.size,
+            doc_type: docType || api.scraper.classifyDocument(file.name).doc_type,
+            file_content: base64,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Drive upload returned ${response.status}`);
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Drive upload error:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    },
+
+    // List files in a tender folder
+    listFiles: async (folderId: string): Promise<{
+      success: boolean;
+      files: Array<{
+        id: string;
+        name: string;
+        mimeType: string;
+        size?: number;
+        webViewLink: string;
+        webContentLink?: string;
+        createdTime: string;
+        modifiedTime: string;
+        doc_type?: string;
+      }>;
+      error?: string;
+    }> => {
+      try {
+        const response = await fetch(`${API_CONFIG.WEBHOOK_BASE}/tdx-drive-list`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ folder_id: folderId }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Drive list returned ${response.status}`);
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Drive list error:', error);
+        return {
+          success: false,
+          files: [],
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    },
+
+    // Download file from Drive and process it
+    downloadAndProcess: async (
+      tenderId: string,
+      fileId: string,
+      fileName: string
+    ): Promise<{
+      success: boolean;
+      extracted_text?: string;
+      page_count?: number;
+      error?: string;
+    }> => {
+      try {
+        const response = await fetch(`${API_CONFIG.WEBHOOK_BASE}/tdx-drive-download-process`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tender_id: tenderId,
+            file_id: fileId,
+            file_name: fileName,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Drive download returned ${response.status}`);
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Drive download error:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    },
+
+    // Sync tender folder - download all files and update DB
+    syncTenderFolder: async (tenderId: string, folderId: string): Promise<{
+      success: boolean;
+      synced: number;
+      failed: number;
+      files: Array<{
+        name: string;
+        success: boolean;
+        error?: string;
+      }>;
+    }> => {
+      try {
+        const response = await fetch(`${API_CONFIG.WEBHOOK_BASE}/tdx-drive-sync`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tender_id: tenderId,
+            folder_id: folderId,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Drive sync returned ${response.status}`);
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Drive sync error:', error);
+        return {
+          success: false,
+          synced: 0,
+          failed: 0,
+          files: [],
+        };
+      }
+    },
+
+    // Get or create tender folder
+    getOrCreateFolder: async (tenderId: string, tenderName: string, tenderNumber?: string): Promise<{
+      success: boolean;
+      folder_id?: string;
+      folder_url?: string;
+      is_new: boolean;
+      error?: string;
+    }> => {
+      try {
+        const response = await fetch(`${API_CONFIG.WEBHOOK_BASE}/tdx-drive-get-or-create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tender_id: tenderId,
+            tender_name: tenderName,
+            tender_number: tenderNumber,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Drive API returned ${response.status}`);
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Drive get/create error:', error);
+        return {
+          success: false,
+          is_new: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    },
+  },
+
   // ==================== CLARIFICATIONS (Module 1.1.5) ====================
   clarifications: {
     list: (tenderId: string) =>
@@ -1059,7 +1304,7 @@ export const api = {
 
             // Convert to GateCondition format
             const conditions: GateCondition[] = result.conditions.map((c: any, i: number) => ({
-              id: c.id || `gate-${tenderId}-${i}`,
+              id: c.id || crypto.randomUUID(),
               tender_id: tenderId,
               condition_number: `${c.condition_number || i + 1}`,
               condition_text: c.condition_text || c.original_text || c.text,
@@ -1079,7 +1324,30 @@ export const api = {
               status: 'UNKNOWN',
             }));
 
-            return { success: true, conditions };
+            // ===== SAVE TO DATABASE =====
+            console.log('Saving professional extraction results to database...');
+
+            // Delete existing conditions for this tender
+            try {
+              await supabaseFetch(`gate_conditions?tender_id=eq.${tenderId}`, { method: 'DELETE' });
+              console.log('Cleared existing conditions');
+            } catch (e) {
+              console.log('No existing conditions to clear');
+            }
+
+            // Save new conditions
+            const savedConditions: GateCondition[] = [];
+            for (const condition of conditions.slice(0, 50)) {
+              try {
+                const saved = await api.gates.create(condition);
+                if (saved) savedConditions.push(saved);
+              } catch (err) {
+                console.error('Error saving condition:', err);
+              }
+            }
+            console.log(`Saved ${savedConditions.length} conditions to database`);
+
+            return { success: true, conditions: savedConditions };
           }
           console.log('Professional webhook returned no conditions, falling back to v2...');
         } else {
@@ -1110,7 +1378,7 @@ export const api = {
 
             // Convert to GateCondition format
             const conditions: GateCondition[] = result.conditions.map((c: any, i: number) => ({
-              id: c.id,
+              id: c.id || crypto.randomUUID(),
               tender_id: tenderId,
               condition_number: `${i + 1}`,
               condition_text: c.text,
@@ -1125,7 +1393,30 @@ export const api = {
               status: 'UNKNOWN',
             }));
 
-            return { success: true, conditions };
+            // ===== SAVE TO DATABASE =====
+            console.log('Saving v2 extraction results to database...');
+
+            // Delete existing conditions for this tender
+            try {
+              await supabaseFetch(`gate_conditions?tender_id=eq.${tenderId}`, { method: 'DELETE' });
+              console.log('Cleared existing conditions');
+            } catch (e) {
+              console.log('No existing conditions to clear');
+            }
+
+            // Save new conditions
+            const savedConditions: GateCondition[] = [];
+            for (const condition of conditions.slice(0, 50)) {
+              try {
+                const saved = await api.gates.create(condition);
+                if (saved) savedConditions.push(saved);
+              } catch (err) {
+                console.error('Error saving condition:', err);
+              }
+            }
+            console.log(`Saved ${savedConditions.length} conditions to database`);
+
+            return { success: true, conditions: savedConditions };
           }
           console.log('Webhook returned no conditions, falling back to regex extraction');
         } else {
