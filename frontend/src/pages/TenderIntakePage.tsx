@@ -16,7 +16,10 @@ import {
   Trash2,
   Eye,
   Save,
-  ArrowRight
+  ArrowRight,
+  Link as LinkIcon,
+  Download,
+  FolderOpen
 } from 'lucide-react';
 import { api } from '../api/tenderix';
 import { setCurrentTender, setTenderExtractedText, getDefaultOrgData, getCurrentOrgId } from '../api/config';
@@ -69,6 +72,28 @@ export function TenderIntakePage() {
   const [showManualInput, setShowManualInput] = useState(false);
   const filesRef = useRef<Map<string, File>>(new Map());
   const [extractionProgress, setExtractionProgress] = useState<string>('');
+
+  // URL Scraping states
+  const [tenderUrl, setTenderUrl] = useState('');
+  const [isScrapingUrl, setIsScrapingUrl] = useState(false);
+  const [scrapedDocuments, setScrapedDocuments] = useState<Array<{
+    file_name: string;
+    file_url: string;
+    file_type: string;
+    doc_type: string;
+    category: string;
+    publish_date?: string;
+    is_clarification: boolean;
+    selected: boolean;
+  }>>([]);
+  const [scrapeError, setScrapeError] = useState<string | null>(null);
+  const [scrapedMetadata, setScrapedMetadata] = useState<{
+    tender_number?: string;
+    tender_name?: string;
+    issuing_body?: string;
+    submission_deadline?: string;
+    category?: string;
+  } | null>(null);
 
   // Extract text from PDF using PDF.js (works with digital PDFs with embedded text)
   const extractTextFromPDF = async (file: File): Promise<string> => {
@@ -245,6 +270,178 @@ export function TenderIntakePage() {
 
   const removeDocument = (id: string) => {
     setDocuments(documents.filter((d) => d.id !== id));
+  };
+
+  // Scrape documents from URL (Dekel/Merkavi)
+  const scrapeFromUrl = async () => {
+    if (!tenderUrl.trim()) {
+      setScrapeError('יש להזין כתובת URL');
+      return;
+    }
+
+    setIsScrapingUrl(true);
+    setScrapeError(null);
+    setScrapedDocuments([]);
+    setScrapedMetadata(null);
+
+    try {
+      // Use the API scraper - for now use a mock until webhook is ready
+      // const result = await api.scraper.scrapeFromUrl(tenderUrl, '');
+
+      // Parse URL to detect source
+      const url = new URL(tenderUrl);
+      const hostname = url.hostname.toLowerCase();
+
+      let source: 'dekel' | 'merkavi' | 'mr_gov' | 'unknown' = 'unknown';
+      if (hostname.includes('dekel') || hostname.includes('dkalnet')) {
+        source = 'dekel';
+      } else if (hostname.includes('merkavi') || hostname.includes('mr.gov')) {
+        source = 'mr_gov';
+      }
+
+      // Call the scraping webhook
+      const response = await fetch(`${import.meta.env.VITE_N8N_WEBHOOK_BASE || 'https://n8n.srv888666.hstgr.cloud/webhook'}/tdx-scrape-documents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tender_url: tenderUrl,
+          source,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`שגיאה בסריקה: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.documents) {
+        setScrapedDocuments(result.documents.map((doc: { file_name: string; file_url: string; file_type: string; doc_type: string; category: string; publish_date?: string; is_clarification: boolean }) => ({
+          ...doc,
+          selected: true, // Select all by default
+        })));
+
+        if (result.metadata) {
+          setScrapedMetadata(result.metadata);
+        }
+      } else {
+        throw new Error(result.error || 'לא נמצאו מסמכים');
+      }
+    } catch (error) {
+      console.error('Scrape error:', error);
+      setScrapeError(error instanceof Error ? error.message : 'שגיאה בסריקת הקישור');
+    } finally {
+      setIsScrapingUrl(false);
+    }
+  };
+
+  // Toggle document selection
+  const toggleDocumentSelection = (index: number) => {
+    setScrapedDocuments(prev => prev.map((doc, i) =>
+      i === index ? { ...doc, selected: !doc.selected } : doc
+    ));
+  };
+
+  // Select/deselect all documents
+  const toggleAllDocuments = (selected: boolean) => {
+    setScrapedDocuments(prev => prev.map(doc => ({ ...doc, selected })));
+  };
+
+  // Download and process selected scraped documents
+  const processSelectedDocuments = async () => {
+    const selected = scrapedDocuments.filter(d => d.selected);
+    if (selected.length === 0) {
+      setScrapeError('יש לבחור לפחות מסמך אחד');
+      return;
+    }
+
+    setIsScrapingUrl(true);
+    setScrapeError(null);
+
+    try {
+      // Add scraped docs to the documents list with "processing" status
+      const newDocs: UploadedDocument[] = selected.map((doc, index) => ({
+        id: `scraped-${Date.now()}-${index}`,
+        name: doc.file_name,
+        type: doc.file_type,
+        size: 0,
+        status: 'processing' as const,
+        detectedType: doc.doc_type.toLowerCase(),
+      }));
+
+      setDocuments(prev => [...prev, ...newDocs]);
+
+      // Process each document via webhook
+      for (let i = 0; i < selected.length; i++) {
+        const doc = selected[i];
+        const docId = newDocs[i].id;
+
+        try {
+          setExtractionProgress(`מעבד ${i + 1}/${selected.length}: ${doc.file_name}...`);
+
+          // Call webhook to download and extract text
+          const response = await fetch(`${import.meta.env.VITE_N8N_WEBHOOK_BASE || 'https://n8n.srv888666.hstgr.cloud/webhook'}/tdx-process-document`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              document_url: doc.file_url,
+              file_name: doc.file_name,
+              doc_type: doc.doc_type,
+            }),
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            setDocuments(prev => prev.map(d =>
+              d.id === docId
+                ? {
+                    ...d,
+                    status: 'done',
+                    extractedText: result.extracted_text || '',
+                    pages: result.page_count || 1,
+                  }
+                : d
+            ));
+          } else {
+            throw new Error(`Failed to process ${doc.file_name}`);
+          }
+        } catch (err) {
+          console.error(`Error processing ${doc.file_name}:`, err);
+          setDocuments(prev => prev.map(d =>
+            d.id === docId ? { ...d, status: 'error' } : d
+          ));
+        }
+      }
+
+      // Apply scraped metadata if available
+      if (scrapedMetadata) {
+        setMetadata(prev => ({
+          tenderNumber: scrapedMetadata.tender_number || prev?.tenderNumber || '',
+          tenderName: scrapedMetadata.tender_name || prev?.tenderName || '',
+          issuingBody: scrapedMetadata.issuing_body || prev?.issuingBody || '',
+          publishDate: prev?.publishDate || '',
+          submissionDeadline: scrapedMetadata.submission_deadline || prev?.submissionDeadline || '',
+          clarificationDeadline: prev?.clarificationDeadline || '',
+          guaranteeAmount: prev?.guaranteeAmount || '',
+          contractPeriod: prev?.contractPeriod || '',
+          category: scrapedMetadata.category || prev?.category || '',
+          priceWeight: prev?.priceWeight || '',
+          qualityWeight: prev?.qualityWeight || '',
+        }));
+      }
+
+      // Clear scraped list
+      setScrapedDocuments([]);
+      setTenderUrl('');
+      setExtractionProgress('');
+
+    } catch (error) {
+      console.error('Error processing documents:', error);
+      setScrapeError('שגיאה בעיבוד המסמכים');
+    } finally {
+      setIsScrapingUrl(false);
+      setExtractionProgress('');
+    }
   };
 
   const startProcessing = async () => {
@@ -457,11 +654,252 @@ export function TenderIntakePage() {
         </div>
       </div>
 
+      {/* URL Scraping Section */}
+      <div className="card" style={{ marginBottom: '1.5rem' }}>
+        <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <LinkIcon size={20} style={{ color: '#7c3aed' }} />
+          ייבוא מכרז מקישור (דקל / מרכבי)
+        </h3>
+
+        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
+          <input
+            type="url"
+            value={tenderUrl}
+            onChange={(e) => setTenderUrl(e.target.value)}
+            placeholder="הדבק קישור לעמוד המכרז (למשל: https://www.dekel.co.il/...)"
+            style={{
+              flex: 1,
+              padding: '0.75rem 1rem',
+              borderRadius: '8px',
+              border: '1px solid #333',
+              background: 'rgba(255,255,255,0.05)',
+              color: '#fff',
+              fontSize: '0.95rem',
+            }}
+            dir="ltr"
+          />
+          <button
+            onClick={scrapeFromUrl}
+            disabled={isScrapingUrl || !tenderUrl.trim()}
+            className="btn btn-primary"
+            style={{ whiteSpace: 'nowrap' }}
+          >
+            {isScrapingUrl ? (
+              <>
+                <Loader2 size={18} className="spin" />
+                סורק...
+              </>
+            ) : (
+              <>
+                <Download size={18} />
+                סרוק מסמכים
+              </>
+            )}
+          </button>
+        </div>
+
+        {scrapeError && (
+          <div style={{
+            padding: '0.75rem 1rem',
+            background: 'rgba(239, 68, 68, 0.1)',
+            borderRadius: '8px',
+            color: '#ef4444',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+          }}>
+            <AlertCircle size={16} />
+            {scrapeError}
+          </div>
+        )}
+
+        {/* Scraped Documents List */}
+        {scrapedDocuments.length > 0 && (
+          <div style={{ marginTop: '1rem' }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '0.75rem',
+            }}>
+              <span style={{ fontWeight: 500 }}>
+                נמצאו {scrapedDocuments.length} מסמכים
+              </span>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={() => toggleAllDocuments(true)}
+                  style={{
+                    padding: '0.25rem 0.75rem',
+                    background: 'transparent',
+                    border: '1px solid #333',
+                    borderRadius: '6px',
+                    color: '#888',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  בחר הכל
+                </button>
+                <button
+                  onClick={() => toggleAllDocuments(false)}
+                  style={{
+                    padding: '0.25rem 0.75rem',
+                    background: 'transparent',
+                    border: '1px solid #333',
+                    borderRadius: '6px',
+                    color: '#888',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  נקה בחירה
+                </button>
+              </div>
+            </div>
+
+            <div style={{
+              maxHeight: '300px',
+              overflowY: 'auto',
+              border: '1px solid #333',
+              borderRadius: '8px',
+            }}>
+              {scrapedDocuments.map((doc, index) => (
+                <div
+                  key={index}
+                  onClick={() => toggleDocumentSelection(index)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.75rem 1rem',
+                    borderBottom: index < scrapedDocuments.length - 1 ? '1px solid #333' : 'none',
+                    cursor: 'pointer',
+                    background: doc.selected ? 'rgba(124, 58, 237, 0.1)' : 'transparent',
+                    transition: 'background 0.2s',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={doc.selected}
+                    onChange={() => {}}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <div style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '8px',
+                    background: doc.is_clarification
+                      ? 'rgba(245, 158, 11, 0.2)'
+                      : doc.file_type.includes('xlsx') || doc.file_type.includes('excel')
+                        ? 'rgba(16, 185, 129, 0.2)'
+                        : doc.file_type.includes('zip')
+                          ? 'rgba(124, 58, 237, 0.2)'
+                          : 'rgba(0, 212, 255, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    {doc.is_clarification ? (
+                      <AlertCircle size={18} style={{ color: '#f59e0b' }} />
+                    ) : doc.file_type.includes('xlsx') ? (
+                      <FileText size={18} style={{ color: '#10b981' }} />
+                    ) : doc.file_type.includes('zip') ? (
+                      <FolderOpen size={18} style={{ color: '#7c3aed' }} />
+                    ) : (
+                      <FileText size={18} style={{ color: '#00d4ff' }} />
+                    )}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontWeight: 500,
+                      fontSize: '0.9rem',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {doc.file_name}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#888', display: 'flex', gap: '0.5rem' }}>
+                      <span style={{
+                        padding: '1px 6px',
+                        background: 'rgba(255,255,255,0.1)',
+                        borderRadius: '4px',
+                      }}>
+                        {doc.doc_type}
+                      </span>
+                      {doc.publish_date && <span>{doc.publish_date}</span>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={processSelectedDocuments}
+              disabled={isScrapingUrl || scrapedDocuments.filter(d => d.selected).length === 0}
+              className="btn btn-primary"
+              style={{ width: '100%', marginTop: '1rem' }}
+            >
+              {isScrapingUrl ? (
+                <>
+                  <Loader2 size={18} className="spin" />
+                  מעבד מסמכים...
+                </>
+              ) : (
+                <>
+                  <Download size={18} />
+                  הורד ועבד {scrapedDocuments.filter(d => d.selected).length} מסמכים
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Scraped Metadata Preview */}
+        {scrapedMetadata && (
+          <div style={{
+            marginTop: '1rem',
+            padding: '1rem',
+            background: 'rgba(124, 58, 237, 0.1)',
+            borderRadius: '8px',
+            borderRight: '4px solid #7c3aed',
+          }}>
+            <div style={{ fontWeight: 600, marginBottom: '0.5rem' }}>פרטי מכרז שזוהו:</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.25rem 1rem', fontSize: '0.9rem' }}>
+              {scrapedMetadata.tender_name && (
+                <>
+                  <span style={{ color: '#888' }}>שם:</span>
+                  <span>{scrapedMetadata.tender_name}</span>
+                </>
+              )}
+              {scrapedMetadata.tender_number && (
+                <>
+                  <span style={{ color: '#888' }}>מספר:</span>
+                  <span>{scrapedMetadata.tender_number}</span>
+                </>
+              )}
+              {scrapedMetadata.issuing_body && (
+                <>
+                  <span style={{ color: '#888' }}>גוף מפרסם:</span>
+                  <span>{scrapedMetadata.issuing_body}</span>
+                </>
+              )}
+              {scrapedMetadata.submission_deadline && (
+                <>
+                  <span style={{ color: '#888' }}>מועד הגשה:</span>
+                  <span>{scrapedMetadata.submission_deadline}</span>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Upload Section */}
       <div className="card" style={{ marginBottom: '1.5rem' }}>
         <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Upload size={20} style={{ color: '#00d4ff' }} />
-          העלאת מסמכי מכרז
+          העלאת מסמכים ידנית
         </h3>
 
         <div
@@ -472,7 +910,7 @@ export function TenderIntakePage() {
           style={{
             border: `2px dashed ${isDragging ? '#00d4ff' : '#333'}`,
             borderRadius: '12px',
-            padding: '3rem',
+            padding: '2rem',
             textAlign: 'center',
             background: isDragging ? 'rgba(0, 212, 255, 0.05)' : 'rgba(255,255,255,0.02)',
             transition: 'all 0.3s ease',
@@ -484,16 +922,16 @@ export function TenderIntakePage() {
             id="fileInput"
             type="file"
             multiple
-            accept=".pdf,.docx,.xlsx,.doc,.xls"
+            accept=".pdf,.docx,.xlsx,.doc,.xls,.zip"
             style={{ display: 'none' }}
             onChange={handleFileInput}
           />
-          <Upload size={48} style={{ color: isDragging ? '#00d4ff' : '#666', marginBottom: '1rem' }} />
-          <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>
+          <Upload size={36} style={{ color: isDragging ? '#00d4ff' : '#666', marginBottom: '0.75rem' }} />
+          <p style={{ fontSize: '1rem', marginBottom: '0.25rem' }}>
             גרור קבצים לכאן או לחץ לבחירה
           </p>
-          <p style={{ color: '#666', fontSize: '0.875rem' }}>
-            תומך ב-PDF, DOCX, XLSX
+          <p style={{ color: '#666', fontSize: '0.8rem' }}>
+            PDF, DOCX, XLSX, ZIP
           </p>
         </div>
 

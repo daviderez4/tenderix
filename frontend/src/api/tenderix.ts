@@ -701,6 +701,258 @@ export const api = {
     },
   },
 
+  // ==================== DOCUMENT SCRAPING & PROCESSING ====================
+  scraper: {
+    // Scrape documents from Dekel/Merkavi tender page
+    scrapeFromUrl: async (tenderUrl: string, tenderId: string): Promise<{
+      success: boolean;
+      tender_id: string;
+      source: 'dekel' | 'merkavi' | 'mr_gov' | 'unknown';
+      documents: Array<{
+        file_name: string;
+        file_url: string;
+        file_type: string;
+        doc_type: string;
+        category: string;
+        publish_date?: string;
+        is_clarification: boolean;
+      }>;
+      metadata?: {
+        tender_number?: string;
+        tender_name?: string;
+        issuing_body?: string;
+        submission_deadline?: string;
+        category?: string;
+      };
+      error?: string;
+    }> => {
+      console.log(`Scraping documents from: ${tenderUrl}`);
+
+      try {
+        // Call n8n webhook for scraping
+        const response = await fetch(`${API_CONFIG.WEBHOOK_BASE}/tdx-scrape-documents`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tender_url: tenderUrl,
+            tender_id: tenderId,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Scraper returned ${response.status}`);
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Scraping error:', error);
+        return {
+          success: false,
+          tender_id: tenderId,
+          source: 'unknown',
+          documents: [],
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    },
+
+    // Download and process a single document
+    processDocument: async (
+      tenderId: string,
+      documentUrl: string,
+      fileName: string,
+      docType: string
+    ): Promise<{
+      success: boolean;
+      document_id?: string;
+      file_name: string;
+      doc_type: string;
+      extracted_text?: string;
+      page_count?: number;
+      structure?: Record<string, unknown>;
+      error?: string;
+    }> => {
+      console.log(`Processing document: ${fileName}`);
+
+      try {
+        const response = await fetch(`${API_CONFIG.WEBHOOK_BASE}/tdx-process-document`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tender_id: tenderId,
+            document_url: documentUrl,
+            file_name: fileName,
+            doc_type: docType,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Document processing returned ${response.status}`);
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Document processing error:', error);
+        return {
+          success: false,
+          file_name: fileName,
+          doc_type: docType,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    },
+
+    // Batch process multiple documents
+    processAllDocuments: async (
+      tenderId: string,
+      documents: Array<{ file_name: string; file_url: string; doc_type: string }>
+    ): Promise<{
+      success: boolean;
+      processed: number;
+      failed: number;
+      results: Array<{
+        file_name: string;
+        success: boolean;
+        document_id?: string;
+        error?: string;
+      }>;
+    }> => {
+      console.log(`Batch processing ${documents.length} documents`);
+
+      const results: Array<{
+        file_name: string;
+        success: boolean;
+        document_id?: string;
+        error?: string;
+      }> = [];
+
+      // Process in parallel batches of 3
+      const BATCH_SIZE = 3;
+      for (let i = 0; i < documents.length; i += BATCH_SIZE) {
+        const batch = documents.slice(i, i + BATCH_SIZE);
+
+        const batchResults = await Promise.all(
+          batch.map(async (doc) => {
+            const result = await api.scraper.processDocument(
+              tenderId,
+              doc.file_url,
+              doc.file_name,
+              doc.doc_type
+            );
+            return {
+              file_name: doc.file_name,
+              success: result.success,
+              document_id: result.document_id,
+              error: result.error,
+            };
+          })
+        );
+
+        results.push(...batchResults);
+
+        // Small delay between batches
+        if (i + BATCH_SIZE < documents.length) {
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+      }
+
+      return {
+        success: results.every(r => r.success),
+        processed: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length,
+        results,
+      };
+    },
+
+    // Auto-classify document type from filename
+    classifyDocument: (fileName: string): {
+      doc_type: string;
+      category: string;
+      confidence: number;
+    } => {
+      const lowerName = fileName.toLowerCase();
+
+      // Classification rules
+      if (/הזמנה|invitation|הגשת/.test(lowerName)) {
+        return { doc_type: 'INVITATION', category: 'main', confidence: 0.9 };
+      }
+      if (/מפרט|specs?|טכני|technical/.test(lowerName)) {
+        return { doc_type: 'SPECS', category: 'technical', confidence: 0.85 };
+      }
+      if (/כמויות|boq|quantities|כמות/.test(lowerName)) {
+        return { doc_type: 'BOQ', category: 'pricing', confidence: 0.9 };
+      }
+      if (/חוזה|contract|הסכם/.test(lowerName)) {
+        return { doc_type: 'CONTRACT', category: 'legal', confidence: 0.85 };
+      }
+      if (/הבהרה|clarification|תשובות|שאלות/.test(lowerName)) {
+        return { doc_type: 'CLARIFICATIONS', category: 'updates', confidence: 0.9 };
+      }
+      if (/טופס|form|נספח/.test(lowerName)) {
+        return { doc_type: 'FORMS', category: 'forms', confidence: 0.8 };
+      }
+      if (/תוכנית|plan|dwg|cad/.test(lowerName)) {
+        return { doc_type: 'DRAWINGS', category: 'technical', confidence: 0.85 };
+      }
+      if (/\.xlsx?$/.test(lowerName)) {
+        return { doc_type: 'BOQ', category: 'pricing', confidence: 0.7 };
+      }
+      if (/\.zip$/.test(lowerName)) {
+        return { doc_type: 'DRAWINGS', category: 'technical', confidence: 0.6 };
+      }
+
+      return { doc_type: 'OTHER', category: 'other', confidence: 0.5 };
+    },
+
+    // Process Excel BOQ file
+    processExcelBOQ: async (
+      tenderId: string,
+      documentUrl: string,
+      fileName: string
+    ): Promise<{
+      success: boolean;
+      items: Array<{
+        item_number: string;
+        description: string;
+        unit: string;
+        quantity: number;
+        category?: string;
+      }>;
+      summary?: {
+        total_items: number;
+        categories: string[];
+      };
+      error?: string;
+    }> => {
+      console.log(`Processing Excel BOQ: ${fileName}`);
+
+      try {
+        const response = await fetch(`${API_CONFIG.WEBHOOK_BASE}/tdx-process-excel-boq`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tender_id: tenderId,
+            document_url: documentUrl,
+            file_name: fileName,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Excel processing returned ${response.status}`);
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Excel BOQ processing error:', error);
+        return {
+          success: false,
+          items: [],
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    },
+  },
+
   // ==================== CLARIFICATIONS (Module 1.1.5) ====================
   clarifications: {
     list: (tenderId: string) =>
