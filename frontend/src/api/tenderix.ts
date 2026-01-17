@@ -538,6 +538,37 @@ export const api = {
         body: JSON.stringify(data),
       }).then(r => r[0]),
 
+    updatePersonnel: (id: string, data: Partial<Personnel>) =>
+      supabaseFetch<Personnel[]>(`company_personnel?id=eq.${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }).then(r => r[0]),
+
+    deletePersonnel: (id: string) =>
+      supabaseFetch<void>(`company_personnel?id=eq.${id}`, { method: 'DELETE' }),
+
+    // Delete functions
+    deleteProject: (id: string) =>
+      supabaseFetch<void>(`company_projects?id=eq.${id}`, { method: 'DELETE' }),
+
+    updateCertification: (id: string, data: Partial<CompanyCertification>) =>
+      supabaseFetch<CompanyCertification[]>(`company_certifications?id=eq.${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }).then(r => r[0]),
+
+    deleteCertification: (id: string) =>
+      supabaseFetch<void>(`company_certifications?id=eq.${id}`, { method: 'DELETE' }),
+
+    updateFinancial: (id: string, data: Partial<CompanyFinancial>) =>
+      supabaseFetch<CompanyFinancial[]>(`company_financials?id=eq.${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }).then(r => r[0]),
+
+    deleteFinancial: (id: string) =>
+      supabaseFetch<void>(`company_financials?id=eq.${id}`, { method: 'DELETE' }),
+
     // ===== חברות קבוצה =====
     getGroupCompanies: (orgId: string) =>
       supabaseFetch<GroupCompany[]>(`group_companies?parent_org_id=eq.${orgId}`),
