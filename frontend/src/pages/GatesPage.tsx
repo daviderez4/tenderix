@@ -148,7 +148,7 @@ export function GatesPage() {
     }
   }
 
-  // Analyze all gates with AI one by one
+  // Analyze all gates with AI in parallel batches
   async function analyzeAllGates() {
     const orgId = getCurrentOrgId();
     const unanalyzedGates = gates.filter(g => !g.status || g.status === 'UNKNOWN');
@@ -162,44 +162,70 @@ export function GatesPage() {
     setAnalysisProgress({ current: 0, total: unanalyzedGates.length });
 
     try {
-      for (let i = 0; i < unanalyzedGates.length; i++) {
-        const gate = unanalyzedGates[i];
-        setAnalysisProgress({ current: i + 1, total: unanalyzedGates.length });
+      // Load company profile ONCE at the start
+      console.log('Loading company profile once for all gates...');
+      const [projects, financials, certifications] = await Promise.all([
+        api.company.getProjects(orgId).catch(() => []),
+        api.company.getFinancials(orgId).catch(() => []),
+        api.company.getCertifications(orgId).catch(() => []),
+      ]);
+      const preloadedProfile = { projects, financials, certifications };
+      console.log('Profile loaded, starting parallel analysis...');
 
-        try {
-          const result = await api.workflows.analyzeGateWithAI(
-            gate.tender_id,
-            gate.id,
-            gate.condition_text,
-            orgId
-          );
+      // Process in batches of 3 for parallel execution
+      const BATCH_SIZE = 3;
+      let completed = 0;
 
-          if (result.success) {
-            setGates(prev => prev.map(g => {
-              if (g.id === gate.id) {
-                return {
-                  ...g,
-                  status: result.status,
-                  evidence: result.evidence,
-                  gap_description: result.gap_description,
-                  legal_classification: result.interpretation?.legal?.classification as 'strict' | 'open' | 'proof_dependent' | undefined,
-                  legal_reasoning: result.interpretation?.legal?.reasoning,
-                  technical_requirement: result.interpretation?.technical?.what_is_required,
-                  equivalent_options: result.interpretation?.technical?.equivalent_options,
-                  ai_confidence: result.ai_confidence,
-                  ai_summary: result.ai_summary,
-                  ai_analyzed_at: new Date().toISOString(),
-                };
-              }
-              return g;
-            }));
+      for (let i = 0; i < unanalyzedGates.length; i += BATCH_SIZE) {
+        const batch = unanalyzedGates.slice(i, i + BATCH_SIZE);
+
+        // Process batch in parallel
+        const batchPromises = batch.map(async (gate) => {
+          try {
+            const result = await api.workflows.analyzeGateWithAI(
+              gate.tender_id,
+              gate.id,
+              gate.condition_text,
+              orgId,
+              preloadedProfile
+            );
+
+            if (result.success) {
+              setGates(prev => prev.map(g => {
+                if (g.id === gate.id) {
+                  return {
+                    ...g,
+                    status: result.status,
+                    evidence: result.evidence,
+                    gap_description: result.gap_description,
+                    legal_classification: result.interpretation?.legal?.classification as 'strict' | 'open' | 'proof_dependent' | undefined,
+                    legal_reasoning: result.interpretation?.legal?.reasoning,
+                    technical_requirement: result.interpretation?.technical?.what_is_required,
+                    equivalent_options: result.interpretation?.technical?.equivalent_options,
+                    ai_confidence: result.ai_confidence,
+                    ai_summary: result.ai_summary,
+                    ai_analyzed_at: new Date().toISOString(),
+                  };
+                }
+                return g;
+              }));
+            }
+            return result;
+          } catch (error) {
+            console.error(`Error analyzing gate ${gate.id}:`, error);
+            return null;
           }
-        } catch (error) {
-          console.error(`Error analyzing gate ${gate.id}:`, error);
-        }
+        });
 
-        // Small delay between requests
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Wait for batch to complete
+        await Promise.all(batchPromises);
+        completed += batch.length;
+        setAnalysisProgress({ current: completed, total: unanalyzedGates.length });
+
+        // Small delay between batches to avoid overwhelming the server
+        if (i + BATCH_SIZE < unanalyzedGates.length) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
       }
     } finally {
       setAnalyzingAllGates(false);

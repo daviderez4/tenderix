@@ -1218,7 +1218,8 @@ export const api = {
       tenderId: string,
       conditionId: string,
       conditionText: string,
-      orgId: string
+      orgId: string,
+      preloadedProfile?: { projects: CompanyProject[]; financials: CompanyFinancial[]; certifications: CompanyCertification[] }
     ): Promise<{
       success: boolean;
       condition_id: string;
@@ -1251,18 +1252,26 @@ export const api = {
       console.log(`analyzeGateWithAI called for condition ${conditionId}`);
 
       try {
-        // Get company profile for context
-        const [projects, financials, certifications] = await Promise.all([
-          api.company.getProjects(orgId).catch(() => [] as CompanyProject[]),
-          api.company.getFinancials(orgId).catch(() => [] as CompanyFinancial[]),
-          api.company.getCertifications(orgId).catch(() => [] as CompanyCertification[]),
-        ]);
-
-        const companyProfile = {
-          projects: projects.slice(0, 10), // Limit to avoid token overflow
-          financials: financials.slice(0, 3),
-          certifications: certifications.slice(0, 10),
-        };
+        // Use preloaded profile or fetch it
+        let companyProfile;
+        if (preloadedProfile) {
+          companyProfile = {
+            projects: preloadedProfile.projects.slice(0, 10),
+            financials: preloadedProfile.financials.slice(0, 3),
+            certifications: preloadedProfile.certifications.slice(0, 10),
+          };
+        } else {
+          const [projects, financials, certifications] = await Promise.all([
+            api.company.getProjects(orgId).catch(() => [] as CompanyProject[]),
+            api.company.getFinancials(orgId).catch(() => [] as CompanyFinancial[]),
+            api.company.getCertifications(orgId).catch(() => [] as CompanyCertification[]),
+          ]);
+          companyProfile = {
+            projects: projects.slice(0, 10),
+            financials: financials.slice(0, 3),
+            certifications: certifications.slice(0, 10),
+          };
+        }
 
         // Call n8n webhook for AI analysis
         const webhookUrl = `${API_CONFIG.WEBHOOK_BASE}/tdx-analyze-gate`;
