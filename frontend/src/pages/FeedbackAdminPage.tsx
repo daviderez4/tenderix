@@ -294,19 +294,44 @@ ${m.message}
     );
   }
 
+  // Light theme colors
+  const THEME = {
+    pageBg: '#f0f9fb',
+    cardBg: '#ffffff',
+    cardBorder: '#c8e4eb',
+    headerText: '#1e3a4c',
+    subtitleText: '#5a7d8a',
+    accentPrimary: '#00b4d8',
+    accentDark: '#0077b6',
+    inputBg: '#f8fafc',
+    inputBorder: '#e2e8f0',
+  };
+
   if (loading) return <Loading />;
 
   const pendingCount = messages.filter(m => m.status === 'pending').length;
   const criticalCount = messages.filter(m => m.priority === 'critical' && m.status !== 'done').length;
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <h1 className="page-title">
-          <MessageSquare size={28} style={{ marginLeft: '0.5rem', verticalAlign: 'middle' }} />
+    <div style={{
+      minHeight: '100vh',
+      background: THEME.pageBg,
+      padding: '2rem',
+    }}>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h1 style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          margin: 0,
+          color: THEME.headerText,
+          fontSize: '1.75rem',
+          fontWeight: 700,
+        }}>
+          <MessageSquare size={28} style={{ color: THEME.accentPrimary }} />
           משוב מצוות הבדיקה
         </h1>
-        <p className="page-subtitle">
+        <p style={{ margin: '0.5rem 0 0', color: THEME.subtitleText, fontSize: '0.95rem' }}>
           הודעות מעידו, אליצח וצוות הפיתוח
         </p>
       </div>
@@ -563,32 +588,67 @@ ${m.message}
       </div>
 
       {/* Feedback Stats */}
-      <div className="grid grid-4" style={{ marginBottom: '1.5rem' }}>
-        <div className="stat-card">
-          <div className="stat-value" style={{ color: 'var(--primary)' }}>{messages.length}</div>
-          <div className="stat-label">סה"כ הודעות</div>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+        gap: '1rem',
+        marginBottom: '1.5rem',
+      }}>
+        <div style={{
+          background: THEME.cardBg,
+          border: `2px solid ${THEME.cardBorder}`,
+          borderRadius: '12px',
+          padding: '1.25rem',
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: '2rem', fontWeight: 700, color: THEME.accentPrimary }}>{messages.length}</div>
+          <div style={{ fontSize: '0.85rem', color: THEME.subtitleText, marginTop: '0.25rem' }}>סה"כ הודעות</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-value" style={{ color: '#eab308' }}>{pendingCount}</div>
-          <div className="stat-label">ממתינות לטיפול</div>
+        <div style={{
+          background: THEME.cardBg,
+          border: `2px solid ${THEME.cardBorder}`,
+          borderRadius: '12px',
+          padding: '1.25rem',
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: '2rem', fontWeight: 700, color: '#d97706' }}>{pendingCount}</div>
+          <div style={{ fontSize: '0.85rem', color: THEME.subtitleText, marginTop: '0.25rem' }}>ממתינות לטיפול</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-value" style={{ color: '#dc2626' }}>{criticalCount}</div>
-          <div className="stat-label">קריטי פתוח</div>
+        <div style={{
+          background: THEME.cardBg,
+          border: `2px solid ${THEME.cardBorder}`,
+          borderRadius: '12px',
+          padding: '1.25rem',
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: '2rem', fontWeight: 700, color: '#dc2626' }}>{criticalCount}</div>
+          <div style={{ fontSize: '0.85rem', color: THEME.subtitleText, marginTop: '0.25rem' }}>קריטי פתוח</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-value" style={{ color: '#22c55e' }}>
+        <div style={{
+          background: THEME.cardBg,
+          border: `2px solid ${THEME.cardBorder}`,
+          borderRadius: '12px',
+          padding: '1.25rem',
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: '2rem', fontWeight: 700, color: '#059669' }}>
             {messages.filter(m => m.status === 'done').length}
           </div>
-          <div className="stat-label">טופלו</div>
+          <div style={{ fontSize: '0.85rem', color: THEME.subtitleText, marginTop: '0.25rem' }}>טופלו</div>
         </div>
       </div>
 
       {/* Filters and Actions */}
-      <div className="card" style={{ marginBottom: '1rem' }}>
+      <div style={{
+        background: THEME.cardBg,
+        border: `2px solid ${THEME.cardBorder}`,
+        borderRadius: '12px',
+        padding: '1rem 1.25rem',
+        marginBottom: '1rem',
+      }}>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <Filter size={18} style={{ color: 'var(--gray-400)' }} />
-          <span style={{ color: 'var(--gray-400)', marginLeft: '0.5rem' }}>סינון:</span>
+          <Filter size={18} style={{ color: THEME.subtitleText }} />
+          <span style={{ color: THEME.subtitleText, marginLeft: '0.5rem' }}>סינון:</span>
 
           {(['all', 'pending', 'reviewed', 'done'] as const).map(f => (
             <button
@@ -597,11 +657,13 @@ ${m.message}
               style={{
                 padding: '0.4rem 0.75rem',
                 borderRadius: '6px',
-                border: filter === f ? '2px solid var(--primary)' : '1px solid var(--gray-600)',
-                background: filter === f ? 'rgba(124, 58, 237, 0.2)' : 'transparent',
-                color: filter === f ? '#a78bfa' : 'var(--gray-300)',
+                border: filter === f ? `2px solid ${THEME.accentPrimary}` : `1px solid ${THEME.cardBorder}`,
+                background: filter === f ? 'rgba(0, 180, 216, 0.1)' : THEME.cardBg,
+                color: filter === f ? THEME.accentDark : THEME.headerText,
                 cursor: 'pointer',
                 fontSize: '0.85rem',
+                fontWeight: filter === f ? 600 : 400,
+                transition: 'all 0.2s',
               }}
             >
               {f === 'all' ? 'הכל' : f === 'pending' ? 'ממתין' : f === 'reviewed' ? 'נצפה' : 'טופל'}
@@ -611,11 +673,23 @@ ${m.message}
           <div style={{ flex: 1 }} />
 
           <button
-            className="btn btn-secondary"
             onClick={refresh}
             disabled={refreshing}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.5rem 1rem',
+              borderRadius: '8px',
+              border: `2px solid ${THEME.cardBorder}`,
+              background: THEME.cardBg,
+              color: THEME.headerText,
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              fontWeight: 500,
+            }}
           >
-            {refreshing ? <div className="spinner" /> : <RefreshCw size={16} />}
+            <RefreshCw size={16} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
             רענן
           </button>
         </div>
@@ -623,7 +697,13 @@ ${m.message}
 
       {/* Bulk Actions */}
       {messages.length > 0 && (
-        <div className="card" style={{ marginBottom: '1rem', background: 'var(--gray-800)' }}>
+        <div style={{
+          background: THEME.cardBg,
+          border: `2px solid ${THEME.cardBorder}`,
+          borderRadius: '12px',
+          padding: '1rem 1.25rem',
+          marginBottom: '1rem',
+        }}>
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <button
               onClick={selectAll}
@@ -633,20 +713,20 @@ ${m.message}
                 gap: '0.5rem',
                 padding: '0.4rem 0.75rem',
                 borderRadius: '6px',
-                border: '1px solid var(--gray-600)',
-                background: selectedIds.size === messages.length ? 'rgba(124, 58, 237, 0.2)' : 'transparent',
-                color: 'var(--gray-300)',
+                border: `1px solid ${THEME.cardBorder}`,
+                background: selectedIds.size === messages.length ? 'rgba(0, 180, 216, 0.1)' : THEME.cardBg,
+                color: THEME.headerText,
                 cursor: 'pointer',
                 fontSize: '0.85rem',
               }}
             >
-              {selectedIds.size === messages.length ? <CheckSquare size={16} /> : <Square size={16} />}
+              {selectedIds.size === messages.length ? <CheckSquare size={16} color={THEME.accentPrimary} /> : <Square size={16} />}
               {selectedIds.size === messages.length ? 'בטל בחירה' : 'בחר הכל'}
             </button>
 
             {selectedIds.size > 0 && (
               <>
-                <span style={{ color: 'var(--gray-400)', fontSize: '0.85rem' }}>
+                <span style={{ color: THEME.subtitleText, fontSize: '0.85rem', fontWeight: 500 }}>
                   נבחרו: {selectedIds.size}
                 </span>
 
@@ -658,11 +738,12 @@ ${m.message}
                     gap: '0.5rem',
                     padding: '0.4rem 0.75rem',
                     borderRadius: '6px',
-                    border: '1px solid #3b82f6',
-                    background: 'rgba(59, 130, 246, 0.2)',
-                    color: '#60a5fa',
+                    border: '2px solid #3b82f6',
+                    background: '#eff6ff',
+                    color: '#1d4ed8',
                     cursor: 'pointer',
                     fontSize: '0.85rem',
+                    fontWeight: 500,
                   }}
                 >
                   <Download size={16} />
@@ -677,11 +758,12 @@ ${m.message}
                     gap: '0.5rem',
                     padding: '0.4rem 0.75rem',
                     borderRadius: '6px',
-                    border: '1px solid #22c55e',
-                    background: 'rgba(34, 197, 94, 0.2)',
-                    color: '#4ade80',
+                    border: '2px solid #059669',
+                    background: '#ecfdf5',
+                    color: '#047857',
                     cursor: 'pointer',
                     fontSize: '0.85rem',
+                    fontWeight: 500,
                   }}
                 >
                   <CheckCircle size={16} />
@@ -695,10 +777,16 @@ ${m.message}
 
       {/* Messages List */}
       {messages.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-          <MessageSquare size={48} style={{ color: 'var(--gray-500)', marginBottom: '1rem' }} />
-          <h3 style={{ color: 'var(--gray-300)' }}>אין הודעות</h3>
-          <p style={{ color: 'var(--gray-500)' }}>
+        <div style={{
+          background: THEME.cardBg,
+          border: `2px solid ${THEME.cardBorder}`,
+          borderRadius: '12px',
+          textAlign: 'center',
+          padding: '3rem',
+        }}>
+          <MessageSquare size={48} style={{ color: THEME.cardBorder, marginBottom: '1rem' }} />
+          <h3 style={{ color: THEME.headerText, margin: '0 0 0.5rem' }}>אין הודעות</h3>
+          <p style={{ color: THEME.subtitleText, margin: 0 }}>
             {filter === 'all' ? 'עדיין לא התקבלו הודעות' : `אין הודעות בסטטוס "${filter}"`}
           </p>
         </div>
@@ -707,13 +795,14 @@ ${m.message}
           {messages.map(msg => (
             <div
               key={msg.id}
-              className="card"
               style={{
-                padding: '1rem',
-                borderRight: msg.priority === 'critical' ? '4px solid #dc2626' :
-                             msg.priority === 'high' ? '4px solid #f59e0b' :
-                             '4px solid var(--gray-600)',
-                background: selectedIds.has(msg.id) ? 'rgba(124, 58, 237, 0.1)' : undefined,
+                background: selectedIds.has(msg.id) ? 'rgba(0, 180, 216, 0.08)' : THEME.cardBg,
+                border: `2px solid ${selectedIds.has(msg.id) ? THEME.accentPrimary : THEME.cardBorder}`,
+                borderRadius: '12px',
+                padding: '1rem 1.25rem',
+                borderRight: msg.priority === 'critical' ? '5px solid #dc2626' :
+                             msg.priority === 'high' ? '5px solid #f59e0b' :
+                             `5px solid ${THEME.cardBorder}`,
               }}
             >
               {/* Header */}
@@ -724,15 +813,15 @@ ${m.message}
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    color: selectedIds.has(msg.id) ? '#a78bfa' : 'var(--gray-500)',
+                    color: selectedIds.has(msg.id) ? THEME.accentPrimary : THEME.subtitleText,
                     padding: '0.25rem',
                   }}
                 >
                   {selectedIds.has(msg.id) ? <CheckSquare size={20} /> : <Square size={20} />}
                 </button>
                 <span style={{
-                  padding: '0.25rem 0.5rem',
-                  background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                  padding: '0.25rem 0.6rem',
+                  background: 'linear-gradient(135deg, #0077b6, #00b4d8)',
                   color: 'white',
                   borderRadius: '6px',
                   fontWeight: 600,
@@ -743,7 +832,7 @@ ${m.message}
                 {getPriorityBadge(msg.priority)}
                 {getStatusBadge(msg.status)}
                 <span style={{ flex: 1 }} />
-                <span style={{ color: 'var(--gray-400)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <span style={{ color: THEME.subtitleText, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                   <Clock size={14} />
                   {formatDate(msg.created_at)}
                 </span>
@@ -751,38 +840,60 @@ ${m.message}
 
               {/* Message */}
               <div style={{
-                background: 'var(--gray-800)',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
                 padding: '1rem',
                 borderRadius: '8px',
                 marginBottom: '0.75rem',
                 whiteSpace: 'pre-wrap',
                 lineHeight: 1.6,
-                color: '#e5e7eb',
+                color: THEME.headerText,
               }}>
                 {msg.message}
               </div>
 
               {/* Page URL */}
-              <div style={{ marginBottom: '0.75rem', fontSize: '0.85rem', color: 'var(--gray-400)' }}>
-                📍 עמוד: <code style={{ background: 'var(--gray-700)', padding: '2px 6px', borderRadius: '4px', color: '#d1d5db' }}>{msg.page_url}</code>
+              <div style={{ marginBottom: '0.75rem', fontSize: '0.85rem', color: THEME.subtitleText }}>
+                📍 עמוד: <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', color: THEME.headerText, border: '1px solid #e2e8f0' }}>{msg.page_url}</code>
               </div>
 
               {/* Actions */}
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 {msg.status === 'pending' && (
                   <button
-                    className="btn btn-secondary"
                     onClick={() => updateStatus(msg.id, 'reviewed')}
-                    style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem' }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      padding: '0.4rem 0.75rem',
+                      fontSize: '0.85rem',
+                      borderRadius: '6px',
+                      border: `1px solid ${THEME.cardBorder}`,
+                      background: THEME.cardBg,
+                      color: THEME.headerText,
+                      cursor: 'pointer',
+                    }}
                   >
                     👀 סמן כנצפה
                   </button>
                 )}
                 {msg.status !== 'done' && (
                   <button
-                    className="btn btn-secondary"
                     onClick={() => updateStatus(msg.id, 'done')}
-                    style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem', background: 'rgba(34, 197, 94, 0.2)', color: '#22c55e' }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      padding: '0.4rem 0.75rem',
+                      fontSize: '0.85rem',
+                      borderRadius: '6px',
+                      border: '2px solid #059669',
+                      background: '#ecfdf5',
+                      color: '#047857',
+                      cursor: 'pointer',
+                      fontWeight: 500,
+                    }}
                   >
                     <CheckCircle size={14} />
                     טופל
@@ -790,9 +901,19 @@ ${m.message}
                 )}
                 {msg.status === 'done' && (
                   <button
-                    className="btn btn-secondary"
                     onClick={() => updateStatus(msg.id, 'pending')}
-                    style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem' }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      padding: '0.4rem 0.75rem',
+                      fontSize: '0.85rem',
+                      borderRadius: '6px',
+                      border: `1px solid ${THEME.cardBorder}`,
+                      background: THEME.cardBg,
+                      color: THEME.headerText,
+                      cursor: 'pointer',
+                    }}
                   >
                     <ArrowUpCircle size={14} />
                     פתח מחדש
@@ -800,9 +921,19 @@ ${m.message}
                 )}
                 <div style={{ flex: 1 }} />
                 <button
-                  className="btn btn-secondary"
                   onClick={() => deleteMessage(msg.id)}
-                  style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem', color: '#f87171' }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    padding: '0.4rem 0.75rem',
+                    fontSize: '0.85rem',
+                    borderRadius: '6px',
+                    border: '1px solid #fecaca',
+                    background: '#fef2f2',
+                    color: '#dc2626',
+                    cursor: 'pointer',
+                  }}
                 >
                   <Trash2 size={14} />
                 </button>
