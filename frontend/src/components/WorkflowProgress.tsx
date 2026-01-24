@@ -27,7 +27,7 @@ export function getDefaultStages(currentStep?: string): WorkflowStage[] {
       labelHe: 'קליטה',
       icon: <FileText size={16} />,
       status: currentIndex > 0 ? 'completed' : currentIndex === 0 ? 'current' : 'pending',
-      route: '/tender',
+      route: '/intake',
     },
     {
       id: 'p2',
@@ -43,7 +43,7 @@ export function getDefaultStages(currentStep?: string): WorkflowStage[] {
       labelHe: 'כתב כמויות',
       icon: <Calculator size={16} />,
       status: currentIndex > 2 ? 'completed' : currentIndex === 2 ? 'current' : 'pending',
-      route: '/boq',
+      route: '/analysis',
     },
     {
       id: 'p4',
@@ -56,10 +56,10 @@ export function getDefaultStages(currentStep?: string): WorkflowStage[] {
     {
       id: 'output',
       label: 'Output',
-      labelHe: 'פלט',
+      labelHe: 'החלטה',
       icon: <FileOutput size={16} />,
       status: currentIndex === 4 ? 'current' : 'pending',
-      route: '/output',
+      route: '/decision',
     },
   ];
 }
