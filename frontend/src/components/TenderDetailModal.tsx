@@ -12,6 +12,26 @@ interface TenderDetailModalProps {
   onDelete: (tender: TenderData) => void;
 }
 
+// Light teal/cyan metallic theme colors
+const THEME = {
+  modalBg: '#ffffff',
+  overlayBg: 'rgba(0, 50, 70, 0.5)',
+  headerGradient: 'linear-gradient(135deg, #00b4d8, #0096c7)',
+  headerText: '#ffffff',
+  sectionBg: '#f8fcfd',
+  sectionBorder: '#e0f4f7',
+  cardBg: '#ffffff',
+  cardBorder: '#c8e4eb',
+  textPrimary: '#1e3a4c',
+  textSecondary: '#5a7d8a',
+  textMuted: '#8aa4ae',
+  accentPrimary: '#00b4d8',
+  accentSuccess: 'linear-gradient(135deg, #10b981, #059669)',
+  starActive: '#fbbf24',
+  deleteHover: '#ef4444',
+  buttonBorder: '#c8e4eb',
+};
+
 export function TenderDetailModal({
   tender,
   isOpen,
@@ -42,7 +62,6 @@ export function TenderDetailModal({
   const currentStage = stages.find(s => s.status === 'current') || stages[0];
 
   const handleStageClick = (stage: WorkflowStage) => {
-    // Set tender context and navigate
     localStorage.setItem('currentTenderId', tender.id);
     localStorage.setItem('currentTenderTitle', tender.title || '');
     navigate(stage.route);
@@ -75,7 +94,7 @@ export function TenderDetailModal({
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0, 0, 0, 0.8)',
+        background: THEME.overlayBg,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -87,14 +106,15 @@ export function TenderDetailModal({
     >
       <div
         style={{
-          background: 'var(--gray-900)',
+          background: THEME.modalBg,
           borderRadius: '16px',
           width: '100%',
           maxWidth: '700px',
           maxHeight: '90vh',
           overflow: 'auto',
-          boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
+          boxShadow: '0 25px 50px rgba(0, 100, 130, 0.2)',
           animation: 'slideUp 0.3s ease-out',
+          border: `2px solid ${THEME.cardBorder}`,
         }}
         onClick={e => e.stopPropagation()}
       >
@@ -102,7 +122,7 @@ export function TenderDetailModal({
         <div
           style={{
             padding: '1.5rem',
-            background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+            background: THEME.headerGradient,
             position: 'relative',
           }}
         >
@@ -137,7 +157,7 @@ export function TenderDetailModal({
           <h2
             style={{
               margin: 0,
-              color: 'white',
+              color: THEME.headerText,
               fontSize: '1.25rem',
               fontWeight: 600,
               paddingLeft: '3rem',
@@ -150,13 +170,13 @@ export function TenderDetailModal({
 
           <div style={{ display: 'flex', gap: '1.5rem', marginTop: '1rem', flexWrap: 'wrap' }}>
             {tender.issuing_body && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'rgba(255,255,255,0.9)', fontSize: '0.9rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'rgba(255,255,255,0.95)', fontSize: '0.9rem' }}>
                 <Building2 size={16} />
                 <span>{tender.issuing_body}</span>
               </div>
             )}
             {tender.deadline && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'rgba(255,255,255,0.9)', fontSize: '0.9rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'rgba(255,255,255,0.95)', fontSize: '0.9rem' }}>
                 <Calendar size={16} />
                 <span>{formatDate(tender.deadline)}</span>
               </div>
@@ -165,37 +185,38 @@ export function TenderDetailModal({
         </div>
 
         {/* Workflow Progress */}
-        <div style={{ padding: '2rem', background: 'var(--gray-850, rgba(0,0,0,0.3))' }}>
-          <h3 style={{ margin: '0 0 1.5rem', color: 'var(--gray-300)', fontSize: '0.9rem', fontWeight: 500, textAlign: 'center' }}>
+        <div style={{ padding: '2rem', background: THEME.sectionBg }}>
+          <h3 style={{ margin: '0 0 1.5rem', color: THEME.textSecondary, fontSize: '0.9rem', fontWeight: 500, textAlign: 'center' }}>
             מסלול עבודה - לחץ על שלב כדי לנווט אליו
           </h3>
           <WorkflowProgress
             stages={stages}
             size="large"
             onStageClick={handleStageClick}
+            lightTheme
           />
         </div>
 
         {/* Current Status */}
-        <div style={{ padding: '1.5rem', borderTop: '1px solid var(--gray-800)' }}>
+        <div style={{ padding: '1.5rem', borderTop: `1px solid ${THEME.sectionBorder}` }}>
           <div
             style={{
-              background: 'var(--gray-800)',
+              background: THEME.cardBg,
               borderRadius: '12px',
               padding: '1rem 1.25rem',
-              border: '1px solid var(--gray-700)',
+              border: `1px solid ${THEME.cardBorder}`,
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-              <Clock size={16} color="#8b5cf6" />
-              <span style={{ color: 'var(--gray-300)', fontSize: '0.85rem', fontWeight: 500 }}>
+              <Clock size={16} color={THEME.accentPrimary} />
+              <span style={{ color: THEME.textSecondary, fontSize: '0.85rem', fontWeight: 500 }}>
                 סטטוס נוכחי
               </span>
             </div>
-            <p style={{ margin: 0, color: 'white', fontSize: '1rem' }}>
+            <p style={{ margin: 0, color: THEME.textPrimary, fontSize: '1rem', fontWeight: 600 }}>
               {currentStage.id.toUpperCase()} - {currentStage.labelHe}
             </p>
-            <p style={{ margin: '0.5rem 0 0', color: 'var(--gray-400)', fontSize: '0.85rem' }}>
+            <p style={{ margin: '0.5rem 0 0', color: THEME.textSecondary, fontSize: '0.85rem' }}>
               {getStageDescription(tender.current_step)}
             </p>
           </div>
@@ -206,19 +227,19 @@ export function TenderDetailModal({
           <div style={{ display: 'grid', gap: '0.75rem' }}>
             {tender.created_at && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                <span style={{ color: 'var(--gray-500)' }}>נוצר:</span>
-                <span style={{ color: 'var(--gray-300)' }}>{formatDate(tender.created_at)}</span>
+                <span style={{ color: THEME.textMuted }}>נוצר:</span>
+                <span style={{ color: THEME.textSecondary }}>{formatDate(tender.created_at)}</span>
               </div>
             )}
             {tender.updated_at && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                <span style={{ color: 'var(--gray-500)' }}>עודכן לאחרונה:</span>
-                <span style={{ color: 'var(--gray-300)' }}>{formatDate(tender.updated_at)}</span>
+                <span style={{ color: THEME.textMuted }}>עודכן לאחרונה:</span>
+                <span style={{ color: THEME.textSecondary }}>{formatDate(tender.updated_at)}</span>
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-              <span style={{ color: 'var(--gray-500)' }}>מזהה:</span>
-              <span style={{ color: 'var(--gray-400)', fontFamily: 'monospace', fontSize: '0.75rem' }}>
+              <span style={{ color: THEME.textMuted }}>מזהה:</span>
+              <span style={{ color: THEME.textMuted, fontFamily: 'monospace', fontSize: '0.75rem' }}>
                 {tender.id.slice(0, 8)}...
               </span>
             </div>
@@ -232,7 +253,7 @@ export function TenderDetailModal({
             display: 'flex',
             gap: '0.75rem',
             flexWrap: 'wrap',
-            borderTop: '1px solid var(--gray-800)',
+            borderTop: `1px solid ${THEME.sectionBorder}`,
           }}
         >
           <button
@@ -242,9 +263,9 @@ export function TenderDetailModal({
               minWidth: '120px',
               padding: '0.75rem 1rem',
               borderRadius: '8px',
-              border: tender.is_favorite ? '2px solid #fbbf24' : '1px solid var(--gray-600)',
-              background: tender.is_favorite ? 'rgba(251, 191, 36, 0.1)' : 'transparent',
-              color: tender.is_favorite ? '#fbbf24' : 'var(--gray-300)',
+              border: tender.is_favorite ? `2px solid ${THEME.starActive}` : `1px solid ${THEME.buttonBorder}`,
+              background: tender.is_favorite ? 'rgba(251, 191, 36, 0.1)' : THEME.cardBg,
+              color: tender.is_favorite ? THEME.starActive : THEME.textSecondary,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -255,7 +276,7 @@ export function TenderDetailModal({
               transition: 'all 0.2s',
             }}
           >
-            <Star size={18} fill={tender.is_favorite ? '#fbbf24' : 'none'} />
+            <Star size={18} fill={tender.is_favorite ? THEME.starActive : 'none'} />
             {tender.is_favorite ? 'במועדפים' : 'הוסף למועדפים'}
           </button>
 
@@ -264,9 +285,9 @@ export function TenderDetailModal({
             style={{
               padding: '0.75rem 1rem',
               borderRadius: '8px',
-              border: '1px solid var(--gray-600)',
-              background: 'transparent',
-              color: 'var(--gray-400)',
+              border: `1px solid ${THEME.buttonBorder}`,
+              background: THEME.cardBg,
+              color: THEME.textMuted,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -276,14 +297,14 @@ export function TenderDetailModal({
               transition: 'all 0.2s',
             }}
             onMouseOver={e => {
-              e.currentTarget.style.borderColor = '#ef4444';
-              e.currentTarget.style.color = '#ef4444';
-              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+              e.currentTarget.style.borderColor = THEME.deleteHover;
+              e.currentTarget.style.color = THEME.deleteHover;
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.05)';
             }}
             onMouseOut={e => {
-              e.currentTarget.style.borderColor = 'var(--gray-600)';
-              e.currentTarget.style.color = 'var(--gray-400)';
-              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.borderColor = THEME.buttonBorder;
+              e.currentTarget.style.color = THEME.textMuted;
+              e.currentTarget.style.background = THEME.cardBg;
             }}
           >
             <Trash2 size={18} />
@@ -298,7 +319,7 @@ export function TenderDetailModal({
               padding: '0.75rem 1.5rem',
               borderRadius: '8px',
               border: 'none',
-              background: 'linear-gradient(135deg, #059669, #047857)',
+              background: THEME.accentSuccess,
               color: 'white',
               display: 'flex',
               alignItems: 'center',
@@ -310,10 +331,10 @@ export function TenderDetailModal({
               transition: 'all 0.2s',
             }}
             onMouseOver={e => {
-              e.currentTarget.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+              e.currentTarget.style.background = 'linear-gradient(135deg, #34d399, #10b981)';
             }}
             onMouseOut={e => {
-              e.currentTarget.style.background = 'linear-gradient(135deg, #059669, #047857)';
+              e.currentTarget.style.background = THEME.accentSuccess;
             }}
           >
             המשך ל{currentStage.labelHe}

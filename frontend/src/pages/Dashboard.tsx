@@ -11,6 +11,18 @@ import { TenderFilters } from '../components/TenderFilters';
 import type { FilterType } from '../components/TenderFilters';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
+// Light theme colors
+const THEME = {
+  pageBg: '#f0f9fb',
+  headerText: '#1e3a4c',
+  subtitleText: '#5a7d8a',
+  accentPrimary: '#00b4d8',
+  accentGradient: 'linear-gradient(135deg, #00b4d8, #0096c7)',
+  cardBg: '#ffffff',
+  cardBorder: '#c8e4eb',
+  emptyIcon: '#00b4d8',
+};
+
 export function Dashboard() {
   const navigate = useNavigate();
   const [tenders, setTenders] = useState<Tender[]>([]);
@@ -162,17 +174,68 @@ export function Dashboard() {
   if (loading) return <Loading />;
 
   return (
-    <div className="page">
+    <div
+      style={{
+        minHeight: '100vh',
+        background: THEME.pageBg,
+        padding: '2rem',
+      }}
+    >
       {/* Header */}
-      <div className="page-header">
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: '2rem',
+          flexWrap: 'wrap',
+          gap: '1rem',
+        }}
+      >
         <div>
-          <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Zap size={28} color="#7c3aed" />
+          <h1
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              margin: 0,
+              color: THEME.headerText,
+              fontSize: '1.75rem',
+              fontWeight: 700,
+            }}
+          >
+            <Zap size={28} color={THEME.accentPrimary} />
             מרכז הפיקוד
           </h1>
-          <p className="page-subtitle">ניהול מכרזים ומעקב התקדמות</p>
+          <p style={{ margin: '0.5rem 0 0', color: THEME.subtitleText, fontSize: '0.95rem' }}>
+            ניהול מכרזים ומעקב התקדמות
+          </p>
         </div>
-        <button onClick={() => navigate('/new')} className="btn btn-primary">
+        <button
+          onClick={() => navigate('/new')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.75rem 1.5rem',
+            borderRadius: '8px',
+            border: 'none',
+            background: THEME.accentGradient,
+            color: 'white',
+            fontSize: '0.95rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+          onMouseOver={e => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 180, 216, 0.3)';
+          }}
+          onMouseOut={e => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        >
           <Plus size={18} />
           מכרז חדש
         </button>
@@ -189,23 +252,46 @@ export function Dashboard() {
 
       {/* Tender Grid */}
       {filteredTenders.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-          <FileText size={64} style={{ opacity: 0.2, marginBottom: '1.5rem', color: '#7c3aed' }} />
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '4rem 2rem',
+            background: THEME.cardBg,
+            borderRadius: '12px',
+            border: `2px solid ${THEME.cardBorder}`,
+          }}
+        >
+          <FileText size={64} style={{ opacity: 0.3, marginBottom: '1.5rem', color: THEME.emptyIcon }} />
           {tenders.length === 0 ? (
             <>
-              <h3 style={{ margin: '0 0 0.5rem', color: 'var(--gray-300)' }}>אין מכרזים במערכת</h3>
-              <p style={{ color: 'var(--gray-500)', marginBottom: '1.5rem' }}>
+              <h3 style={{ margin: '0 0 0.5rem', color: THEME.headerText }}>אין מכרזים במערכת</h3>
+              <p style={{ color: THEME.subtitleText, marginBottom: '1.5rem' }}>
                 התחל על ידי הוספת המכרז הראשון שלך
               </p>
-              <button onClick={() => navigate('/new')} className="btn btn-primary">
+              <button
+                onClick={() => navigate('/new')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: THEME.accentGradient,
+                  color: 'white',
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
                 <Plus size={18} />
                 הוסף מכרז ראשון
               </button>
             </>
           ) : (
             <>
-              <h3 style={{ margin: '0 0 0.5rem', color: 'var(--gray-300)' }}>לא נמצאו מכרזים</h3>
-              <p style={{ color: 'var(--gray-500)' }}>
+              <h3 style={{ margin: '0 0 0.5rem', color: THEME.headerText }}>לא נמצאו מכרזים</h3>
+              <p style={{ color: THEME.subtitleText }}>
                 נסה לשנות את הפילטרים או לחפש משהו אחר
               </p>
             </>

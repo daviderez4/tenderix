@@ -20,6 +20,25 @@ interface TenderCardProps {
   onDelete: (tender: TenderData) => void;
 }
 
+// Light teal/cyan metallic theme colors
+const THEME = {
+  cardBg: '#ffffff',
+  cardBorder: '#b8e0e6',
+  cardBorderHover: '#7dd3e1',
+  cardShadow: '0 2px 8px rgba(0, 180, 216, 0.08)',
+  cardShadowHover: '0 8px 24px rgba(0, 180, 216, 0.15)',
+  headerBorder: '#e0f4f7',
+  progressBg: '#f0fafb',
+  textPrimary: '#1e3a4c',
+  textSecondary: '#5a7d8a',
+  textMuted: '#8aa4ae',
+  accentPrimary: '#00b4d8',
+  accentGradient: 'linear-gradient(135deg, #00b4d8, #0096c7)',
+  accentGradientHover: 'linear-gradient(135deg, #48cae4, #00b4d8)',
+  starActive: '#fbbf24',
+  deleteHover: '#ef4444',
+};
+
 export function TenderCard({ tender, onOpen, onFavorite, onDelete }: TenderCardProps) {
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return 'לא צוין';
@@ -39,34 +58,35 @@ export function TenderCard({ tender, onOpen, onFavorite, onDelete }: TenderCardP
   return (
     <div
       style={{
-        background: 'var(--gray-800)',
+        background: THEME.cardBg,
         borderRadius: '12px',
-        border: '1px solid var(--gray-700)',
+        border: `2px solid ${THEME.cardBorder}`,
         overflow: 'hidden',
         transition: 'all 0.2s ease',
         cursor: 'pointer',
+        boxShadow: THEME.cardShadow,
       }}
       onMouseOver={e => {
-        e.currentTarget.style.borderColor = 'var(--gray-600)';
-        e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)';
+        e.currentTarget.style.borderColor = THEME.cardBorderHover;
+        e.currentTarget.style.transform = 'translateY(-3px)';
+        e.currentTarget.style.boxShadow = THEME.cardShadowHover;
       }}
       onMouseOut={e => {
-        e.currentTarget.style.borderColor = 'var(--gray-700)';
+        e.currentTarget.style.borderColor = THEME.cardBorder;
         e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = 'none';
+        e.currentTarget.style.boxShadow = THEME.cardShadow;
       }}
       onClick={() => onOpen(tender)}
     >
       {/* Header */}
-      <div style={{ padding: '1rem 1rem 0.75rem', borderBottom: '1px solid var(--gray-700)' }}>
+      <div style={{ padding: '1rem 1rem 0.75rem', borderBottom: `1px solid ${THEME.headerBorder}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
           <h3
             style={{
               margin: 0,
               fontSize: '1rem',
               fontWeight: 600,
-              color: 'white',
+              color: THEME.textPrimary,
               flex: 1,
               lineHeight: 1.4,
               direction: 'rtl',
@@ -84,7 +104,7 @@ export function TenderCard({ tender, onOpen, onFavorite, onDelete }: TenderCardP
               border: 'none',
               cursor: 'pointer',
               padding: '4px',
-              color: tender.is_favorite ? '#fbbf24' : 'var(--gray-500)',
+              color: tender.is_favorite ? THEME.starActive : THEME.textMuted,
               transition: 'all 0.2s',
             }}
             onMouseOver={e => {
@@ -95,20 +115,20 @@ export function TenderCard({ tender, onOpen, onFavorite, onDelete }: TenderCardP
             }}
             title={tender.is_favorite ? 'הסר מהמועדפים' : 'הוסף למועדפים'}
           >
-            <Star size={20} fill={tender.is_favorite ? '#fbbf24' : 'none'} />
+            <Star size={20} fill={tender.is_favorite ? THEME.starActive : 'none'} />
           </button>
         </div>
 
         {/* Meta info */}
         <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
           {tender.issuing_body && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--gray-400)', fontSize: '0.8rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: THEME.textSecondary, fontSize: '0.8rem' }}>
               <Building2 size={14} />
               <span>{tender.issuing_body}</span>
             </div>
           )}
           {tender.deadline && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--gray-400)', fontSize: '0.8rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: THEME.textSecondary, fontSize: '0.8rem' }}>
               <Calendar size={14} />
               <span>{formatDate(tender.deadline)}</span>
             </div>
@@ -117,8 +137,8 @@ export function TenderCard({ tender, onOpen, onFavorite, onDelete }: TenderCardP
       </div>
 
       {/* Workflow Progress */}
-      <div style={{ padding: '1rem', background: 'var(--gray-850, rgba(0,0,0,0.2))' }}>
-        <WorkflowProgress stages={stages} size="small" />
+      <div style={{ padding: '1rem', background: THEME.progressBg }}>
+        <WorkflowProgress stages={stages} size="small" lightTheme />
       </div>
 
       {/* Actions */}
@@ -128,7 +148,8 @@ export function TenderCard({ tender, onOpen, onFavorite, onDelete }: TenderCardP
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          borderTop: '1px solid var(--gray-700)',
+          borderTop: `1px solid ${THEME.headerBorder}`,
+          background: THEME.cardBg,
         }}
       >
         <button
@@ -141,7 +162,7 @@ export function TenderCard({ tender, onOpen, onFavorite, onDelete }: TenderCardP
             border: 'none',
             cursor: 'pointer',
             padding: '6px 10px',
-            color: 'var(--gray-500)',
+            color: THEME.textMuted,
             display: 'flex',
             alignItems: 'center',
             gap: '0.25rem',
@@ -151,11 +172,11 @@ export function TenderCard({ tender, onOpen, onFavorite, onDelete }: TenderCardP
           }}
           onMouseOver={e => {
             e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
-            e.currentTarget.style.color = '#ef4444';
+            e.currentTarget.style.color = THEME.deleteHover;
           }}
           onMouseOut={e => {
             e.currentTarget.style.background = 'none';
-            e.currentTarget.style.color = 'var(--gray-500)';
+            e.currentTarget.style.color = THEME.textMuted;
           }}
         >
           <Trash2 size={14} />
@@ -168,7 +189,7 @@ export function TenderCard({ tender, onOpen, onFavorite, onDelete }: TenderCardP
             onOpen(tender);
           }}
           style={{
-            background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+            background: THEME.accentGradient,
             border: 'none',
             cursor: 'pointer',
             padding: '6px 14px',
@@ -182,10 +203,10 @@ export function TenderCard({ tender, onOpen, onFavorite, onDelete }: TenderCardP
             transition: 'all 0.2s',
           }}
           onMouseOver={e => {
-            e.currentTarget.style.background = 'linear-gradient(135deg, #8b5cf6, #7c3aed)';
+            e.currentTarget.style.background = THEME.accentGradientHover;
           }}
           onMouseOut={e => {
-            e.currentTarget.style.background = 'linear-gradient(135deg, #7c3aed, #6d28d9)';
+            e.currentTarget.style.background = THEME.accentGradient;
           }}
         >
           פתח

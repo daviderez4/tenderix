@@ -13,6 +13,7 @@ interface WorkflowProgressProps {
   stages: WorkflowStage[];
   onStageClick?: (stage: WorkflowStage) => void;
   size?: 'small' | 'medium' | 'large';
+  lightTheme?: boolean;
 }
 
 export function getDefaultStages(currentStep?: string): WorkflowStage[] {
@@ -63,7 +64,57 @@ export function getDefaultStages(currentStep?: string): WorkflowStage[] {
   ];
 }
 
-export function WorkflowProgress({ stages, onStageClick, size = 'medium' }: WorkflowProgressProps) {
+// Light theme colors (teal/cyan metallic)
+const lightColors = {
+  completed: {
+    bg: 'linear-gradient(135deg, #10b981, #059669)',
+    border: '#34d399',
+    text: '#047857',
+    icon: 'white',
+  },
+  current: {
+    bg: 'linear-gradient(135deg, #00b4d8, #0096c7)',
+    border: '#48cae4',
+    text: '#0077b6',
+    icon: 'white',
+  },
+  pending: {
+    bg: '#f8fafc',
+    border: '#cbd5e1',
+    text: '#94a3b8',
+    icon: '#94a3b8',
+  },
+  lineComplete: 'linear-gradient(90deg, #10b981, #34d399)',
+  lineIncomplete: '#e2e8f0',
+  labelMuted: '#64748b',
+};
+
+// Dark theme colors (original)
+const darkColors = {
+  completed: {
+    bg: 'linear-gradient(135deg, #059669, #047857)',
+    border: '#10b981',
+    text: '#a7f3d0',
+    icon: 'white',
+  },
+  current: {
+    bg: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+    border: '#8b5cf6',
+    text: '#c4b5fd',
+    icon: 'white',
+  },
+  pending: {
+    bg: 'var(--gray-800)',
+    border: 'var(--gray-600)',
+    text: 'var(--gray-500)',
+    icon: 'var(--gray-500)',
+  },
+  lineComplete: 'linear-gradient(90deg, #059669, #10b981)',
+  lineIncomplete: 'var(--gray-700)',
+  labelMuted: 'var(--gray-500)',
+};
+
+export function WorkflowProgress({ stages, onStageClick, size = 'medium', lightTheme = false }: WorkflowProgressProps) {
   const sizes = {
     small: {
       circle: 28,
@@ -89,38 +140,18 @@ export function WorkflowProgress({ stages, onStageClick, size = 'medium' }: Work
   };
 
   const s = sizes[size];
+  const colors = lightTheme ? lightColors : darkColors;
 
   const getStatusColors = (status: WorkflowStage['status']) => {
-    switch (status) {
-      case 'completed':
-        return {
-          bg: 'linear-gradient(135deg, #059669, #047857)',
-          border: '#10b981',
-          text: '#a7f3d0',
-          icon: 'white',
-        };
-      case 'current':
-        return {
-          bg: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
-          border: '#8b5cf6',
-          text: '#c4b5fd',
-          icon: 'white',
-        };
-      case 'pending':
-        return {
-          bg: 'var(--gray-800)',
-          border: 'var(--gray-600)',
-          text: 'var(--gray-500)',
-          icon: 'var(--gray-500)',
-        };
-    }
+    return colors[status];
   };
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
       {stages.map((stage, index) => {
-        const colors = getStatusColors(stage.status);
+        const stageColors = getStatusColors(stage.status);
         const isLast = index === stages.length - 1;
+        const currentIndex = stages.findIndex(st => st.status === 'current');
 
         return (
           <div key={stage.id} style={{ display: 'flex', alignItems: 'center' }}>
@@ -149,13 +180,17 @@ export function WorkflowProgress({ stages, onStageClick, size = 'medium' }: Work
                   width: `${s.circle}px`,
                   height: `${s.circle}px`,
                   borderRadius: '50%',
-                  background: colors.bg,
-                  border: `2px solid ${colors.border}`,
+                  background: stageColors.bg,
+                  border: `2px solid ${stageColors.border}`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: colors.icon,
-                  boxShadow: stage.status === 'current' ? '0 0 12px rgba(124, 58, 237, 0.5)' : 'none',
+                  color: stageColors.icon,
+                  boxShadow: stage.status === 'current'
+                    ? lightTheme
+                      ? '0 0 12px rgba(0, 180, 216, 0.4)'
+                      : '0 0 12px rgba(124, 58, 237, 0.5)'
+                    : 'none',
                 }}
               >
                 {stage.status === 'completed' ? (
@@ -165,10 +200,10 @@ export function WorkflowProgress({ stages, onStageClick, size = 'medium' }: Work
                 )}
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: s.font, fontWeight: 600, color: colors.text }}>
+                <div style={{ fontSize: s.font, fontWeight: 600, color: stageColors.text }}>
                   {stage.id.toUpperCase()}
                 </div>
-                <div style={{ fontSize: `calc(${s.font} - 0.1rem)`, color: 'var(--gray-500)' }}>
+                <div style={{ fontSize: `calc(${s.font} - 0.1rem)`, color: colors.labelMuted }}>
                   {stage.labelHe}
                 </div>
               </div>
@@ -180,9 +215,9 @@ export function WorkflowProgress({ stages, onStageClick, size = 'medium' }: Work
                 style={{
                   width: size === 'small' ? '20px' : size === 'medium' ? '40px' : '60px',
                   height: `${s.line}px`,
-                  background: index < stages.findIndex(st => st.status === 'current')
-                    ? 'linear-gradient(90deg, #059669, #10b981)'
-                    : 'var(--gray-700)',
+                  background: index < currentIndex
+                    ? colors.lineComplete
+                    : colors.lineIncomplete,
                   margin: `0 ${size === 'small' ? '4px' : '8px'}`,
                   marginBottom: size === 'small' ? '24px' : size === 'medium' ? '32px' : '40px',
                   borderRadius: `${s.line}px`,

@@ -11,6 +11,18 @@ interface ConfirmDialogProps {
   onCancel: () => void;
 }
 
+// Light theme colors
+const THEME = {
+  modalBg: '#ffffff',
+  overlayBg: 'rgba(0, 50, 70, 0.5)',
+  textPrimary: '#1e3a4c',
+  textSecondary: '#5a7d8a',
+  textMuted: '#8aa4ae',
+  buttonBorder: '#c8e4eb',
+  buttonHoverBg: '#f0f9fb',
+  cardBorder: '#c8e4eb',
+};
+
 export function ConfirmDialog({
   isOpen,
   title,
@@ -26,18 +38,21 @@ export function ConfirmDialog({
   const variantColors = {
     danger: {
       icon: '#ef4444',
+      iconBg: 'rgba(239, 68, 68, 0.1)',
       button: 'linear-gradient(135deg, #dc2626, #b91c1c)',
       buttonHover: 'linear-gradient(135deg, #ef4444, #dc2626)',
     },
     warning: {
       icon: '#f59e0b',
+      iconBg: 'rgba(245, 158, 11, 0.1)',
       button: 'linear-gradient(135deg, #f59e0b, #d97706)',
       buttonHover: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
     },
     info: {
-      icon: '#3b82f6',
-      button: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-      buttonHover: 'linear-gradient(135deg, #60a5fa, #3b82f6)',
+      icon: '#00b4d8',
+      iconBg: 'rgba(0, 180, 216, 0.1)',
+      button: 'linear-gradient(135deg, #00b4d8, #0096c7)',
+      buttonHover: 'linear-gradient(135deg, #48cae4, #00b4d8)',
     },
   };
 
@@ -48,7 +63,7 @@ export function ConfirmDialog({
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0, 0, 0, 0.7)',
+        background: THEME.overlayBg,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -59,13 +74,14 @@ export function ConfirmDialog({
     >
       <div
         style={{
-          background: 'var(--gray-800)',
+          background: THEME.modalBg,
           borderRadius: '12px',
           padding: '1.5rem',
           maxWidth: '400px',
           width: '90%',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+          boxShadow: '0 20px 40px rgba(0, 100, 130, 0.15)',
           animation: 'slideUp 0.2s ease-out',
+          border: `2px solid ${THEME.cardBorder}`,
         }}
         onClick={e => e.stopPropagation()}
       >
@@ -76,7 +92,7 @@ export function ConfirmDialog({
               width: '40px',
               height: '40px',
               borderRadius: '50%',
-              background: `${colors.icon}20`,
+              background: colors.iconBg,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -86,10 +102,10 @@ export function ConfirmDialog({
             <AlertTriangle size={20} color={colors.icon} />
           </div>
           <div style={{ flex: 1 }}>
-            <h3 style={{ margin: 0, color: 'white', fontSize: '1.1rem', fontWeight: 600 }}>
+            <h3 style={{ margin: 0, color: THEME.textPrimary, fontSize: '1.1rem', fontWeight: 600 }}>
               {title}
             </h3>
-            <p style={{ margin: '0.5rem 0 0', color: 'var(--gray-400)', fontSize: '0.9rem', lineHeight: 1.5 }}>
+            <p style={{ margin: '0.5rem 0 0', color: THEME.textSecondary, fontSize: '0.9rem', lineHeight: 1.5 }}>
               {message}
             </p>
           </div>
@@ -98,7 +114,7 @@ export function ConfirmDialog({
             style={{
               background: 'none',
               border: 'none',
-              color: 'var(--gray-500)',
+              color: THEME.textMuted,
               cursor: 'pointer',
               padding: '4px',
             }}
@@ -114,19 +130,19 @@ export function ConfirmDialog({
             style={{
               padding: '0.6rem 1.25rem',
               borderRadius: '8px',
-              border: '1px solid var(--gray-600)',
-              background: 'transparent',
-              color: 'var(--gray-300)',
+              border: `1px solid ${THEME.buttonBorder}`,
+              background: THEME.modalBg,
+              color: THEME.textSecondary,
               fontSize: '0.9rem',
               fontWeight: 500,
               cursor: 'pointer',
               transition: 'all 0.2s',
             }}
             onMouseOver={e => {
-              e.currentTarget.style.background = 'var(--gray-700)';
+              e.currentTarget.style.background = THEME.buttonHoverBg;
             }}
             onMouseOut={e => {
-              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.background = THEME.modalBg;
             }}
           >
             {cancelText}

@@ -15,6 +15,26 @@ interface TenderFiltersProps {
   };
 }
 
+// Light teal/cyan metallic theme colors
+const THEME = {
+  containerBg: '#f8fcfd',
+  containerBorder: '#d4eef3',
+  buttonBg: '#ffffff',
+  buttonBorder: '#c8e4eb',
+  buttonBorderHover: '#90d4e4',
+  buttonActiveBg: '#e6f7fa',
+  buttonActiveBorder: '#00b4d8',
+  textPrimary: '#1e3a4c',
+  textSecondary: '#5a7d8a',
+  textMuted: '#8aa4ae',
+  accentPrimary: '#00b4d8',
+  countBg: '#e0f4f7',
+  countActiveBg: '#cceef5',
+  inputBg: '#ffffff',
+  inputBorder: '#c8e4eb',
+  inputFocusBorder: '#00b4d8',
+};
+
 export function TenderFilters({
   activeFilter,
   onFilterChange,
@@ -36,9 +56,10 @@ export function TenderFilters({
         flexDirection: 'column',
         gap: '1rem',
         padding: '1rem',
-        background: 'var(--gray-850, rgba(0,0,0,0.2))',
+        background: THEME.containerBg,
         borderRadius: '12px',
         marginBottom: '1.5rem',
+        border: `1px solid ${THEME.containerBorder}`,
       }}
     >
       {/* Filter Buttons */}
@@ -57,9 +78,9 @@ export function TenderFilters({
                 gap: '0.5rem',
                 padding: '0.6rem 1rem',
                 borderRadius: '8px',
-                border: isActive ? '2px solid #7c3aed' : '1px solid var(--gray-700)',
-                background: isActive ? 'rgba(124, 58, 237, 0.15)' : 'var(--gray-800)',
-                color: isActive ? '#c4b5fd' : 'var(--gray-400)',
+                border: isActive ? `2px solid ${THEME.buttonActiveBorder}` : `1px solid ${THEME.buttonBorder}`,
+                background: isActive ? THEME.buttonActiveBg : THEME.buttonBg,
+                color: isActive ? THEME.accentPrimary : THEME.textSecondary,
                 fontSize: '0.85rem',
                 fontWeight: isActive ? 600 : 500,
                 cursor: 'pointer',
@@ -67,14 +88,14 @@ export function TenderFilters({
               }}
               onMouseOver={e => {
                 if (!isActive) {
-                  e.currentTarget.style.borderColor = 'var(--gray-600)';
-                  e.currentTarget.style.color = 'var(--gray-300)';
+                  e.currentTarget.style.borderColor = THEME.buttonBorderHover;
+                  e.currentTarget.style.color = THEME.textPrimary;
                 }
               }}
               onMouseOut={e => {
                 if (!isActive) {
-                  e.currentTarget.style.borderColor = 'var(--gray-700)';
-                  e.currentTarget.style.color = 'var(--gray-400)';
+                  e.currentTarget.style.borderColor = THEME.buttonBorder;
+                  e.currentTarget.style.color = THEME.textSecondary;
                 }
               }}
             >
@@ -82,7 +103,8 @@ export function TenderFilters({
               <span>{filter.label}</span>
               <span
                 style={{
-                  background: isActive ? 'rgba(124, 58, 237, 0.3)' : 'var(--gray-700)',
+                  background: isActive ? THEME.countActiveBg : THEME.countBg,
+                  color: isActive ? THEME.accentPrimary : THEME.textSecondary,
                   padding: '2px 8px',
                   borderRadius: '10px',
                   fontSize: '0.75rem',
@@ -105,7 +127,7 @@ export function TenderFilters({
             right: '12px',
             top: '50%',
             transform: 'translateY(-50%)',
-            color: 'var(--gray-500)',
+            color: THEME.textMuted,
           }}
         />
         <input
@@ -117,19 +139,19 @@ export function TenderFilters({
             width: '100%',
             padding: '0.75rem 2.5rem 0.75rem 1rem',
             borderRadius: '8px',
-            border: '1px solid var(--gray-700)',
-            background: 'var(--gray-800)',
-            color: 'white',
+            border: `1px solid ${THEME.inputBorder}`,
+            background: THEME.inputBg,
+            color: THEME.textPrimary,
             fontSize: '0.9rem',
             outline: 'none',
             transition: 'border-color 0.2s',
             direction: 'rtl',
           }}
           onFocus={e => {
-            e.currentTarget.style.borderColor = '#7c3aed';
+            e.currentTarget.style.borderColor = THEME.inputFocusBorder;
           }}
           onBlur={e => {
-            e.currentTarget.style.borderColor = 'var(--gray-700)';
+            e.currentTarget.style.borderColor = THEME.inputBorder;
           }}
         />
       </div>
