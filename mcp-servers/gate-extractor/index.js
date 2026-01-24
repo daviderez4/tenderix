@@ -1,24 +1,17 @@
 #!/usr/bin/env node
 
 /**
- * Tenderix Gate Extractor MCP Server - Professional Edition
+ * Tenderix Gate Extractor MCP Server - Professional Edition v3.0
  *
  * מערכת חילוץ תנאי סף מקצועית למכרזים ישראליים
- * ארכיטקטורה: 4 סוכני AI
+ * ברמת מומחה זכאות רגולטורי ומשפטי
  *
- * כלים זמינים:
- * - chunk_document: חיתוך מסמך לחלקים עם חפיפה
- * - extract_gates_from_chunk: חילוץ תנאי סף מ-chunk (legacy)
- * - validate_extraction_coverage: בדיקת כיסוי החילוץ
- * - merge_and_dedupe_conditions: מיזוג והסרת כפילויות
- * - save_extracted_conditions: שמירה ל-Supabase
- *
- * NEW - Professional Tools:
- * - professional_gate_extraction: חילוץ מקצועי עם 4 סוכני AI
- * - extract_definitions: חילוץ מילון הגדרות (Agent 0)
- * - scan_for_conditions: סריקה שורה שורה (Agent 1)
- * - analyze_conditions: ניתוח מעמיק עם פרשנות כפולה (Agent 2)
- * - validate_and_finalize: אימות כיסוי ומיזוג (Agent 3)
+ * כלים חדשים:
+ * - expert_gate_analysis: ניתוח מקצועי ברמת מומחה עם טבלאות
+ * - compare_to_bidder_profile: השוואה לפרופיל מציע
+ * - generate_gap_solutions: יצירת פתרונות לסגירת פערים
+ * - generate_strategic_questions: שאלות הבהרה אסטרטגיות
+ * - format_hebrew_report: עיצוב דוח עברי קריא
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -30,8 +23,9 @@ import {
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
+
+// Import all prompts
 import {
-  // New professional prompts
   DEFINITIONS_SYSTEM_PROMPT,
   DEFINITIONS_PROMPT,
   SCANNER_SYSTEM_PROMPT,
@@ -40,22 +34,29 @@ import {
   ANALYZER_PROMPT,
   VALIDATOR_SYSTEM_PROMPT,
   VALIDATOR_PROMPT,
-  // Legacy prompts
   SYSTEM_PROMPT,
   EXTRACTION_PROMPT,
   MERGE_PROMPT,
-  // Keywords and patterns
   GATE_KEYWORDS,
   SECTION_BOUNDARIES
 } from './prompts.js';
+
+import {
+  EXPERT_SYSTEM_PROMPT,
+  COMPREHENSIVE_ANALYSIS_PROMPT,
+  PROFILE_COMPARISON_PROMPT,
+  GAP_CLOSURE_PROMPT,
+  STRATEGIC_QUESTIONS_PROMPT
+} from './prompts-professional-v2.js';
 
 // Configuration
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://rerfjgjwjqodevkvhkxu.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
-// Model to use - Claude Opus for complex Hebrew document analysis
-const CLAUDE_MODEL = 'claude-opus-4-5-20251101';
+// Model to use
+const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
+const CLAUDE_MODEL_COMPLEX = 'claude-opus-4-5-20251101';
 
 // Initialize clients
 let supabase = null;
@@ -73,60 +74,6 @@ function initClients() {
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
-
-/**
- * Calculate Levenshtein distance between two strings
- */
-function levenshteinDistance(str1, str2) {
-  const m = str1.length;
-  const n = str2.length;
-  const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
-
-  for (let i = 0; i <= m; i++) dp[i][0] = i;
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
-
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      if (str1[i - 1] === str2[j - 1]) {
-        dp[i][j] = dp[i - 1][j - 1];
-      } else {
-        dp[i][j] = Math.min(
-          dp[i - 1][j] + 1,
-          dp[i][j - 1] + 1,
-          dp[i - 1][j - 1] + 1
-        );
-      }
-    }
-  }
-  return dp[m][n];
-}
-
-/**
- * Calculate similarity ratio between two strings
- */
-function similarityRatio(str1, str2) {
-  const maxLen = Math.max(str1.length, str2.length);
-  if (maxLen === 0) return 1;
-  const distance = levenshteinDistance(str1, str2);
-  return 1 - distance / maxLen;
-}
-
-/**
- * Find section boundaries in Hebrew text
- */
-function findSectionBoundaries(text) {
-  const boundaries = [];
-
-  for (const pattern of SECTION_BOUNDARIES) {
-    let match;
-    const regex = new RegExp(pattern.source, 'gm');
-    while ((match = regex.exec(text)) !== null) {
-      boundaries.push(match.index);
-    }
-  }
-
-  return [...new Set(boundaries)].sort((a, b) => a - b);
-}
 
 /**
  * Extract JSON from Claude response
@@ -155,389 +102,200 @@ function extractJsonFromResponse(text) {
   throw new Error('No valid JSON found in response');
 }
 
+/**
+ * Format conditions as Hebrew markdown table
+ */
+function formatHebrewTable(conditions) {
+  if (!conditions || conditions.length === 0) {
+    return 'לא נמצאו תנאי סף';
+  }
+
+  let table = `
+## טבלת תנאי סף והגבלות השתתפות
+
+| # | תנאי סף / הגבלה | דרישת המכרז | סטטוס | פער/סיכון | פתרון מוצע | פרשנות רגולטורית | מקור |
+|---|----------------|-------------|-------|-----------|------------|------------------|------|
+`;
+
+  conditions.forEach((c, i) => {
+    const status = c.compliance_status === 'MET' ? '✅ עומד' :
+                   c.compliance_status === 'GAP' ? '❌ פער' :
+                   c.compliance_status === 'PARTIAL' ? '⚠️ חלקי' : '❓ נדרש מידע';
+
+    table += `| ${i + 1} | ${c.condition_name || c.text || '-'} | ${(c.tender_requirement || c.requirement || '-').substring(0, 50)}... | ${status} | ${c.common_gap_risk || c.gap || '-'} | ${c.proposed_solution || c.solution || '-'} | ${c.regulatory_interpretation || c.interpretation || '-'} | עמ' ${c.source?.page || '?'} |\n`;
+  });
+
+  return table;
+}
+
+/**
+ * Format definitions as Hebrew table
+ */
+function formatDefinitionsTable(definitions) {
+  if (!definitions || definitions.length === 0) {
+    return '';
+  }
+
+  let table = `
+## הגדרות שמכתיבות את פרשנות תנאי הסף (חשוב להוכחות)
+
+| מונח | מה זה אומר בפועל | נקודות פרשנות/סיכון |
+|------|------------------|---------------------|
+`;
+
+  definitions.forEach(d => {
+    table += `| **${d.term}** | ${d.definition || d.practical_meaning || '-'} | ${d.interpretation_risk || d.implications?.join(', ') || '-'} |\n`;
+  });
+
+  return table;
+}
+
+/**
+ * Format experience categories table
+ */
+function formatExperienceTable(categories) {
+  if (!categories || categories.length === 0) {
+    return '';
+  }
+
+  let table = `
+## קטגוריות ניסיון נדרש
+
+| קטגוריה | דרישה | חל על | סטטוס | פער | פתרון | פרשנות |
+|---------|-------|-------|-------|-----|-------|--------|
+`;
+
+  categories.forEach(c => {
+    const status = c.compliance_status === 'MET' ? '✅' :
+                   c.compliance_status === 'GAP' ? '❌' : '❓';
+
+    table += `| ${c.category_name} | ${(c.requirement || '-').substring(0, 40)}... | ${c.applies_to || '-'} | ${status} | ${c.common_gap || '-'} | ${c.proposed_solution || '-'} | ${c.regulatory_note || '-'} |\n`;
+  });
+
+  return table;
+}
+
+/**
+ * Format plain language summary
+ */
+function formatSummary(summary) {
+  if (!summary) return '';
+
+  let text = `
+## סיכום מצב (במילים פשוטות)
+
+`;
+
+  if (summary.plain_language_summary && Array.isArray(summary.plain_language_summary)) {
+    summary.plain_language_summary.forEach(item => {
+      text += `• ${item}\n`;
+    });
+  }
+
+  text += `
+### סטטוס כולל
+- **המלצה**: ${summary.overall_status === 'GO' ? '✅ GO - להגיש' :
+               summary.overall_status === 'NO_GO' ? '❌ NO-GO - לא להגיש' :
+               '⚠️ מותנה - להגיש עם סגירת פערים'}
+- **רמת ביטחון**: ${Math.round((summary.confidence_level || 0) * 100)}%
+- **תנאים שעומדים**: ${summary.met_conditions || 0}
+- **פערים**: ${summary.gap_conditions || 0}
+- **חוסמים**: ${summary.blocker_conditions || 0}
+`;
+
+  return text;
+}
+
+/**
+ * Generate full Hebrew report
+ */
+function generateFullReport(analysisResult) {
+  let report = `# דוח ניתוח תנאי סף
+
+**מכרז**: ${analysisResult.tender_analysis?.tender_name || 'לא צוין'}
+**מספר**: ${analysisResult.tender_analysis?.tender_number || 'לא צוין'}
+**גוף מזמין**: ${analysisResult.tender_analysis?.issuing_body || 'לא צוין'}
+**מועד הגשה**: ${analysisResult.tender_analysis?.submission_deadline || 'לא צוין'}
+
+---
+`;
+
+  // Add definitions table
+  report += formatDefinitionsTable(analysisResult.critical_definitions);
+
+  // Add main conditions table
+  report += formatHebrewTable(analysisResult.gate_conditions_table);
+
+  // Add experience categories
+  report += formatExperienceTable(analysisResult.experience_categories);
+
+  // Add strategic notes
+  if (analysisResult.strategic_notes && analysisResult.strategic_notes.length > 0) {
+    report += `
+## הערות אסטרטגיות חשובות
+
+`;
+    analysisResult.strategic_notes.forEach((note, i) => {
+      report += `### ${i + 1}. ${note.topic}
+${note.explanation}
+
+**השפעה מעשית**: ${note.practical_impact}
+
+`;
+    });
+  }
+
+  // Add clarification questions
+  if (analysisResult.clarification_questions_recommended && analysisResult.clarification_questions_recommended.length > 0) {
+    report += `
+## שאלות הבהרה מומלצות
+
+| עדיפות | שאלה | סיבה | השפעה |
+|--------|------|------|-------|
+`;
+    analysisResult.clarification_questions_recommended.forEach(q => {
+      report += `| ${q.priority} | ${q.question} | ${q.reason} | ${q.potential_impact} |\n`;
+    });
+  }
+
+  // Add summary
+  report += formatSummary(analysisResult.status_summary);
+
+  // Add action items
+  if (analysisResult.action_items && analysisResult.action_items.length > 0) {
+    report += `
+## משימות לביצוע
+
+`;
+    analysisResult.action_items.forEach((item, i) => {
+      report += `${i + 1}. [ ] **${item.action}** - ${item.owner || 'לא הוגדר'} (עד ${item.deadline || 'לא הוגדר'}) [${item.priority}]\n`;
+    });
+  }
+
+  return report;
+}
+
 // ============================================
-// PROFESSIONAL AGENT FUNCTIONS
+// PROFESSIONAL ANALYSIS FUNCTIONS
 // ============================================
 
 /**
- * Agent 0: Extract Definitions
- * מחלץ את מילון ההגדרות מהמכרז
+ * Expert Gate Analysis - Main professional function
  */
-async function extractDefinitions(documentText) {
+async function expertGateAnalysis(documentText, bidderProfile = null) {
   if (!anthropic) throw new Error('Anthropic API not initialized');
 
-  console.error('[Agent 0] Extracting definitions from document...');
+  console.error('[Expert Analysis] Starting comprehensive analysis...');
+  console.error(`[Expert Analysis] Document length: ${documentText.length} characters`);
 
-  const prompt = DEFINITIONS_PROMPT.replace('{document_text}', documentText);
-
-  const response = await anthropic.messages.create({
-    model: CLAUDE_MODEL,
-    max_tokens: 4096,
-    system: DEFINITIONS_SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: prompt }]
-  });
-
-  const responseText = response.content[0].text;
-
-  try {
-    const result = extractJsonFromResponse(responseText);
-    console.error(`[Agent 0] Found ${result.definitions?.length || 0} definitions`);
-    return {
-      success: true,
-      ...result
-    };
-  } catch (e) {
-    console.error(`[Agent 0] Failed to parse response: ${e.message}`);
-    return {
-      success: false,
-      definitions_found: false,
-      definitions: [],
-      error: e.message
-    };
-  }
-}
-
-/**
- * Agent 1: Scanner
- * סורק את המסמך שורה שורה ומזהה משפטים פוטנציאליים
- */
-async function scanForConditions(documentText) {
-  if (!anthropic) throw new Error('Anthropic API not initialized');
-
-  console.error('[Agent 1] Scanning document for potential conditions...');
-
-  const prompt = SCANNER_PROMPT.replace('{document_text}', documentText);
-
-  const response = await anthropic.messages.create({
-    model: CLAUDE_MODEL,
-    max_tokens: 8192,
-    system: SCANNER_SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: prompt }]
-  });
-
-  const responseText = response.content[0].text;
-
-  try {
-    const result = extractJsonFromResponse(responseText);
-    console.error(`[Agent 1] Found ${result.potential_conditions?.length || 0} potential conditions`);
-    return {
-      success: true,
-      ...result
-    };
-  } catch (e) {
-    console.error(`[Agent 1] Failed to parse response: ${e.message}`);
-    return {
-      success: false,
-      potential_conditions: [],
-      error: e.message
-    };
-  }
-}
-
-/**
- * Agent 2: Analyzer
- * מנתח כל משפט לעומק עם פרשנות כפולה
- */
-async function analyzeConditions(potentialConditions, definitions) {
-  if (!anthropic) throw new Error('Anthropic API not initialized');
-
-  console.error(`[Agent 2] Analyzing ${potentialConditions.length} conditions...`);
-
-  const definitionsJson = JSON.stringify(definitions || [], null, 2);
-  const conditionsJson = JSON.stringify(potentialConditions, null, 2);
-
-  const prompt = ANALYZER_PROMPT
-    .replace('{definitions_json}', definitionsJson)
-    .replace('{conditions_json}', conditionsJson);
-
-  const response = await anthropic.messages.create({
-    model: CLAUDE_MODEL,
-    max_tokens: 8192,
-    system: ANALYZER_SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: prompt }]
-  });
-
-  const responseText = response.content[0].text;
-
-  try {
-    const result = extractJsonFromResponse(responseText);
-    console.error(`[Agent 2] Analyzed ${result.analyzed_conditions?.length || 0} conditions, rejected ${result.rejected_conditions?.length || 0}`);
-    return {
-      success: true,
-      ...result
-    };
-  } catch (e) {
-    console.error(`[Agent 2] Failed to parse response: ${e.message}`);
-    return {
-      success: false,
-      analyzed_conditions: [],
-      rejected_conditions: [],
-      error: e.message
-    };
-  }
-}
-
-/**
- * Agent 3: Validator
- * מאמת כיסוי, מזהה כפילויות, מייצר דוח סופי
- */
-async function validateAndFinalize(documentText, analyzedConditions) {
-  if (!anthropic) throw new Error('Anthropic API not initialized');
-
-  console.error(`[Agent 3] Validating ${analyzedConditions.length} conditions...`);
-
-  const conditionsJson = JSON.stringify(analyzedConditions, null, 2);
-
-  const prompt = VALIDATOR_PROMPT
+  const prompt = COMPREHENSIVE_ANALYSIS_PROMPT
     .replace('{document_text}', documentText)
-    .replace('{analyzed_conditions_json}', conditionsJson);
+    .replace('{bidder_profile}', bidderProfile ? JSON.stringify(bidderProfile, null, 2) : 'לא סופק');
 
   const response = await anthropic.messages.create({
-    model: CLAUDE_MODEL,
-    max_tokens: 8192,
-    system: VALIDATOR_SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: prompt }]
-  });
-
-  const responseText = response.content[0].text;
-
-  try {
-    const result = extractJsonFromResponse(responseText);
-    console.error(`[Agent 3] Final conditions: ${result.final_conditions?.length || 0}, coverage: ${result.validation_result?.coverage_percentage || 0}%`);
-    return {
-      success: true,
-      ...result
-    };
-  } catch (e) {
-    console.error(`[Agent 3] Failed to parse response: ${e.message}`);
-    return {
-      success: false,
-      validation_result: { coverage_percentage: 0 },
-      final_conditions: analyzedConditions, // Return what we have
-      error: e.message
-    };
-  }
-}
-
-/**
- * Professional Gate Extraction Pipeline
- * מריץ את כל 4 הסוכנים ברצף ומחזיר תוצאה מלאה
- */
-async function professionalGateExtraction(tenderId, documentText) {
-  console.error(`[Pipeline] Starting professional extraction for tender ${tenderId}`);
-  console.error(`[Pipeline] Document length: ${documentText.length} characters`);
-
-  const startTime = Date.now();
-
-  // Step 0: Extract definitions
-  console.error('[Pipeline] Step 0: Extracting definitions...');
-  const definitionsResult = await extractDefinitions(documentText);
-
-  // Step 1: Scan for potential conditions
-  console.error('[Pipeline] Step 1: Scanning for conditions...');
-  const scanResult = await scanForConditions(documentText);
-
-  if (!scanResult.success || !scanResult.potential_conditions?.length) {
-    return {
-      success: false,
-      error: 'Scanner found no potential conditions',
-      definitions: definitionsResult,
-      scan_result: scanResult
-    };
-  }
-
-  // Step 2: Analyze conditions with definitions context
-  console.error('[Pipeline] Step 2: Analyzing conditions...');
-  const analyzeResult = await analyzeConditions(
-    scanResult.potential_conditions,
-    definitionsResult.definitions || []
-  );
-
-  if (!analyzeResult.success || !analyzeResult.analyzed_conditions?.length) {
-    return {
-      success: false,
-      error: 'Analyzer could not process conditions',
-      definitions: definitionsResult,
-      scan_result: scanResult,
-      analyze_result: analyzeResult
-    };
-  }
-
-  // Step 3: Validate and finalize
-  console.error('[Pipeline] Step 3: Validating and finalizing...');
-  const validateResult = await validateAndFinalize(
-    documentText,
-    analyzeResult.analyzed_conditions
-  );
-
-  const endTime = Date.now();
-  const durationSec = ((endTime - startTime) / 1000).toFixed(1);
-
-  console.error(`[Pipeline] Completed in ${durationSec}s`);
-
-  // Prepare final conditions with IDs
-  const finalConditions = (validateResult.final_conditions || analyzeResult.analyzed_conditions).map((c, i) => ({
-    id: randomUUID(),
-    tender_id: tenderId,
-    condition_number: i + 1,
-    // Map to database schema
-    condition_text: c.original_text || c.text,
-    requirement_type: c.category || 'OTHER',
-    is_mandatory: c.is_mandatory !== false,
-    // Quantitative
-    required_amount: c.quantitative?.amount || null,
-    required_years: c.quantitative?.years || null,
-    required_count: c.quantitative?.count || null,
-    // Traceability
-    source_page: c.traceability?.source_page || null,
-    source_section: c.traceability?.source_section || null,
-    source_quote: c.traceability?.source_quote || c.original_text?.substring(0, 200),
-    source_file: c.traceability?.source_file || null,
-    // New fields
-    bearer_entity: c.bearer?.entity || 'bidder_only',
-    subcontractor_allowed: c.bearer?.subcontractor_allowed || false,
-    subcontractor_limit: c.bearer?.subcontractor_limit || null,
-    group_companies_allowed: c.bearer?.group_companies_allowed || false,
-    legal_classification: c.interpretation?.legal?.classification || null,
-    legal_reasoning: c.interpretation?.legal?.reasoning || null,
-    technical_requirement: c.interpretation?.technical?.what_is_required || null,
-    equivalent_options: c.interpretation?.technical?.equivalent_options || [],
-    definition_applied: c.interpretation?.technical?.definition_applied || null,
-    // Meta
-    ai_confidence: c.confidence || 0.8,
-    extraction_method: 'professional_4_agent',
-    extracted_at: new Date().toISOString(),
-    // Keep full analysis for reference
-    _full_analysis: c
-  }));
-
-  return {
-    success: true,
-    tender_id: tenderId,
-    extraction_method: 'professional_4_agent',
-    duration_seconds: parseFloat(durationSec),
-    // Definitions
-    definitions: {
-      found: definitionsResult.definitions_found || false,
-      count: definitionsResult.definitions?.length || 0,
-      items: definitionsResult.definitions || [],
-      critical: definitionsResult.critical_definitions || [],
-      missing: definitionsResult.missing_definitions || []
-    },
-    // Validation
-    validation: {
-      coverage_percentage: validateResult.validation_result?.coverage_percentage || 0,
-      missed_sections: validateResult.validation_result?.missed_sections || [],
-      duplicates_merged: validateResult.validation_result?.duplicates_found?.length || 0,
-      contradictions: validateResult.validation_result?.contradictions || [],
-      overall_confidence: validateResult.validation_result?.overall_confidence || 0.8
-    },
-    // Summary
-    summary: {
-      scanned: scanResult.potential_conditions?.length || 0,
-      analyzed: analyzeResult.analyzed_conditions?.length || 0,
-      rejected: analyzeResult.rejected_conditions?.length || 0,
-      final: finalConditions.length
-    },
-    // Final conditions
-    conditions: finalConditions
-  };
-}
-
-// ============================================
-// LEGACY TOOL IMPLEMENTATIONS
-// ============================================
-
-/**
- * Tool 1: chunk_document
- * חיתוך מסמך לחלקים עם חפיפה
- */
-async function chunkDocument(text, chunkSize = 4000, overlap = 500) {
-  const chunks = [];
-  const boundaries = findSectionBoundaries(text);
-
-  let currentPos = 0;
-  let chunkIndex = 0;
-
-  while (currentPos < text.length) {
-    let endPos = currentPos + chunkSize;
-
-    // Try to end at a section boundary
-    const nearbyBoundary = boundaries.find(b =>
-      b > currentPos + chunkSize - overlap &&
-      b < currentPos + chunkSize + overlap
-    );
-
-    if (nearbyBoundary) {
-      endPos = nearbyBoundary;
-    } else if (endPos < text.length) {
-      // Try to end at a sentence boundary (period followed by space)
-      const searchStart = Math.max(0, endPos - 200);
-      const searchEnd = Math.min(text.length, endPos + 200);
-      const searchText = text.substring(searchStart, searchEnd);
-
-      const sentenceEnd = searchText.lastIndexOf('. ');
-      if (sentenceEnd !== -1) {
-        endPos = searchStart + sentenceEnd + 2;
-      }
-    }
-
-    // Ensure we don't exceed text length
-    endPos = Math.min(endPos, text.length);
-
-    const chunkText = text.substring(currentPos, endPos).trim();
-
-    if (chunkText.length > 0) {
-      chunks.push({
-        index: chunkIndex,
-        text: chunkText,
-        start_position: currentPos,
-        end_position: endPos,
-        char_count: chunkText.length
-      });
-      chunkIndex++;
-    }
-
-    // Move to next position with overlap
-    currentPos = endPos - overlap;
-    if (currentPos <= chunks[chunks.length - 1]?.start_position) {
-      currentPos = endPos; // Prevent infinite loop
-    }
-  }
-
-  return {
-    success: true,
-    total_chunks: chunks.length,
-    total_characters: text.length,
-    chunk_size: chunkSize,
-    overlap: overlap,
-    chunks: chunks
-  };
-}
-
-/**
- * Tool 2: extract_gates_from_chunk (legacy)
- * חילוץ תנאי סף מ-chunk עם Claude
- */
-async function extractGatesFromChunk(chunkText, tenderId, existingConditions = []) {
-  if (!anthropic) throw new Error('Anthropic API not initialized');
-
-  // Build existing conditions section
-  let existingConditionsSection = '';
-  if (existingConditions.length > 0) {
-    const existingTexts = existingConditions.map(c => `- ${c.text?.substring(0, 100)}...`).join('\n');
-    existingConditionsSection = `תנאים שכבר חולצו (הימנע מכפילויות):\n${existingTexts}`;
-  }
-
-  const prompt = EXTRACTION_PROMPT
-    .replace('{chunk_text}', chunkText)
-    .replace('{document_text}', chunkText)
-    .replace('{existing_conditions_section}', existingConditionsSection);
-
-  const response = await anthropic.messages.create({
-    model: CLAUDE_MODEL,
-    max_tokens: 4096,
-    system: SYSTEM_PROMPT,
+    model: CLAUDE_MODEL_COMPLEX,
+    max_tokens: 16000,
+    system: EXPERT_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: prompt }]
   });
 
@@ -546,77 +304,43 @@ async function extractGatesFromChunk(chunkText, tenderId, existingConditions = [
   try {
     const result = extractJsonFromResponse(responseText);
 
-    // Add IDs and tender_id to each condition
-    const conditions = (result.conditions || result.potential_conditions || []).map(c => ({
-      id: randomUUID(),
-      tender_id: tenderId,
-      ...c
-    }));
+    // Generate formatted report
+    const formattedReport = generateFullReport(result);
+
+    console.error(`[Expert Analysis] Found ${result.gate_conditions_table?.length || 0} conditions`);
 
     return {
       success: true,
-      conditions: conditions,
-      extraction_notes: result.extraction_notes || result.scanning_notes || null,
-      chunk_length: chunkText.length,
-      conditions_found: conditions.length
+      analysis: result,
+      formatted_report: formattedReport,
+      raw_response_length: responseText.length
     };
   } catch (e) {
+    console.error(`[Expert Analysis] Failed to parse response: ${e.message}`);
     return {
       success: false,
-      error: `Failed to parse extraction response: ${e.message}`,
-      raw_response: responseText.substring(0, 500)
+      error: e.message,
+      raw_response: responseText.substring(0, 2000)
     };
   }
 }
 
 /**
- * Tool 3: validate_extraction_coverage
- * בדיקת כיסוי החילוץ
+ * Compare analysis to bidder profile
  */
-async function validateExtractionCoverage(documentText, extractedConditions) {
+async function compareToBidderProfile(tenderRequirements, bidderProfile) {
   if (!anthropic) throw new Error('Anthropic API not initialized');
 
-  // Find relevant excerpts - sections containing keywords
-  const excerpts = [];
-  const lines = documentText.split('\n');
+  console.error('[Profile Comparison] Comparing requirements to profile...');
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const foundKeywords = GATE_KEYWORDS.filter(kw => line.includes(kw));
-
-    if (foundKeywords.length > 0) {
-      // Get context (2 lines before and after)
-      const start = Math.max(0, i - 2);
-      const end = Math.min(lines.length, i + 3);
-      const context = lines.slice(start, end).join('\n');
-
-      excerpts.push({
-        line_number: i + 1,
-        text: context,
-        keywords: foundKeywords
-      });
-    }
-  }
-
-  // Limit excerpts for API call
-  const limitedExcerpts = excerpts.slice(0, 20);
-  const excerptText = limitedExcerpts.map(e =>
-    `[שורה ${e.line_number}] ${e.text}`
-  ).join('\n---\n');
-
-  const conditionsText = extractedConditions.map(c =>
-    `- [${c.category}] ${c.text?.substring(0, 150)}...`
-  ).join('\n');
-
-  // Use new validator prompt
-  const prompt = VALIDATOR_PROMPT
-    .replace('{document_text}', excerptText)
-    .replace('{analyzed_conditions_json}', JSON.stringify(extractedConditions, null, 2));
+  const prompt = PROFILE_COMPARISON_PROMPT
+    .replace('{tender_requirements}', JSON.stringify(tenderRequirements, null, 2))
+    .replace('{bidder_profile}', JSON.stringify(bidderProfile, null, 2));
 
   const response = await anthropic.messages.create({
     model: CLAUDE_MODEL,
-    max_tokens: 4096,
-    system: VALIDATOR_SYSTEM_PROMPT,
+    max_tokens: 8000,
+    system: EXPERT_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: prompt }]
   });
 
@@ -624,157 +348,133 @@ async function validateExtractionCoverage(documentText, extractedConditions) {
 
   try {
     const result = extractJsonFromResponse(responseText);
+    console.error(`[Profile Comparison] Found ${result.compliance_matrix?.length || 0} matches, ${result.information_gaps?.length || 0} gaps`);
 
     return {
       success: true,
-      coverage_percentage: result.validation_result?.coverage_percentage || result.coverage_percentage || 0,
-      missed_sections: result.validation_result?.missed_sections || result.missed_sections || [],
-      validation_notes: result.validation_notes || null,
-      excerpts_analyzed: limitedExcerpts.length,
-      total_keyword_matches: excerpts.length
+      comparison: result
     };
   } catch (e) {
     return {
       success: false,
-      error: `Failed to parse validation response: ${e.message}`,
-      raw_response: responseText.substring(0, 500)
+      error: e.message,
+      raw_response: responseText.substring(0, 1000)
     };
   }
 }
 
 /**
- * Tool 4: merge_and_dedupe_conditions
- * מיזוג והסרת כפילויות
+ * Generate gap closure solutions
  */
-async function mergeAndDedupeConditions(allConditions) {
+async function generateGapSolutions(gapDescription, tenderContext, bidderProfile) {
   if (!anthropic) throw new Error('Anthropic API not initialized');
 
-  // First pass: quick deduplication using similarity
-  const uniqueConditions = [];
-  const similarityThreshold = 0.85;
+  console.error('[Gap Closure] Generating solutions...');
 
-  for (const condition of allConditions) {
-    const conditionText = condition.text || condition.original_text || '';
-    const isDuplicate = uniqueConditions.some(existing => {
-      const existingText = existing.text || existing.original_text || '';
-      const textSimilarity = similarityRatio(conditionText, existingText);
-      return textSimilarity >= similarityThreshold;
-    });
+  const prompt = GAP_CLOSURE_PROMPT
+    .replace('{gap_description}', gapDescription)
+    .replace('{tender_context}', JSON.stringify(tenderContext, null, 2))
+    .replace('{bidder_profile}', JSON.stringify(bidderProfile, null, 2));
 
-    if (!isDuplicate) {
-      uniqueConditions.push(condition);
-    }
+  const response = await anthropic.messages.create({
+    model: CLAUDE_MODEL,
+    max_tokens: 4000,
+    system: EXPERT_SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: prompt }]
+  });
+
+  const responseText = response.content[0].text;
+
+  try {
+    const result = extractJsonFromResponse(responseText);
+    console.error(`[Gap Closure] Generated ${result.closure_options?.length || 0} options`);
+
+    return {
+      success: true,
+      solutions: result
+    };
+  } catch (e) {
+    return {
+      success: false,
+      error: e.message,
+      raw_response: responseText.substring(0, 1000)
+    };
   }
-
-  // If significant deduplication happened, use AI for semantic merge
-  if (uniqueConditions.length < allConditions.length * 0.8 || uniqueConditions.length > 10) {
-    const conditionsJson = JSON.stringify(uniqueConditions.map(c => ({
-      id: c.id,
-      text: (c.text || c.original_text)?.substring(0, 300),
-      type: c.type,
-      category: c.category,
-      is_mandatory: c.is_mandatory,
-      quantitative: c.quantitative
-    })), null, 2);
-
-    const prompt = MERGE_PROMPT.replace('{all_conditions}', conditionsJson);
-
-    const response = await anthropic.messages.create({
-      model: CLAUDE_MODEL,
-      max_tokens: 4096,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: prompt }]
-    });
-
-    const responseText = response.content[0].text;
-
-    try {
-      const result = extractJsonFromResponse(responseText);
-
-      return {
-        success: true,
-        merged_conditions: result.merged_conditions || [],
-        removed_conditions: result.removed_conditions || [],
-        merge_summary: result.merge_summary || {
-          original_count: allConditions.length,
-          final_count: result.merged_conditions?.length || 0
-        }
-      };
-    } catch (e) {
-      // Fall back to simple deduplication result
-      return {
-        success: true,
-        merged_conditions: uniqueConditions,
-        removed_conditions: [],
-        merge_summary: {
-          original_count: allConditions.length,
-          final_count: uniqueConditions.length,
-          duplicates_merged: allConditions.length - uniqueConditions.length
-        },
-        note: 'AI merge failed, using simple deduplication'
-      };
-    }
-  }
-
-  return {
-    success: true,
-    merged_conditions: uniqueConditions,
-    removed_conditions: [],
-    merge_summary: {
-      original_count: allConditions.length,
-      final_count: uniqueConditions.length,
-      duplicates_merged: allConditions.length - uniqueConditions.length
-    }
-  };
 }
 
 /**
- * Tool 5: save_extracted_conditions
- * שמירה ל-Supabase
+ * Generate strategic clarification questions
  */
-async function saveExtractedConditions(tenderId, conditions) {
+async function generateStrategicQuestions(tenderAnalysis, bidderProfile, competitorsInfo = null) {
+  if (!anthropic) throw new Error('Anthropic API not initialized');
+
+  console.error('[Strategic Questions] Generating questions...');
+
+  const prompt = STRATEGIC_QUESTIONS_PROMPT
+    .replace('{tender_analysis}', JSON.stringify(tenderAnalysis, null, 2))
+    .replace('{bidder_profile}', JSON.stringify(bidderProfile, null, 2))
+    .replace('{competitors_info}', competitorsInfo ? JSON.stringify(competitorsInfo, null, 2) : 'לא סופק');
+
+  const response = await anthropic.messages.create({
+    model: CLAUDE_MODEL,
+    max_tokens: 4000,
+    system: EXPERT_SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: prompt }]
+  });
+
+  const responseText = response.content[0].text;
+
+  try {
+    const result = extractJsonFromResponse(responseText);
+    console.error(`[Strategic Questions] Generated ${result.clarification_questions?.length || 0} questions`);
+
+    return {
+      success: true,
+      questions: result
+    };
+  } catch (e) {
+    return {
+      success: false,
+      error: e.message,
+      raw_response: responseText.substring(0, 1000)
+    };
+  }
+}
+
+/**
+ * Save analysis results to Supabase
+ */
+async function saveAnalysisResults(tenderId, analysisResult) {
   if (!supabase) throw new Error('Supabase not initialized');
 
   const savedConditions = [];
   const errors = [];
 
+  // Save each condition
+  const conditions = analysisResult.gate_conditions_table || [];
+
   for (let i = 0; i < conditions.length; i++) {
-    const condition = conditions[i];
+    const c = conditions[i];
 
     const record = {
-      id: condition.id || randomUUID(),
+      id: randomUUID(),
       tender_id: tenderId,
-      condition_number: condition.condition_number || i + 1,
-      condition_text: condition.condition_text || condition.text || condition.original_text,
-      requirement_type: condition.requirement_type || condition.category || 'OTHER',
-      is_mandatory: condition.is_mandatory !== false,
-      ai_confidence: condition.ai_confidence || condition.confidence || 0.8,
-      source_quote: condition.source_quote || condition.condition_text?.substring(0, 200),
-      source_page: condition.source_page || null,
-      source_section: condition.source_section || null,
-      source_file: condition.source_file || null,
+      condition_number: i + 1,
+      condition_text: c.tender_requirement || c.requirement,
+      requirement_type: c.condition_name || 'OTHER',
+      is_mandatory: true,
+      ai_confidence: 0.9,
+      source_quote: c.tender_requirement,
+      source_page: c.source?.page || null,
+      source_section: c.source?.section || null,
       ai_analyzed_at: new Date().toISOString(),
-      extracted_by: condition.extraction_method || 'gate-extractor-mcp',
-      extraction_pass: condition.extraction_pass || 1
+      extracted_by: 'expert-gate-analysis-v3',
+      // New professional fields
+      compliance_status: c.compliance_status,
+      gap_description: c.common_gap_risk,
+      proposed_solution: c.proposed_solution,
+      regulatory_interpretation: c.regulatory_interpretation
     };
-
-    // Add quantitative data if present
-    if (condition.required_amount) record.required_amount = condition.required_amount;
-    if (condition.required_years) record.required_years = condition.required_years;
-    if (condition.required_count) record.required_count = condition.required_count;
-
-    // Legacy quantitative format
-    if (condition.quantitative) {
-      if (condition.quantitative.amount) record.required_amount = condition.quantitative.amount;
-      if (condition.quantitative.years) record.required_years = condition.quantitative.years;
-      if (condition.quantitative.count) record.required_count = condition.quantitative.count;
-    }
-
-    // New professional fields (if columns exist in DB)
-    if (condition.bearer_entity) record.bearer_entity = condition.bearer_entity;
-    if (condition.subcontractor_allowed !== undefined) record.subcontractor_allowed = condition.subcontractor_allowed;
-    if (condition.legal_classification) record.legal_classification = condition.legal_classification;
-    if (condition.technical_requirement) record.technical_requirement = condition.technical_requirement;
 
     const { data, error } = await supabase
       .from('gate_conditions')
@@ -789,8 +489,8 @@ async function saveExtractedConditions(tenderId, conditions) {
     }
   }
 
-  // Update tender extraction status
-  const { error: tenderError } = await supabase
+  // Update tender status
+  await supabase
     .from('tenders')
     .update({
       gates_extracted: true,
@@ -801,11 +501,88 @@ async function saveExtractedConditions(tenderId, conditions) {
 
   return {
     success: errors.length === 0,
-    tender_id: tenderId,
     saved_count: savedConditions.length,
     error_count: errors.length,
-    errors: errors.length > 0 ? errors : undefined,
-    tender_update_error: tenderError?.message
+    errors: errors.length > 0 ? errors : undefined
+  };
+}
+
+// ============================================
+// LEGACY FUNCTIONS (kept for compatibility)
+// ============================================
+
+function levenshteinDistance(str1, str2) {
+  const m = str1.length;
+  const n = str2.length;
+  const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (str1[i - 1] === str2[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1];
+      } else {
+        dp[i][j] = Math.min(
+          dp[i - 1][j] + 1,
+          dp[i][j - 1] + 1,
+          dp[i - 1][j - 1] + 1
+        );
+      }
+    }
+  }
+  return dp[m][n];
+}
+
+function similarityRatio(str1, str2) {
+  const maxLen = Math.max(str1.length, str2.length);
+  if (maxLen === 0) return 1;
+  const distance = levenshteinDistance(str1, str2);
+  return 1 - distance / maxLen;
+}
+
+async function chunkDocument(text, chunkSize = 4000, overlap = 500) {
+  const chunks = [];
+  let currentPos = 0;
+  let chunkIndex = 0;
+
+  while (currentPos < text.length) {
+    let endPos = Math.min(currentPos + chunkSize, text.length);
+
+    // Try to end at sentence boundary
+    if (endPos < text.length) {
+      const searchStart = Math.max(0, endPos - 200);
+      const searchText = text.substring(searchStart, endPos + 200);
+      const sentenceEnd = searchText.lastIndexOf('. ');
+      if (sentenceEnd !== -1) {
+        endPos = searchStart + sentenceEnd + 2;
+      }
+    }
+
+    const chunkText = text.substring(currentPos, endPos).trim();
+    if (chunkText.length > 0) {
+      chunks.push({
+        index: chunkIndex,
+        text: chunkText,
+        start_position: currentPos,
+        end_position: endPos,
+        char_count: chunkText.length
+      });
+      chunkIndex++;
+    }
+
+    currentPos = endPos - overlap;
+    if (currentPos <= 0 && chunkIndex > 0) {
+      currentPos = endPos;
+    }
+  }
+
+  return {
+    success: true,
+    total_chunks: chunks.length,
+    total_characters: text.length,
+    chunks: chunks
   };
 }
 
@@ -816,7 +593,7 @@ async function saveExtractedConditions(tenderId, conditions) {
 const server = new Server(
   {
     name: 'tenderix-gate-extractor',
-    version: '2.0.0',
+    version: '3.0.0',
   },
   {
     capabilities: {
@@ -829,202 +606,133 @@ const server = new Server(
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
-      // NEW: Professional extraction tool
+      // NEW: Professional analysis tools
       {
-        name: 'professional_gate_extraction',
-        description: 'חילוץ תנאי סף מקצועי עם 4 סוכני AI: מילון הגדרות, סריקה, ניתוח מעמיק, ואימות. מחזיר תוצאות עם עקיבות מלאה ופרשנות כפולה.',
+        name: 'expert_gate_analysis',
+        description: 'ניתוח תנאי סף מקצועי ברמת מומחה זכאות רגולטורי. מחזיר טבלאות מעוצבות, הגדרות קריטיות, פערים ופתרונות, והערות אסטרטגיות.',
         inputSchema: {
           type: 'object',
           properties: {
-            tender_id: {
-              type: 'string',
-              description: 'מזהה המכרז (UUID)'
-            },
             document_text: {
               type: 'string',
               description: 'הטקסט המלא של מסמך המכרז'
-            }
-          },
-          required: ['tender_id', 'document_text']
-        }
-      },
-      // Individual agent tools for manual control
-      {
-        name: 'extract_definitions',
-        description: 'Agent 0: חילוץ מילון הגדרות מהמכרז',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            document_text: {
-              type: 'string',
-              description: 'הטקסט המלא של המסמך'
+            },
+            bidder_profile: {
+              type: 'object',
+              description: 'פרופיל המציע (אופציונלי) - לבדיקת עמידה',
+              default: null
             }
           },
           required: ['document_text']
         }
       },
       {
-        name: 'scan_for_conditions',
-        description: 'Agent 1: סריקה שורה שורה לזיהוי משפטים פוטנציאליים',
+        name: 'compare_to_bidder_profile',
+        description: 'השוואה בין דרישות המכרז לפרופיל המציע - זיהוי פערים והתאמות',
         inputSchema: {
           type: 'object',
           properties: {
-            document_text: {
-              type: 'string',
-              description: 'הטקסט המלא של המסמך'
+            tender_requirements: {
+              type: 'object',
+              description: 'דרישות המכרז (תוצאת expert_gate_analysis)'
+            },
+            bidder_profile: {
+              type: 'object',
+              description: 'פרופיל המציע המלא'
             }
           },
-          required: ['document_text']
+          required: ['tender_requirements', 'bidder_profile']
         }
       },
       {
-        name: 'analyze_conditions',
-        description: 'Agent 2: ניתוח מעמיק של תנאים עם פרשנות משפטית וטכנית',
+        name: 'generate_gap_solutions',
+        description: 'יצירת פתרונות יצירתיים לסגירת פערים בתנאי סף',
         inputSchema: {
           type: 'object',
           properties: {
-            potential_conditions: {
-              type: 'array',
-              description: 'רשימת משפטים פוטנציאליים מה-Scanner',
-              items: { type: 'object' }
+            gap_description: {
+              type: 'string',
+              description: 'תיאור הפער שזוהה'
             },
-            definitions: {
-              type: 'array',
-              description: 'מילון הגדרות מהמכרז',
-              items: { type: 'object' },
-              default: []
+            tender_context: {
+              type: 'object',
+              description: 'הקשר המכרז (דרישות, הגדרות)'
+            },
+            bidder_profile: {
+              type: 'object',
+              description: 'פרופיל המציע'
             }
           },
-          required: ['potential_conditions']
+          required: ['gap_description', 'tender_context', 'bidder_profile']
         }
       },
       {
-        name: 'validate_and_finalize',
-        description: 'Agent 3: אימות כיסוי, מיזוג כפילויות, ויצירת דוח סופי',
+        name: 'generate_strategic_questions',
+        description: 'יצירת שאלות הבהרה אסטרטגיות - לסגירת פערים ולהגבלת מתחרים',
         inputSchema: {
           type: 'object',
           properties: {
-            document_text: {
-              type: 'string',
-              description: 'הטקסט המלא של המסמך'
+            tender_analysis: {
+              type: 'object',
+              description: 'ניתוח המכרז'
             },
-            analyzed_conditions: {
-              type: 'array',
-              description: 'תנאים מנותחים מה-Analyzer',
-              items: { type: 'object' }
+            bidder_profile: {
+              type: 'object',
+              description: 'פרופיל המציע'
+            },
+            competitors_info: {
+              type: 'object',
+              description: 'מידע על מתחרים (אופציונלי)',
+              default: null
             }
           },
-          required: ['document_text', 'analyzed_conditions']
+          required: ['tender_analysis', 'bidder_profile']
         }
       },
-      // Legacy tools
+      {
+        name: 'format_hebrew_report',
+        description: 'עיצוב דוח ניתוח תנאי סף בעברית - טבלאות מעוצבות וקריאות',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            analysis_result: {
+              type: 'object',
+              description: 'תוצאת הניתוח מ-expert_gate_analysis'
+            }
+          },
+          required: ['analysis_result']
+        }
+      },
+      {
+        name: 'save_analysis_to_db',
+        description: 'שמירת תוצאות הניתוח ל-Supabase',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            tender_id: {
+              type: 'string',
+              description: 'מזהה המכרז (UUID)'
+            },
+            analysis_result: {
+              type: 'object',
+              description: 'תוצאת הניתוח'
+            }
+          },
+          required: ['tender_id', 'analysis_result']
+        }
+      },
+      // Legacy tools (kept for compatibility)
       {
         name: 'chunk_document',
-        description: 'חיתוך מסמך לחלקים עם חפיפות לעיבוד איטרטיבי. מזהה גבולות סעיפים בעברית.',
+        description: 'חיתוך מסמך לחלקים עם חפיפות',
         inputSchema: {
           type: 'object',
           properties: {
-            text: {
-              type: 'string',
-              description: 'הטקסט המלא של המסמך'
-            },
-            chunk_size: {
-              type: 'number',
-              description: 'גודל כל chunk בתווים (ברירת מחדל: 4000)',
-              default: 4000
-            },
-            overlap: {
-              type: 'number',
-              description: 'חפיפה בין chunks בתווים (ברירת מחדל: 500)',
-              default: 500
-            }
+            text: { type: 'string', description: 'הטקסט לחיתוך' },
+            chunk_size: { type: 'number', default: 4000 },
+            overlap: { type: 'number', default: 500 }
           },
           required: ['text']
-        }
-      },
-      {
-        name: 'extract_gates_from_chunk',
-        description: '[Legacy] חילוץ תנאי סף מ-chunk בודד. מומלץ להשתמש ב-professional_gate_extraction במקום.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            chunk_text: {
-              type: 'string',
-              description: 'טקסט ה-chunk לעיבוד'
-            },
-            tender_id: {
-              type: 'string',
-              description: 'מזהה המכרז (UUID)'
-            },
-            existing_conditions: {
-              type: 'array',
-              description: 'תנאים שכבר חולצו (להימנעות מכפילויות)',
-              items: {
-                type: 'object'
-              },
-              default: []
-            }
-          },
-          required: ['chunk_text', 'tender_id']
-        }
-      },
-      {
-        name: 'validate_extraction_coverage',
-        description: 'בדיקת כיסוי החילוץ - זיהוי קטעים שפוספסו על סמך מילות מפתח.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            document_text: {
-              type: 'string',
-              description: 'הטקסט המלא של המסמך'
-            },
-            extracted_conditions: {
-              type: 'array',
-              description: 'התנאים שחולצו לבדיקה',
-              items: {
-                type: 'object'
-              }
-            }
-          },
-          required: ['document_text', 'extracted_conditions']
-        }
-      },
-      {
-        name: 'merge_and_dedupe_conditions',
-        description: 'מיזוג תנאים כפולים והסרת תנאים לא תקפים. משתמש ב-Levenshtein וניתוח סמנטי.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            all_conditions: {
-              type: 'array',
-              description: 'כל התנאים מכל המעברים',
-              items: {
-                type: 'object'
-              }
-            }
-          },
-          required: ['all_conditions']
-        }
-      },
-      {
-        name: 'save_extracted_conditions',
-        description: 'שמירת תנאי הסף הסופיים ל-Supabase ועדכון סטטוס המכרז.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            tender_id: {
-              type: 'string',
-              description: 'מזהה המכרז (UUID)'
-            },
-            conditions: {
-              type: 'array',
-              description: 'תנאי הסף לשמירה',
-              items: {
-                type: 'object'
-              }
-            }
-          },
-          required: ['tender_id', 'conditions']
         }
       }
     ]
@@ -1042,68 +750,36 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     switch (name) {
       // New professional tools
-      case 'professional_gate_extraction':
-        result = await professionalGateExtraction(
-          args.tender_id,
-          args.document_text
-        );
+      case 'expert_gate_analysis':
+        result = await expertGateAnalysis(args.document_text, args.bidder_profile);
         break;
 
-      case 'extract_definitions':
-        result = await extractDefinitions(args.document_text);
+      case 'compare_to_bidder_profile':
+        result = await compareToBidderProfile(args.tender_requirements, args.bidder_profile);
         break;
 
-      case 'scan_for_conditions':
-        result = await scanForConditions(args.document_text);
+      case 'generate_gap_solutions':
+        result = await generateGapSolutions(args.gap_description, args.tender_context, args.bidder_profile);
         break;
 
-      case 'analyze_conditions':
-        result = await analyzeConditions(
-          args.potential_conditions,
-          args.definitions || []
-        );
+      case 'generate_strategic_questions':
+        result = await generateStrategicQuestions(args.tender_analysis, args.bidder_profile, args.competitors_info);
         break;
 
-      case 'validate_and_finalize':
-        result = await validateAndFinalize(
-          args.document_text,
-          args.analyzed_conditions
-        );
+      case 'format_hebrew_report':
+        result = {
+          success: true,
+          formatted_report: generateFullReport(args.analysis_result)
+        };
+        break;
+
+      case 'save_analysis_to_db':
+        result = await saveAnalysisResults(args.tender_id, args.analysis_result);
         break;
 
       // Legacy tools
       case 'chunk_document':
-        result = await chunkDocument(
-          args.text,
-          args.chunk_size || 4000,
-          args.overlap || 500
-        );
-        break;
-
-      case 'extract_gates_from_chunk':
-        result = await extractGatesFromChunk(
-          args.chunk_text,
-          args.tender_id,
-          args.existing_conditions || []
-        );
-        break;
-
-      case 'validate_extraction_coverage':
-        result = await validateExtractionCoverage(
-          args.document_text,
-          args.extracted_conditions
-        );
-        break;
-
-      case 'merge_and_dedupe_conditions':
-        result = await mergeAndDedupeConditions(args.all_conditions);
-        break;
-
-      case 'save_extracted_conditions':
-        result = await saveExtractedConditions(
-          args.tender_id,
-          args.conditions
-        );
+        result = await chunkDocument(args.text, args.chunk_size, args.overlap);
         break;
 
       default:
@@ -1139,7 +815,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error('Tenderix Gate Extractor MCP Server v2.0 (Professional) running on stdio');
+  console.error('Tenderix Gate Extractor MCP Server v3.0 (Professional Expert) running on stdio');
 }
 
 main().catch(console.error);
