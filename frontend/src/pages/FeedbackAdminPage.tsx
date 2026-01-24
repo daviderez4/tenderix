@@ -1,7 +1,47 @@
 import { useState, useEffect } from 'react';
-import { MessageSquare, Clock, CheckCircle, Trash2, RefreshCw, Filter, ArrowUpCircle, Download, CheckSquare, Square } from 'lucide-react';
+import { MessageSquare, Clock, CheckCircle, Trash2, RefreshCw, Filter, ArrowUpCircle, Download, CheckSquare, Square, ClipboardList, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { API_CONFIG } from '../api/config';
 import { Loading } from '../components/Loading';
+
+// Development Status Data from spec
+const DEV_STATUS = {
+  summary: {
+    total: 31,
+    complete: 14,
+    partial: 8,
+    missing: 9,
+  },
+  highPriority: [
+    { id: '1.3', name: 'נרמול טקסט עברי', note: 'חשוב לדיוק' },
+    { id: '1.4', name: 'חילוץ סעיף הגדרות', note: '"מילון המכרז"' },
+    { id: '2.3', name: 'ישות נושאת דרישה', note: 'מי צריך לעמוד בתנאי' },
+    { id: '2.4', name: 'פרשנות "דומה"', note: 'מילון טכני' },
+    { id: '2.6.5', name: 'אופטימיזציה תנאי סף vs ניקוד', note: 'עידו' },
+  ],
+  mediumPriority: [
+    { id: '2.5', name: 'פרשנות כפולה', note: 'HEAD משפטי + טכני' },
+    { id: '2.7.6', name: 'ניתוח שאלות אחרים', note: 'אליצח' },
+    { id: '3.4.5', name: 'השוואה למכרזים דומים', note: 'אליצח' },
+    { id: '3.5', name: 'סיכוני תמחור', note: 'אינטגרציה ERP' },
+  ],
+  partial: [
+    { id: '1.1', name: 'העלאה וזיהוי מסמכים', done: 'העלאת קבצים', missing: 'זיהוי אוטומטי של סוג מסמך' },
+    { id: '1.2', name: 'חילוץ מטא-דאטה', done: 'שדות בסיסיים', missing: 'חילוץ אוטומטי מ-PDF' },
+    { id: '2.0', name: 'פרופיל חברה', done: 'כל השדות', missing: 'פרויקטים משיקים (אליצח)' },
+    { id: '2.2', name: 'פירוק כימותי', done: 'בסיסי', missing: 'הגדרת "בוצע" (עידו)' },
+    { id: '2.9', name: 'הערכה והמלצה', done: 'סיכום', missing: 'ציטוטים מדויקים' },
+    { id: '3.3', name: 'היקף העבודה', done: 'בסיסי', missing: 'WBS מפורט' },
+    { id: '3.4', name: 'חריגים ואי-התאמות', done: 'בסיסי', missing: '"חריגים = הזדמנות" (עידו)' },
+  ],
+  missingTables: [
+    'certifications - הסמכות ורישיונות',
+    'key_personnel - אנשי מפתח',
+    'historical_bids - היסטוריית הצעות',
+    'tender_versions - גרסאות מסמכים',
+    'strategic_questions - שאלות אסטרטגיות',
+    'tender_analysis - תוצאות ניתוח',
+  ],
+};
 
 interface FeedbackMessage {
   id: string;
@@ -20,6 +60,7 @@ export function FeedbackAdminPage() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'reviewed' | 'done'>('all');
   const [refreshing, setRefreshing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showDevStatus, setShowDevStatus] = useState(true);
 
   useEffect(() => {
     loadMessages();
@@ -237,7 +278,130 @@ ${m.message}
         </p>
       </div>
 
-      {/* Stats */}
+      {/* Development Status Section */}
+      <div className="card" style={{ marginBottom: '1.5rem', border: '2px solid #f59e0b' }}>
+        <div
+          onClick={() => setShowDevStatus(!showDevStatus)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            cursor: 'pointer',
+            padding: '0.5rem 0',
+          }}
+        >
+          <ClipboardList size={24} style={{ color: '#f59e0b' }} />
+          <h2 style={{ margin: 0, color: '#fbbf24', flex: 1, fontSize: '1.1rem' }}>
+            מצב פיתוח - מה נשאר להכין (מהאפיון של אליצח ועידו)
+          </h2>
+          <div style={{
+            display: 'flex',
+            gap: '1rem',
+            alignItems: 'center',
+            color: 'var(--gray-400)',
+            fontSize: '0.85rem',
+          }}>
+            <span style={{ color: '#22c55e' }}>{DEV_STATUS.summary.complete} מלאים</span>
+            <span style={{ color: '#f59e0b' }}>{DEV_STATUS.summary.partial} חלקיים</span>
+            <span style={{ color: '#ef4444' }}>{DEV_STATUS.summary.missing} חסרים</span>
+            {showDevStatus ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </div>
+        </div>
+
+        {showDevStatus && (
+          <div style={{ marginTop: '1rem' }}>
+            {/* High Priority */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <h3 style={{ color: '#ef4444', margin: '0 0 0.75rem', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <AlertTriangle size={16} /> עדיפות גבוהה - חסר לגמרי
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.5rem' }}>
+                {DEV_STATUS.highPriority.map(item => (
+                  <div key={item.id} style={{
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    borderRadius: '8px',
+                    padding: '0.75rem',
+                  }}>
+                    <div style={{ fontWeight: 600, color: '#fca5a5' }}>{item.id}: {item.name}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--gray-400)', marginTop: '0.25rem' }}>{item.note}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Medium Priority */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <h3 style={{ color: '#f59e0b', margin: '0 0 0.75rem', fontSize: '0.95rem' }}>
+                עדיפות בינונית - חסר
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.5rem' }}>
+                {DEV_STATUS.mediumPriority.map(item => (
+                  <div key={item.id} style={{
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    borderRadius: '8px',
+                    padding: '0.75rem',
+                  }}>
+                    <div style={{ fontWeight: 600, color: '#fcd34d' }}>{item.id}: {item.name}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--gray-400)', marginTop: '0.25rem' }}>{item.note}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Partial Implementation */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <h3 style={{ color: '#3b82f6', margin: '0 0 0.75rem', fontSize: '0.95rem' }}>
+                מימוש חלקי - צריך השלמה
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '0.5rem' }}>
+                {DEV_STATUS.partial.map(item => (
+                  <div key={item.id} style={{
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    borderRadius: '8px',
+                    padding: '0.75rem',
+                  }}>
+                    <div style={{ fontWeight: 600, color: '#93c5fd' }}>{item.id}: {item.name}</div>
+                    <div style={{ fontSize: '0.8rem', marginTop: '0.5rem', display: 'flex', gap: '1rem' }}>
+                      <span style={{ color: '#22c55e' }}>✓ {item.done}</span>
+                      <span style={{ color: '#f87171' }}>✗ {item.missing}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Missing DB Tables */}
+            <div>
+              <h3 style={{ color: '#a78bfa', margin: '0 0 0.75rem', fontSize: '0.95rem' }}>
+                טבלאות DB חסרות
+              </h3>
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '0.5rem',
+              }}>
+                {DEV_STATUS.missingTables.map((table, i) => (
+                  <span key={i} style={{
+                    background: 'rgba(167, 139, 250, 0.15)',
+                    border: '1px solid rgba(167, 139, 250, 0.3)',
+                    borderRadius: '6px',
+                    padding: '0.4rem 0.75rem',
+                    fontSize: '0.8rem',
+                    color: '#c4b5fd',
+                  }}>
+                    {table}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Feedback Stats */}
       <div className="grid grid-4" style={{ marginBottom: '1.5rem' }}>
         <div className="stat-card">
           <div className="stat-value" style={{ color: 'var(--primary)' }}>{messages.length}</div>
