@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MessageSquare, Clock, CheckCircle, AlertCircle, Trash2, RefreshCw, Filter, ArrowUpCircle } from 'lucide-react';
+import { MessageSquare, Clock, CheckCircle, Trash2, RefreshCw, Filter, ArrowUpCircle } from 'lucide-react';
 import { API_CONFIG } from '../api/config';
 import { Loading } from '../components/Loading';
 

@@ -1789,7 +1789,7 @@ export const api = {
     // Module 2.6: השוואה לפרופיל חברה + פרשנות כפולה (Module 2.5)
     // ==========================================================
     analyzeGateWithAI: async (
-      tenderId: string,
+      _tenderId: string,
       conditionId: string,
       conditionText: string,
       orgId: string,
@@ -1884,7 +1884,7 @@ export const api = {
           const requiredProjects = projectMatch ? parseInt(projectMatch[1]) : 1;
 
           const relevantProjects = companyProfile.projects.filter(p => {
-            const projectValue = p.contract_value || 0;
+            const projectValue = p.total_value || 0;
             return projectValue > 0;
           });
 
@@ -1932,16 +1932,16 @@ export const api = {
           const requiredCert = isoMatch ? `ISO ${isoMatch[1]}` : '';
 
           const matchingCert = companyProfile.certifications.find(c =>
-            requiredCert && c.certification_name?.toUpperCase().includes(requiredCert.toUpperCase())
+            requiredCert && c.cert_name?.toUpperCase().includes(requiredCert.toUpperCase())
           );
 
           if (matchingCert) {
             status = 'MEETS';
-            evidence = `נמצאה הסמכה: ${matchingCert.certification_name}, תוקף עד: ${matchingCert.valid_until || 'לא ידוע'}`;
+            evidence = `נמצאה הסמכה: ${matchingCert.cert_name}, תוקף עד: ${matchingCert.valid_until || 'לא ידוע'}`;
             aiConfidence = 0.95;
           } else if (companyProfile.certifications.length > 0) {
             status = 'PARTIALLY_MEETS';
-            evidence = `קיימות הסמכות: ${companyProfile.certifications.map(c => c.certification_name).join(', ')}`;
+            evidence = `קיימות הסמכות: ${companyProfile.certifications.map(c => c.cert_name).join(', ')}`;
             gapDescription = `לא נמצאה הסמכה ספציפית: ${requiredCert || 'ההסמכה הנדרשת'}`;
             aiConfidence = 0.6;
           } else {
@@ -2017,9 +2017,6 @@ export const api = {
           evidence: result.evidence || '',
           gap_description: result.gap_description,
           interpretation: result.interpretation,
-          gap_closure: result.gap_closure,
-          clarification_questions: result.clarification_questions,
-          risk_assessment: result.risk_assessment,
           ai_confidence: result.ai_confidence || 0,
           ai_summary: result.ai_summary,
         };
