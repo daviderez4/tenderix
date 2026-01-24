@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FileText, Zap } from 'lucide-react';
+import { Plus, FileText, Zap, MessageSquare } from 'lucide-react';
 import { api, toggleTenderFavorite, deleteTender } from '../api/tenderix';
 import type { Tender } from '../api/tenderix';
 import { Loading } from '../components/Loading';
@@ -211,34 +211,67 @@ export function Dashboard() {
             ניהול מכרזים ומעקב התקדמות
           </p>
         </div>
-        <button
-          onClick={() => navigate('/new')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.75rem 1.5rem',
-            borderRadius: '8px',
-            border: 'none',
-            background: THEME.accentGradient,
-            color: 'white',
-            fontSize: '0.95rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-          }}
-          onMouseOver={e => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 180, 216, 0.3)';
-          }}
-          onMouseOut={e => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = 'none';
-          }}
-        >
-          <Plus size={18} />
-          מכרז חדש
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button
+            onClick={() => navigate('/feedback-admin')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.75rem 1.25rem',
+              borderRadius: '8px',
+              border: `2px solid ${THEME.cardBorder}`,
+              background: THEME.cardBg,
+              color: THEME.headerText,
+              fontSize: '0.95rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseOver={e => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.borderColor = THEME.accentPrimary;
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 180, 216, 0.2)';
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.borderColor = THEME.cardBorder;
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+            title="הודעות וצ'אט"
+          >
+            <MessageSquare size={18} />
+            הודעות
+          </button>
+          <button
+            onClick={() => navigate('/new')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '8px',
+              border: 'none',
+              background: THEME.accentGradient,
+              color: 'white',
+              fontSize: '0.95rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseOver={e => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 180, 216, 0.3)';
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <Plus size={18} />
+            מכרז חדש
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
