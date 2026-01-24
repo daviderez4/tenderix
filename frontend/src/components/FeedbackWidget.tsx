@@ -12,6 +12,9 @@ interface FeedbackMessage {
   priority: 'low' | 'medium' | 'high' | 'critical';
 }
 
+// Quick select authors - these are the team members
+const TEAM_MEMBERS = ['עידו', 'אליצח', 'דוד'] as const;
+
 export function FeedbackWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [authorName, setAuthorName] = useState('');
@@ -52,6 +55,11 @@ export function FeedbackWidget() {
     }
   }
 
+  function selectAuthor(name: string) {
+    setAuthorName(name);
+    localStorage.setItem('feedback_author_name', name);
+  }
+
   async function submitFeedback() {
     if (!message.trim() || !authorName.trim()) return;
 
@@ -90,7 +98,6 @@ export function FeedbackWidget() {
           setIsOpen(false);
         }, 2000);
       } else {
-        // Table might not exist, try to create it
         console.error('Failed to submit feedback:', await res.text());
         alert('שגיאה בשליחת המשוב. נסה שוב.');
       }
@@ -187,33 +194,88 @@ export function FeedbackWidget() {
             <div style={{
               padding: '2rem',
               textAlign: 'center',
-              color: 'var(--success)',
+              color: '#22c55e',
             }}>
               <CheckCircle size={48} style={{ marginBottom: '0.5rem' }} />
               <p style={{ margin: 0, fontWeight: 600 }}>ההודעה נשלחה בהצלחה!</p>
             </div>
           ) : (
             <div style={{ padding: '1rem' }}>
-              {/* Author Name */}
+              {/* Author Name with Quick Select */}
               <div style={{ marginBottom: '0.75rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', color: 'var(--gray-400)' }}>
-                  השם שלך
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--gray-400)' }}>
+                  מי אתה? (לחץ לבחירה מהירה)
                 </label>
-                <input
-                  type="text"
-                  value={authorName}
-                  onChange={e => setAuthorName(e.target.value)}
-                  placeholder="עידו / אליצח / דוד..."
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem 0.75rem',
-                    borderRadius: '6px',
-                    border: '1px solid var(--gray-700)',
-                    background: 'var(--gray-800)',
-                    color: 'white',
-                    fontSize: '0.95rem',
-                  }}
-                />
+
+                {/* Quick Select Buttons */}
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  {TEAM_MEMBERS.map(name => (
+                    <button
+                      key={name}
+                      onClick={() => selectAuthor(name)}
+                      style={{
+                        flex: 1,
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: '8px',
+                        border: authorName === name ? '2px solid #7c3aed' : '1px solid var(--gray-600)',
+                        background: authorName === name ? 'linear-gradient(135deg, #7c3aed, #6d28d9)' : 'var(--gray-800)',
+                        color: authorName === name ? 'white' : 'var(--gray-300)',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem',
+                        fontWeight: authorName === name ? 600 : 500,
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom Name Input (collapsed if team member selected) */}
+                {!TEAM_MEMBERS.includes(authorName as typeof TEAM_MEMBERS[number]) && (
+                  <input
+                    type="text"
+                    value={authorName}
+                    onChange={e => setAuthorName(e.target.value)}
+                    placeholder="או הקלד שם אחר..."
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem 0.75rem',
+                      borderRadius: '6px',
+                      border: '1px solid var(--gray-700)',
+                      background: 'var(--gray-800)',
+                      color: 'white',
+                      fontSize: '0.9rem',
+                    }}
+                  />
+                )}
+
+                {/* Show selected name or option to change */}
+                {TEAM_MEMBERS.includes(authorName as typeof TEAM_MEMBERS[number]) && (
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginTop: '0.25rem',
+                  }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--gray-500)' }}>
+                      ✓ נבחר: {authorName}
+                    </span>
+                    <button
+                      onClick={() => setAuthorName('')}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--gray-500)',
+                        cursor: 'pointer',
+                        fontSize: '0.75rem',
+                        textDecoration: 'underline',
+                      }}
+                    >
+                      שם אחר
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Priority */}
