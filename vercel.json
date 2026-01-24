@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "name": "tenderix",
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
+  "framework": "vite",
+  "installCommand": "cd frontend && npm install",
+  "rewrites": [
+    {
+      "source": "/docs/:path*",
+      "destination": "/docs/:path*"
+    },
+    {
+      "source": "/((?!docs/).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
