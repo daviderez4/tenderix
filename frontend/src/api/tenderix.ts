@@ -1968,7 +1968,7 @@ export const api = {
           ? `❌ לא עומד. ${gapDescription}`
           : `❓ נדרש בירור נוסף`;
 
-        // Save to database
+        // Save to database - only fields that exist in the table
         try {
           await fetch(`${API_CONFIG.SUPABASE_URL}/rest/v1/gate_conditions?id=eq.${conditionId}`, {
             method: 'PATCH',
@@ -1982,12 +1982,9 @@ export const api = {
               status,
               evidence,
               gap_description: gapDescription,
-              legal_classification: legalClassification,
-              legal_reasoning: legalReasoning,
               ai_confidence: aiConfidence,
               ai_summary: aiSummary,
-              ai_analyzed_at: new Date().toISOString(),
-              requirement_type: requirementType
+              ai_analyzed_at: new Date().toISOString()
             })
           });
         } catch (saveError) {
