@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { CheckSquare, RefreshCw, FileQuestion, Lightbulb, FileCheck, AlertCircle, FileText, Zap, RotateCcw, ListOrdered, DollarSign, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { CheckSquare, RefreshCw, FileQuestion, Lightbulb, FileCheck, AlertCircle, FileText, Zap, RotateCcw, ListOrdered, DollarSign, Sparkles, ChevronDown, ChevronUp, X, CheckCircle, AlertTriangle, Info } from 'lucide-react';
 import { api } from '../api/tenderix';
 import type { GateCondition, Tender } from '../api/tenderix';
 import { getCurrentTenderId, getCurrentOrgId, getTenderExtractedText } from '../api/config';
@@ -7,6 +7,15 @@ import { Loading } from '../components/Loading';
 import { StatusBadge } from '../components/StatusBadge';
 
 type TabType = 'conditions' | 'clarifications' | 'strategic' | 'documents' | 'reanalysis' | 'priorities' | 'pricing';
+
+// Toast notification type
+type ToastType = 'success' | 'error' | 'warning' | 'info';
+interface Toast {
+  id: string;
+  type: ToastType;
+  message: string;
+  details?: string;
+}
 
 export function GatesPage() {
   const [tender, setTender] = useState<Tender | null>(null);
@@ -23,6 +32,21 @@ export function GatesPage() {
   const [expandedGates, setExpandedGates] = useState<Set<string>>(new Set());
   const [analyzingAllGates, setAnalyzingAllGates] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState({ current: 0, total: 0 });
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  // Toast management
+  const addToast = useCallback((type: ToastType, message: string, details?: string) => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { id, type, message, details }]);
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 5000);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -154,10 +178,11 @@ export function GatesPage() {
     const unanalyzedGates = gates.filter(g => !g.status || g.status === 'UNKNOWN');
 
     if (unanalyzedGates.length === 0) {
-      alert('כל התנאים כבר נותחו');
+      addToast('info', 'כל התנאים כבר נותחו', 'אין תנאים נוספים לניתוח');
       return;
     }
 
+    addToast('info', `מתחיל ניתוח של ${unanalyzedGates.length} תנאי סף...`, 'הניתוח עשוי לקחת מספר שניות');
     setAnalyzingAllGates(true);
     setAnalysisProgress({ current: 0, total: unanalyzedGates.length });
 
@@ -171,6 +196,7 @@ export function GatesPage() {
       ]);
       const preloadedProfile = { projects, financials, certifications };
       console.log('Profile loaded, starting parallel analysis...');
+      addToast('success', 'פרופיל חברה נטען בהצלחה', `${projects.length} פרויקטים, ${certifications.length} הסמכות`);
 
       // Process in batches of 3 for parallel execution
       const BATCH_SIZE = 3;
@@ -227,6 +253,19 @@ export function GatesPage() {
           await new Promise(resolve => setTimeout(resolve, 200));
         }
       }
+
+      // Summary of analysis results
+      const updatedGates = gates.filter(g => g.status && g.status !== 'UNKNOWN');
+      const meetsCount = updatedGates.filter(g => g.status === 'MEETS').length;
+      const partialCount = updatedGates.filter(g => g.status === 'PARTIALLY_MEETS').length;
+      const failsCount = updatedGates.filter(g => g.status === 'DOES_NOT_MEET').length;
+
+      addToast('success', `הניתוח הושלם! נותחו ${unanalyzedGates.length} תנאים`,
+        `✅ עומד: ${meetsCount} | ⚠️ חלקי: ${partialCount} | ❌ לא עומד: ${failsCount}`);
+
+    } catch (error) {
+      console.error('Error in analyzeAllGates:', error);
+      addToast('error', 'שגיאה בניתוח תנאי הסף', 'נסה שוב מאוחר יותר');
     } finally {
       setAnalyzingAllGates(false);
       setAnalysisProgress({ current: 0, total: 0 });
@@ -821,6 +860,85 @@ export function GatesPage() {
           )}
         </div>
       )}
+
+      {/* Toast Notifications */}
+      <div style={{
+        position: 'fixed',
+        bottom: '1rem',
+        left: '1rem',
+        zIndex: 1000,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.5rem',
+        maxWidth: '400px'
+      }}>
+        {toasts.map(toast => (
+          <div
+            key={toast.id}
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '0.75rem',
+              padding: '1rem',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              animation: 'slideIn 0.3s ease-out',
+              background: toast.type === 'success' ? 'linear-gradient(135deg, #059669, #047857)' :
+                          toast.type === 'error' ? 'linear-gradient(135deg, #dc2626, #b91c1c)' :
+                          toast.type === 'warning' ? 'linear-gradient(135deg, #d97706, #b45309)' :
+                          'linear-gradient(135deg, #7c3aed, #6d28d9)',
+              color: 'white'
+            }}
+          >
+            <div style={{ flexShrink: 0, marginTop: '2px' }}>
+              {toast.type === 'success' && <CheckCircle size={20} />}
+              {toast.type === 'error' && <AlertCircle size={20} />}
+              {toast.type === 'warning' && <AlertTriangle size={20} />}
+              {toast.type === 'info' && <Info size={20} />}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, marginBottom: toast.details ? '0.25rem' : 0 }}>
+                {toast.message}
+              </div>
+              {toast.details && (
+                <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>
+                  {toast.details}
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => removeToast(toast.id)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'white',
+                cursor: 'pointer',
+                padding: '0.25rem',
+                opacity: 0.7,
+                transition: 'opacity 0.2s'
+              }}
+              onMouseOver={e => (e.currentTarget.style.opacity = '1')}
+              onMouseOut={e => (e.currentTarget.style.opacity = '0.7')}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Animation keyframes */}
+      <style>{`
+        @keyframes slideIn {
+          from {
+            transform: translateX(-100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 }
