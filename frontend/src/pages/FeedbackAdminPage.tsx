@@ -3,43 +3,76 @@ import { MessageSquare, Clock, CheckCircle, Trash2, RefreshCw, Filter, ArrowUpCi
 import { API_CONFIG } from '../api/config';
 import { Loading } from '../components/Loading';
 
-// Development Status Data from spec
+// Development Status Data - Updated based on actual implementation review
+// Total modules from spec v3: 31 (4 core + 7 P1 + 11 P2 + 6 P3 + 4 P4)
 const DEV_STATUS = {
   summary: {
     total: 31,
-    complete: 14,
-    partial: 8,
-    missing: 9,
+    complete: 16,  // Actually working with workflows
+    partial: 7,    // Has basic implementation
+    missing: 8,    // Not implemented
   },
-  highPriority: [
-    { id: '1.3', name: 'נרמול טקסט עברי', note: 'חשוב לדיוק' },
-    { id: '1.4', name: 'חילוץ סעיף הגדרות', note: '"מילון המכרז"' },
-    { id: '2.3', name: 'ישות נושאת דרישה', note: 'מי צריך לעמוד בתנאי' },
-    { id: '2.4', name: 'פרשנות "דומה"', note: 'מילון טכני' },
-    { id: '2.6.5', name: 'אופטימיזציה תנאי סף vs ניקוד', note: 'עידו' },
+  // עקרונות ליבה - Core Principles
+  corePrinciples: [
+    { id: 'C1', name: 'עקיבות מלאה (Traceability)', status: 'partial', note: 'יש שדות source_page, source_quote - אבל לא תמיד מלא' },
+    { id: 'C2', name: 'מילון טכני לפי קטגוריה', status: 'missing', note: 'עידו - פרשנות לפי יכולות' },
+    { id: 'C3', name: 'לוגיקת הצטברות נכונה', status: 'partial', note: 'בסיסי - צריך בדיקות כפילויות' },
+    { id: 'C4', name: 'מסלולי סגירת פערים', status: 'complete', note: 'closure_options בתנאי סף' },
   ],
-  mediumPriority: [
-    { id: '2.5', name: 'פרשנות כפולה', note: 'HEAD משפטי + טכני' },
-    { id: '2.7.6', name: 'ניתוח שאלות אחרים', note: 'אליצח' },
-    { id: '3.4.5', name: 'השוואה למכרזים דומים', note: 'אליצח' },
-    { id: '3.5', name: 'סיכוני תמחור', note: 'אינטגרציה ERP' },
+  // P1 - קליטת מכרז
+  p1Modules: [
+    { id: '1.1', name: 'העלאה וזיהוי מסמכים', status: 'partial', done: 'העלאה ידנית, Google Drive', missing: 'זיהוי אוטומטי סוג מסמך' },
+    { id: '1.1.5', name: 'ניהול גרסאות מסמכים', status: 'complete', note: 'עידו - tdx-versions workflow', badge: 'new' },
+    { id: '1.2', name: 'חילוץ מטא-דאטה', status: 'partial', done: 'שדות ידניים בטופס', missing: 'חילוץ אוטומטי מ-PDF' },
+    { id: '1.3', name: 'נרמול טקסט עברי', status: 'missing', note: 'חשוב לדיוק - לא קיים' },
+    { id: '1.4', name: 'חילוץ סעיף הגדרות', status: 'missing', note: '"מילון המכרז" - לא קיים' },
+    { id: '1.5', name: 'זיהוי קטגוריית מכרז', status: 'partial', done: 'בחירה ידנית', missing: 'זיהוי אוטומטי' },
+    { id: '1.6', name: 'ניתוח מכרז קודם', status: 'complete', note: 'אליצח - tdx-previous-tender', badge: 'new' },
   ],
-  partial: [
-    { id: '1.1', name: 'העלאה וזיהוי מסמכים', done: 'העלאת קבצים', missing: 'זיהוי אוטומטי של סוג מסמך' },
-    { id: '1.2', name: 'חילוץ מטא-דאטה', done: 'שדות בסיסיים', missing: 'חילוץ אוטומטי מ-PDF' },
-    { id: '2.0', name: 'פרופיל חברה', done: 'כל השדות', missing: 'פרויקטים משיקים (אליצח)' },
-    { id: '2.2', name: 'פירוק כימותי', done: 'בסיסי', missing: 'הגדרת "בוצע" (עידו)' },
-    { id: '2.9', name: 'הערכה והמלצה', done: 'סיכום', missing: 'ציטוטים מדויקים' },
-    { id: '3.3', name: 'היקף העבודה', done: 'בסיסי', missing: 'WBS מפורט' },
-    { id: '3.4', name: 'חריגים ואי-התאמות', done: 'בסיסי', missing: '"חריגים = הזדמנות" (עידו)' },
+  // P2 - ניתוח תנאי סף
+  p2Modules: [
+    { id: '2.0', name: 'פרופיל חברה', status: 'partial', done: 'כל השדות הבסיסיים', missing: 'פרויקטים משיקים (אליצח)' },
+    { id: '2.1', name: 'חילוץ וסיווג תנאי סף', status: 'complete', note: 'tdx-extract-gates-v2, professional-gates' },
+    { id: '2.2', name: 'פירוק כימותי', status: 'partial', done: 'שדות בסיסיים', missing: 'הגדרת "בוצע" (עידו)' },
+    { id: '2.3', name: 'ישות נושאת דרישה', status: 'partial', done: 'שדות bearer_entity', missing: 'ניתוח מלא' },
+    { id: '2.4', name: 'פרשנות "דומה"', status: 'missing', note: 'מילון טכני לא קיים' },
+    { id: '2.5', name: 'פרשנות כפולה (משפטי+טכני)', status: 'missing', note: 'HEAD כפול לא קיים' },
+    { id: '2.6', name: 'השוואה לפרופיל חברה', status: 'complete', note: 'tdx-gate-work workflow' },
+    { id: '2.6.5', name: 'אופטימיזציה תנאי סף vs ניקוד', status: 'missing', note: 'עידו - מינימום לסף, מקסימום לניקוד', badge: 'new' },
+    { id: '2.7', name: 'בקשות הבהרה', status: 'complete', note: 'tdx-clarify-simple workflow' },
+    { id: '2.7.5', name: 'שאלות אסטרטגיות', status: 'complete', note: 'אליצח - tdx-strategic-v3', badge: 'new' },
+    { id: '2.7.6', name: 'ניתוח שאלות אחרים', status: 'missing', note: 'אליצח - מי שאל ולמה', badge: 'new' },
+    { id: '2.8', name: 'רשימת מסמכים נדרשים', status: 'complete', note: 'tdx-required-docs workflow' },
+    { id: '2.9', name: 'הערכה והמלצה', status: 'partial', done: 'סיכום AI', missing: 'ציטוטים מדויקים' },
+    { id: '2.10', name: 'ניתוח מחדש אחרי הבהרות', status: 'complete', note: 'עידו - tdx-reanalysis', badge: 'new' },
   ],
+  // P3 - מפרט ו-BOQ
+  p3Modules: [
+    { id: '3.1', name: 'ניתוח מפרט טכני', status: 'complete', note: 'tdx-sow-analysis workflow' },
+    { id: '3.2', name: 'ניתוח BOQ', status: 'complete', note: 'tdx-boq-analysis workflow' },
+    { id: '3.3', name: 'היקף העבודה', status: 'partial', done: 'בסיסי', missing: 'WBS מפורט' },
+    { id: '3.4', name: 'חריגים ואי-התאמות', status: 'partial', done: 'זיהוי בסיסי', missing: '"חריגים = הזדמנות" (עידו)' },
+    { id: '3.4.5', name: 'השוואה למכרזים דומים', status: 'missing', note: 'אליצח - סעיף סעיף', badge: 'new' },
+    { id: '3.5', name: 'סיכוני תמחור והמלצות', status: 'partial', done: 'בסיסי', missing: 'אינטגרציה ERP' },
+  ],
+  // P4 - ניתוח מתחרים
+  p4Modules: [
+    { id: '4.1', name: 'היסטוריית הצעות', status: 'complete', note: 'tdx-historical-bids', badge: 'new' },
+    { id: '4.2', name: 'מיפוי מתחרים', status: 'complete', note: 'tdx-competitor-mapping workflow' },
+    { id: '4.3', name: 'ניתוח תמחור מתחרים', status: 'complete', note: 'tdx-pricing-intel workflow' },
+    { id: '4.4', name: 'מודיעין תחרותי', status: 'complete', note: 'tdx-competitive-intel workflow' },
+  ],
+  // Output
+  outputModules: [
+    { id: '5.0', name: 'דוח GO/NO-GO', status: 'complete', note: 'tdx-final-decision workflow' },
+  ],
+  // Missing DB Tables
   missingTables: [
-    'certifications - הסמכות ורישיונות',
-    'key_personnel - אנשי מפתח',
-    'historical_bids - היסטוריית הצעות',
-    'tender_versions - גרסאות מסמכים',
-    'strategic_questions - שאלות אסטרטגיות',
-    'tender_analysis - תוצאות ניתוח',
+    { name: 'key_personnel', desc: 'אנשי מפתח' },
+    { name: 'tender_versions', desc: 'גרסאות מסמכים' },
+    { name: 'strategic_questions', desc: 'שאלות אסטרטגיות' },
+    { name: 'tender_analysis', desc: 'תוצאות ניתוח' },
+    { name: 'technical_dictionary', desc: 'מילון טכני לפי קטגוריה' },
   ],
 };
 
@@ -278,8 +311,15 @@ ${m.message}
         </p>
       </div>
 
-      {/* Development Status Section */}
-      <div className="card" style={{ marginBottom: '1.5rem', border: '2px solid #f59e0b' }}>
+      {/* Development Status Section - Light Theme */}
+      <div style={{
+        marginBottom: '1.5rem',
+        background: '#ffffff',
+        borderRadius: '12px',
+        border: '2px solid #00b4d8',
+        boxShadow: '0 2px 8px rgba(0, 180, 216, 0.1)',
+        padding: '1.25rem',
+      }}>
         <div
           onClick={() => setShowDevStatus(!showDevStatus)}
           style={{
@@ -287,87 +327,212 @@ ${m.message}
             alignItems: 'center',
             gap: '0.75rem',
             cursor: 'pointer',
-            padding: '0.5rem 0',
           }}
         >
-          <ClipboardList size={24} style={{ color: '#f59e0b' }} />
-          <h2 style={{ margin: 0, color: '#fbbf24', flex: 1, fontSize: '1.1rem' }}>
-            מצב פיתוח - מה נשאר להכין (מהאפיון של אליצח ועידו)
+          <ClipboardList size={24} style={{ color: '#0077b6' }} />
+          <h2 style={{ margin: 0, color: '#1e3a4c', flex: 1, fontSize: '1.1rem', fontWeight: 600 }}>
+            מצב פיתוח - אפיון v3.0 (אליצח ועידו)
           </h2>
           <div style={{
             display: 'flex',
             gap: '1rem',
             alignItems: 'center',
-            color: 'var(--gray-400)',
             fontSize: '0.85rem',
           }}>
-            <span style={{ color: '#22c55e' }}>{DEV_STATUS.summary.complete} מלאים</span>
-            <span style={{ color: '#f59e0b' }}>{DEV_STATUS.summary.partial} חלקיים</span>
-            <span style={{ color: '#ef4444' }}>{DEV_STATUS.summary.missing} חסרים</span>
-            {showDevStatus ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            <span style={{ color: '#059669', fontWeight: 600 }}>✓ {DEV_STATUS.summary.complete} מלאים</span>
+            <span style={{ color: '#d97706', fontWeight: 600 }}>◐ {DEV_STATUS.summary.partial} חלקיים</span>
+            <span style={{ color: '#dc2626', fontWeight: 600 }}>✗ {DEV_STATUS.summary.missing} חסרים</span>
+            {showDevStatus ? <ChevronUp size={20} color="#5a7d8a" /> : <ChevronDown size={20} color="#5a7d8a" />}
           </div>
         </div>
 
         {showDevStatus && (
-          <div style={{ marginTop: '1rem' }}>
-            {/* High Priority */}
-            <div style={{ marginBottom: '1.25rem' }}>
-              <h3 style={{ color: '#ef4444', margin: '0 0 0.75rem', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <AlertTriangle size={16} /> עדיפות גבוהה - חסר לגמרי
-              </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.5rem' }}>
-                {DEV_STATUS.highPriority.map(item => (
-                  <div key={item.id} style={{
-                    background: 'rgba(239, 68, 68, 0.1)',
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                    borderRadius: '8px',
-                    padding: '0.75rem',
-                  }}>
-                    <div style={{ fontWeight: 600, color: '#fca5a5' }}>{item.id}: {item.name}</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--gray-400)', marginTop: '0.25rem' }}>{item.note}</div>
-                  </div>
-                ))}
+          <div style={{ marginTop: '1.25rem' }}>
+            {/* Progress Bar */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', height: '12px', borderRadius: '6px', overflow: 'hidden', background: '#f1f5f9' }}>
+                <div style={{ width: `${(DEV_STATUS.summary.complete / DEV_STATUS.summary.total) * 100}%`, background: 'linear-gradient(90deg, #10b981, #059669)' }} />
+                <div style={{ width: `${(DEV_STATUS.summary.partial / DEV_STATUS.summary.total) * 100}%`, background: 'linear-gradient(90deg, #fbbf24, #f59e0b)' }} />
+                <div style={{ width: `${(DEV_STATUS.summary.missing / DEV_STATUS.summary.total) * 100}%`, background: 'linear-gradient(90deg, #f87171, #ef4444)' }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '0.75rem', color: '#64748b' }}>
+                <span>{Math.round((DEV_STATUS.summary.complete / DEV_STATUS.summary.total) * 100)}% הושלם</span>
+                <span>{DEV_STATUS.summary.total} מודולים באפיון</span>
               </div>
             </div>
 
-            {/* Medium Priority */}
+            {/* Core Principles */}
             <div style={{ marginBottom: '1.25rem' }}>
-              <h3 style={{ color: '#f59e0b', margin: '0 0 0.75rem', fontSize: '0.95rem' }}>
-                עדיפות בינונית - חסר
+              <h3 style={{ color: '#7c3aed', margin: '0 0 0.75rem', fontSize: '0.9rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                ⚙️ עקרונות ליבה רוחביים
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.5rem' }}>
-                {DEV_STATUS.mediumPriority.map(item => (
+                {DEV_STATUS.corePrinciples.map(item => (
                   <div key={item.id} style={{
-                    background: 'rgba(245, 158, 11, 0.1)',
-                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    background: item.status === 'complete' ? '#f0fdf4' : item.status === 'partial' ? '#fefce8' : '#fef2f2',
+                    border: `1px solid ${item.status === 'complete' ? '#86efac' : item.status === 'partial' ? '#fde047' : '#fecaca'}`,
                     borderRadius: '8px',
                     padding: '0.75rem',
                   }}>
-                    <div style={{ fontWeight: 600, color: '#fcd34d' }}>{item.id}: {item.name}</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--gray-400)', marginTop: '0.25rem' }}>{item.note}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Partial Implementation */}
-            <div style={{ marginBottom: '1.25rem' }}>
-              <h3 style={{ color: '#3b82f6', margin: '0 0 0.75rem', fontSize: '0.95rem' }}>
-                מימוש חלקי - צריך השלמה
-              </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '0.5rem' }}>
-                {DEV_STATUS.partial.map(item => (
-                  <div key={item.id} style={{
-                    background: 'rgba(59, 130, 246, 0.1)',
-                    border: '1px solid rgba(59, 130, 246, 0.3)',
-                    borderRadius: '8px',
-                    padding: '0.75rem',
-                  }}>
-                    <div style={{ fontWeight: 600, color: '#93c5fd' }}>{item.id}: {item.name}</div>
-                    <div style={{ fontSize: '0.8rem', marginTop: '0.5rem', display: 'flex', gap: '1rem' }}>
-                      <span style={{ color: '#22c55e' }}>✓ {item.done}</span>
-                      <span style={{ color: '#f87171' }}>✗ {item.missing}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: '4px', background: item.status === 'complete' ? '#dcfce7' : item.status === 'partial' ? '#fef9c3' : '#fee2e2', color: item.status === 'complete' ? '#166534' : item.status === 'partial' ? '#a16207' : '#991b1b' }}>
+                        {item.status === 'complete' ? '✓' : item.status === 'partial' ? '◐' : '✗'}
+                      </span>
+                      <span style={{ fontWeight: 600, color: '#1e3a4c', fontSize: '0.9rem' }}>{item.id}: {item.name}</span>
                     </div>
+                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.35rem' }}>{item.note}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* P1 - Intake */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <h3 style={{ color: '#0891b2', margin: '0 0 0.75rem', fontSize: '0.9rem', fontWeight: 600 }}>
+                📥 P1: קליטת מכרז ({DEV_STATUS.p1Modules.filter(m => m.status === 'complete').length}/{DEV_STATUS.p1Modules.length})
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.5rem' }}>
+                {DEV_STATUS.p1Modules.map(item => (
+                  <div key={item.id} style={{
+                    background: item.status === 'complete' ? '#f0fdf4' : item.status === 'partial' ? '#fefce8' : '#fef2f2',
+                    border: `1px solid ${item.status === 'complete' ? '#86efac' : item.status === 'partial' ? '#fde047' : '#fecaca'}`,
+                    borderRadius: '8px',
+                    padding: '0.6rem 0.75rem',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.5rem',
+                  }}>
+                    <span style={{ fontSize: '0.7rem', padding: '2px 5px', borderRadius: '4px', background: item.status === 'complete' ? '#dcfce7' : item.status === 'partial' ? '#fef9c3' : '#fee2e2', color: item.status === 'complete' ? '#166534' : item.status === 'partial' ? '#a16207' : '#991b1b', flexShrink: 0 }}>
+                      {item.status === 'complete' ? '✓' : item.status === 'partial' ? '◐' : '✗'}
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 600, color: '#1e3a4c', fontSize: '0.85rem' }}>{item.id}: {item.name}</span>
+                        {'badge' in item && item.badge === 'new' && <span style={{ fontSize: '0.65rem', padding: '1px 4px', borderRadius: '3px', background: '#ec4899', color: 'white' }}>חדש</span>}
+                      </div>
+                      {'done' in item && item.done && <div style={{ fontSize: '0.75rem', color: '#059669', marginTop: '0.25rem' }}>✓ {item.done}</div>}
+                      {'missing' in item && item.missing && <div style={{ fontSize: '0.75rem', color: '#dc2626', marginTop: '0.15rem' }}>✗ {item.missing}</div>}
+                      {'note' in item && !('done' in item) && <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>{item.note}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* P2 - Gates */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <h3 style={{ color: '#7c3aed', margin: '0 0 0.75rem', fontSize: '0.9rem', fontWeight: 600 }}>
+                🔍 P2: ניתוח תנאי סף ({DEV_STATUS.p2Modules.filter(m => m.status === 'complete').length}/{DEV_STATUS.p2Modules.length})
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.5rem' }}>
+                {DEV_STATUS.p2Modules.map(item => (
+                  <div key={item.id} style={{
+                    background: item.status === 'complete' ? '#f0fdf4' : item.status === 'partial' ? '#fefce8' : '#fef2f2',
+                    border: `1px solid ${item.status === 'complete' ? '#86efac' : item.status === 'partial' ? '#fde047' : '#fecaca'}`,
+                    borderRadius: '8px',
+                    padding: '0.6rem 0.75rem',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.5rem',
+                  }}>
+                    <span style={{ fontSize: '0.7rem', padding: '2px 5px', borderRadius: '4px', background: item.status === 'complete' ? '#dcfce7' : item.status === 'partial' ? '#fef9c3' : '#fee2e2', color: item.status === 'complete' ? '#166534' : item.status === 'partial' ? '#a16207' : '#991b1b', flexShrink: 0 }}>
+                      {item.status === 'complete' ? '✓' : item.status === 'partial' ? '◐' : '✗'}
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 600, color: '#1e3a4c', fontSize: '0.85rem' }}>{item.id}: {item.name}</span>
+                        {'badge' in item && item.badge === 'new' && <span style={{ fontSize: '0.65rem', padding: '1px 4px', borderRadius: '3px', background: '#ec4899', color: 'white' }}>חדש</span>}
+                      </div>
+                      {'done' in item && item.done && <div style={{ fontSize: '0.75rem', color: '#059669', marginTop: '0.25rem' }}>✓ {item.done}</div>}
+                      {'missing' in item && item.missing && <div style={{ fontSize: '0.75rem', color: '#dc2626', marginTop: '0.15rem' }}>✗ {item.missing}</div>}
+                      {'note' in item && !('done' in item) && <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>{item.note}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* P3 - Specs */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <h3 style={{ color: '#059669', margin: '0 0 0.75rem', fontSize: '0.9rem', fontWeight: 600 }}>
+                📋 P3: מפרט ו-BOQ ({DEV_STATUS.p3Modules.filter(m => m.status === 'complete').length}/{DEV_STATUS.p3Modules.length})
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.5rem' }}>
+                {DEV_STATUS.p3Modules.map(item => (
+                  <div key={item.id} style={{
+                    background: item.status === 'complete' ? '#f0fdf4' : item.status === 'partial' ? '#fefce8' : '#fef2f2',
+                    border: `1px solid ${item.status === 'complete' ? '#86efac' : item.status === 'partial' ? '#fde047' : '#fecaca'}`,
+                    borderRadius: '8px',
+                    padding: '0.6rem 0.75rem',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.5rem',
+                  }}>
+                    <span style={{ fontSize: '0.7rem', padding: '2px 5px', borderRadius: '4px', background: item.status === 'complete' ? '#dcfce7' : item.status === 'partial' ? '#fef9c3' : '#fee2e2', color: item.status === 'complete' ? '#166534' : item.status === 'partial' ? '#a16207' : '#991b1b', flexShrink: 0 }}>
+                      {item.status === 'complete' ? '✓' : item.status === 'partial' ? '◐' : '✗'}
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 600, color: '#1e3a4c', fontSize: '0.85rem' }}>{item.id}: {item.name}</span>
+                        {'badge' in item && item.badge === 'new' && <span style={{ fontSize: '0.65rem', padding: '1px 4px', borderRadius: '3px', background: '#ec4899', color: 'white' }}>חדש</span>}
+                      </div>
+                      {'done' in item && item.done && <div style={{ fontSize: '0.75rem', color: '#059669', marginTop: '0.25rem' }}>✓ {item.done}</div>}
+                      {'missing' in item && item.missing && <div style={{ fontSize: '0.75rem', color: '#dc2626', marginTop: '0.15rem' }}>✗ {item.missing}</div>}
+                      {'note' in item && !('done' in item) && <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>{item.note}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* P4 - Competitors */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <h3 style={{ color: '#d97706', margin: '0 0 0.75rem', fontSize: '0.9rem', fontWeight: 600 }}>
+                🎯 P4: ניתוח מתחרים ({DEV_STATUS.p4Modules.filter(m => m.status === 'complete').length}/{DEV_STATUS.p4Modules.length}) ✓
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.5rem' }}>
+                {DEV_STATUS.p4Modules.map(item => (
+                  <div key={item.id} style={{
+                    background: '#f0fdf4',
+                    border: '1px solid #86efac',
+                    borderRadius: '8px',
+                    padding: '0.6rem 0.75rem',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.5rem',
+                  }}>
+                    <span style={{ fontSize: '0.7rem', padding: '2px 5px', borderRadius: '4px', background: '#dcfce7', color: '#166534', flexShrink: 0 }}>✓</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 600, color: '#1e3a4c', fontSize: '0.85rem' }}>{item.id}: {item.name}</span>
+                        {'badge' in item && item.badge === 'new' && <span style={{ fontSize: '0.65rem', padding: '1px 4px', borderRadius: '3px', background: '#ec4899', color: 'white' }}>חדש</span>}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>{item.note}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Output */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <h3 style={{ color: '#16a34a', margin: '0 0 0.75rem', fontSize: '0.9rem', fontWeight: 600 }}>
+                ✅ פלט: דוח החלטה ✓
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.5rem' }}>
+                {DEV_STATUS.outputModules.map(item => (
+                  <div key={item.id} style={{
+                    background: '#f0fdf4',
+                    border: '1px solid #86efac',
+                    borderRadius: '8px',
+                    padding: '0.6rem 0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}>
+                    <span style={{ fontSize: '0.7rem', padding: '2px 5px', borderRadius: '4px', background: '#dcfce7', color: '#166534' }}>✓</span>
+                    <span style={{ fontWeight: 600, color: '#1e3a4c', fontSize: '0.85rem' }}>{item.id}: {item.name}</span>
+                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>- {item.note}</span>
                   </div>
                 ))}
               </div>
@@ -375,24 +540,20 @@ ${m.message}
 
             {/* Missing DB Tables */}
             <div>
-              <h3 style={{ color: '#a78bfa', margin: '0 0 0.75rem', fontSize: '0.95rem' }}>
-                טבלאות DB חסרות
+              <h3 style={{ color: '#7c3aed', margin: '0 0 0.75rem', fontSize: '0.9rem', fontWeight: 600 }}>
+                🗄️ טבלאות DB חסרות ({DEV_STATUS.missingTables.length})
               </h3>
-              <div style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '0.5rem',
-              }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                 {DEV_STATUS.missingTables.map((table, i) => (
                   <span key={i} style={{
-                    background: 'rgba(167, 139, 250, 0.15)',
-                    border: '1px solid rgba(167, 139, 250, 0.3)',
+                    background: '#faf5ff',
+                    border: '1px solid #d8b4fe',
                     borderRadius: '6px',
                     padding: '0.4rem 0.75rem',
                     fontSize: '0.8rem',
-                    color: '#c4b5fd',
+                    color: '#6b21a8',
                   }}>
-                    {table}
+                    {table.name} - {table.desc}
                   </span>
                 ))}
               </div>
