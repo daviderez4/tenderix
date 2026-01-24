@@ -24,6 +24,8 @@ export interface Tender {
   status?: string;
   go_nogo_decision?: string;
   created_at?: string;
+  updated_at?: string;
+  is_favorite?: boolean;
 }
 
 export interface GateCondition {
@@ -4038,4 +4040,23 @@ export async function runFullAnalysis(tenderId: string, orgId: string, onProgres
   }
 
   return results;
+}
+
+// ==================== TENDER ACTIONS ====================
+
+export async function toggleTenderFavorite(tenderId: string, currentValue: boolean): Promise<Tender | undefined> {
+  return api.tenders.update(tenderId, {
+    is_favorite: !currentValue,
+    updated_at: new Date().toISOString()
+  });
+}
+
+export async function deleteTender(tenderId: string): Promise<void> {
+  // First delete related data (ignore errors if tables don't exist or are empty)
+  try {
+    await api.tenders.delete(tenderId);
+  } catch (error) {
+    console.error('Error deleting tender:', error);
+    throw error;
+  }
 }
