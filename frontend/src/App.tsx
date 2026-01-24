@@ -10,6 +10,8 @@ import { CompetitorsPage } from './pages/CompetitorsPage';
 import { DecisionPage } from './pages/DecisionPage';
 import { CompanyProfilePage } from './pages/CompanyProfilePage';
 import { TenderIntakePage } from './pages/TenderIntakePage';
+import { FeedbackWidget } from './components/FeedbackWidget';
+import { FeedbackAdminPage } from './pages/FeedbackAdminPage';
 import './index.css';
 
 // Check for OAuth token in URL hash and handle it immediately
@@ -70,8 +72,11 @@ function App() {
             <Route path="/competitors" element={<CompetitorsPage />} />
             <Route path="/decision" element={<DecisionPage />} />
             <Route path="/company" element={<CompanyProfilePage />} />
+            <Route path="/feedback-admin" element={<FeedbackAdminPage />} />
           </Routes>
         </main>
+        {/* Feedback Widget - visible on all pages */}
+        <FeedbackWidget />
       </div>
     </BrowserRouter>
   );
