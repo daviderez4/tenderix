@@ -10,6 +10,7 @@ import { CompetitorsPage } from './pages/CompetitorsPage';
 import { DecisionPage } from './pages/DecisionPage';
 import { CompanyProfilePage } from './pages/CompanyProfilePage';
 import { TenderIntakePage } from './pages/TenderIntakePage';
+import { SimpleIntakePage } from './pages/SimpleIntakePage';
 import { FeedbackWidget } from './components/FeedbackWidget';
 import { FeedbackAdminPage } from './pages/FeedbackAdminPage';
 import './index.css';
@@ -67,6 +68,7 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/new" element={<NewTenderPage />} />
             <Route path="/intake" element={<TenderIntakePage />} />
+            <Route path="/simple" element={<SimpleIntakePage />} />
             <Route path="/gates" element={<GatesPage />} />
             <Route path="/analysis" element={<AnalysisPage />} />
             <Route path="/competitors" element={<CompetitorsPage />} />

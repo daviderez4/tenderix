@@ -8,7 +8,8 @@ import {
   PlusCircle,
   LogOut,
   Upload,
-  Building2
+  Building2,
+  Sparkles
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -16,7 +17,7 @@ export function Sidebar() {
 
   const navItems = [
     { path: '/', icon: Home, label: 'דשבורד', pillar: null },
-    { path: '/new', icon: PlusCircle, label: 'מכרז חדש', pillar: null },
+    { path: '/simple', icon: Sparkles, label: 'חילוץ מהיר', pillar: 'NEW' },
     { path: '/intake', icon: Upload, label: 'קליטת מכרז', pillar: 'P1' },
     { path: '/gates', icon: CheckSquare, label: 'תנאי סף', pillar: 'P2' },
     { path: '/analysis', icon: BarChart3, label: 'מפרט ו-BOQ', pillar: 'P3' },
@@ -32,6 +33,7 @@ export function Sidebar() {
   }
 
   const pillarColors: Record<string, string> = {
+    'NEW': '#ec4899',
     'P1': '#00d4ff',
     'P2': '#7c3aed',
     'P3': '#10b981',
