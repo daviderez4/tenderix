@@ -305,10 +305,11 @@ export function SimpleIntakePage() {
       for (const condition of results.conditions) {
         await api.gates.create({
           tender_id: tender.id,
-          condition_number: condition.number,
-          condition_text: condition.text,
-          requirement_type: condition.type,
-          is_mandatory: condition.isMandatory,
+          condition_number: condition.number || '1',
+          condition_text: condition.text || 'תנאי סף',
+          condition_type: condition.type || 'OTHER', // Required field in DB
+          requirement_type: condition.type || 'OTHER',
+          is_mandatory: condition.isMandatory !== false,
           source_page: condition.sourcePage,
           source_section: condition.sourceSection,
           status: 'UNKNOWN',
