@@ -1,11 +1,11 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Sparkles, ArrowRight, Copy, Eye, EyeOff } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Sparkles, ArrowRight, Copy, Eye, EyeOff, FileCheck, Database, BarChart3 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 // @ts-ignore
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { api } from '../api/tenderix';
-import { setCurrentTender, getCurrentOrgId, getDefaultOrgData } from '../api/config';
+import { setCurrentTender, getCurrentOrgId, getDefaultOrgData, setTenderExtractedText } from '../api/config';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -174,6 +174,8 @@ export function SimpleIntakePage() {
   } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [savedTenderId, setSavedTenderId] = useState<string | null>(null);
+  const [currentFile, setCurrentFile] = useState<{ name: string; size: number; type: string } | null>(null);
+  const [currentStep, setCurrentStep] = useState<'upload' | 'extract' | 'save' | 'done'>('upload');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Extract text from PDF
@@ -229,6 +231,8 @@ export function SimpleIntakePage() {
       }
 
       setText(extractedText);
+      setCurrentFile({ name: file.name, size: file.size, type: file.type });
+      setCurrentStep('extract');
       setExtractionStatus(`נחלצו ${extractedText.length.toLocaleString()} תווים`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'שגיאה בקריאת הקובץ');
@@ -259,6 +263,7 @@ export function SimpleIntakePage() {
         conditions: result.conditions,
         metadata: result.metadata,
       });
+      setCurrentStep('save');
       setExtractionStatus(`נמצאו ${result.conditions.length} תנאי סף!`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'שגיאה בניתוח');
@@ -331,8 +336,28 @@ export function SimpleIntakePage() {
         });
       }
 
+      // Save document metadata
+      if (currentFile) {
+        await api.documents.create({
+          tender_id: tender.id,
+          file_name: currentFile.name,
+          file_type: currentFile.type.includes('pdf') ? 'PDF' : 'TXT',
+          storage_path: `local/${currentFile.name}`, // Reference to local file
+          doc_type: 'INVITATION', // Main tender document
+          file_size_bytes: currentFile.size,
+          version: 1,
+          is_original: true,
+          processed_text: text.substring(0, 50000), // Store first 50K chars of extracted text
+          processing_status: 'COMPLETED',
+        });
+      }
+
+      // Save extracted text for later analysis stages
+      setTenderExtractedText(tender.id, text);
+
       setCurrentTender(tender.id, results.metadata.tenderName || 'מכרז חדש');
       setSavedTenderId(tender.id);
+      setCurrentStep('done');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'שגיאה בשמירה');
     } finally {
@@ -382,6 +407,75 @@ export function SimpleIntakePage() {
           <p style={{ color: '#94a3b8', fontSize: '1.1rem' }}>
             העלה מסמך או הדבק טקסט - קבל תוצאות תוך שניות
           </p>
+        </div>
+
+        {/* Progress Steps */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          gap: '0.5rem',
+          marginBottom: '2rem',
+          direction: 'ltr',
+        }}>
+          {[
+            { key: 'upload', icon: Upload, label: 'העלאה' },
+            { key: 'extract', icon: Sparkles, label: 'חילוץ' },
+            { key: 'save', icon: Database, label: 'שמירה' },
+            { key: 'done', icon: BarChart3, label: 'ניתוח' },
+          ].map((step, index) => {
+            const stepOrder = ['upload', 'extract', 'save', 'done'];
+            const currentIndex = stepOrder.indexOf(currentStep);
+            const stepIndex = stepOrder.indexOf(step.key);
+            const isActive = stepIndex === currentIndex;
+            const isComplete = stepIndex < currentIndex;
+
+            return (
+              <div key={step.key} style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: isComplete ? 'linear-gradient(135deg, #22c55e, #16a34a)'
+                      : isActive ? 'linear-gradient(135deg, #7c3aed, #6d28d9)'
+                        : 'rgba(255,255,255,0.1)',
+                    border: isActive ? '2px solid #7c3aed' : 'none',
+                    transition: 'all 0.3s',
+                  }}>
+                    {isComplete ? (
+                      <CheckCircle size={20} style={{ color: 'white' }} />
+                    ) : (
+                      <step.icon size={20} style={{ color: isActive ? 'white' : '#64748b' }} />
+                    )}
+                  </div>
+                  <span style={{
+                    fontSize: '0.75rem',
+                    color: isActive ? '#7c3aed' : isComplete ? '#22c55e' : '#64748b',
+                    fontWeight: isActive ? 600 : 400,
+                  }}>
+                    {step.label}
+                  </span>
+                </div>
+                {index < 3 && (
+                  <div style={{
+                    width: '40px',
+                    height: '2px',
+                    background: isComplete || (isActive && index < currentIndex) ? '#22c55e' : 'rgba(255,255,255,0.1)',
+                    margin: '0 0.5rem',
+                    marginBottom: '1.5rem',
+                  }} />
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Input Section */}
@@ -733,7 +827,7 @@ export function SimpleIntakePage() {
                 {isSaving ? (
                   <>
                     <Loader2 size={22} className="spin" />
-                    שומר...
+                    שומר מכרז ותנאי סף...
                   </>
                 ) : (
                   <>
@@ -750,33 +844,80 @@ export function SimpleIntakePage() {
                 borderRadius: '12px',
                 borderRight: '4px solid #22c55e',
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
                   <CheckCircle size={24} style={{ color: '#22c55e' }} />
                   <span style={{ color: '#22c55e', fontWeight: 600, fontSize: '1.1rem' }}>
                     המכרז נשמר בהצלחה!
                   </span>
                 </div>
-                <button
-                  onClick={() => navigate('/gates')}
-                  style={{
-                    width: '100%',
-                    padding: '1rem',
-                    borderRadius: '12px',
-                    border: 'none',
-                    background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
-                    color: 'white',
-                    fontSize: '1rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.75rem',
-                  }}
-                >
-                  המשך לניתוח תנאי סף
-                  <ArrowRight size={20} />
-                </button>
+
+                {/* Saved info summary */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: '1rem',
+                  marginBottom: '1.5rem',
+                  padding: '1rem',
+                  background: 'rgba(255,255,255,0.05)',
+                  borderRadius: '8px',
+                }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <FileCheck size={20} style={{ color: '#22c55e', marginBottom: '0.25rem' }} />
+                    <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>מסמך</div>
+                    <div style={{ color: '#fff', fontSize: '0.85rem' }}>{currentFile?.name?.substring(0, 15)}...</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <Database size={20} style={{ color: '#7c3aed', marginBottom: '0.25rem' }} />
+                    <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>תנאי סף</div>
+                    <div style={{ color: '#fff', fontSize: '0.85rem' }}>{results?.conditions.length} נשמרו</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <BarChart3 size={20} style={{ color: '#00d4ff', marginBottom: '0.25rem' }} />
+                    <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>סטטוס</div>
+                    <div style={{ color: '#fff', fontSize: '0.85rem' }}>מוכן לניתוח</div>
+                  </div>
+                </div>
+
+                {/* Navigation options */}
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button
+                    onClick={() => navigate('/gates')}
+                    style={{
+                      flex: 2,
+                      padding: '1rem',
+                      borderRadius: '12px',
+                      border: 'none',
+                      background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                      color: 'white',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <BarChart3 size={20} />
+                    ניתוח תנאי סף
+                    <ArrowRight size={18} />
+                  </button>
+                  <button
+                    onClick={() => navigate('/')}
+                    style={{
+                      flex: 1,
+                      padding: '1rem',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      background: 'transparent',
+                      color: '#94a3b8',
+                      fontSize: '0.9rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    לדשבורד
+                  </button>
+                </div>
               </div>
             )}
           </div>
