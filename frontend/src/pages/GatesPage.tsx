@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { CheckSquare, RefreshCw, FileQuestion, Lightbulb, FileCheck, AlertCircle, FileText, Zap, RotateCcw, ListOrdered, DollarSign, Sparkles, ChevronDown, ChevronUp, X, CheckCircle, AlertTriangle, Info } from 'lucide-react';
+import { CheckSquare, RefreshCw, FileQuestion, Lightbulb, FileCheck, AlertCircle, FileText, Zap, RotateCcw, ListOrdered, DollarSign, Sparkles, ChevronDown, ChevronUp, X, CheckCircle, AlertTriangle, Info, ArrowLeft, Upload, BarChart3, Target } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { api } from '../api/tenderix';
 import type { GateCondition, Tender } from '../api/tenderix';
 import { getCurrentTenderId, getCurrentOrgId, getTenderExtractedText } from '../api/config';
@@ -323,9 +324,17 @@ export function GatesPage() {
           <AlertCircle size={48} style={{ color: 'var(--warning)', marginBottom: '1rem' }} />
           <h2>לא נבחר מכרז</h2>
           <p style={{ color: 'var(--gray-500)', marginBottom: '1.5rem' }}>
-            יש לבחור מכרז מהדשבורד או להעלות מכרז חדש
+            יש להעלות מסמך מכרז כדי לחלץ תנאי סף
           </p>
-          <a href="/" className="btn btn-primary">חזור לדשבורד</a>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+            <Link to="/simple" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Upload size={18} />
+              העלה מסמך
+            </Link>
+            <Link to="/" className="btn" style={{ background: 'var(--gray-700)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              חזור לדשבורד
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -347,6 +356,80 @@ export function GatesPage() {
 
   return (
     <div>
+      {/* Breadcrumb / Back navigation */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: '1rem',
+        padding: '0.75rem 1rem',
+        background: 'rgba(255,255,255,0.03)',
+        borderRadius: '8px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <Link
+            to="/simple"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              color: 'var(--gray-400)',
+              textDecoration: 'none',
+              fontSize: '0.9rem',
+              padding: '0.5rem 0.75rem',
+              borderRadius: '6px',
+              background: 'rgba(124, 58, 237, 0.1)',
+              border: '1px solid rgba(124, 58, 237, 0.3)',
+            }}
+          >
+            <ArrowLeft size={16} />
+            חזרה לחילוץ
+          </Link>
+          <span style={{ color: 'var(--gray-600)' }}>|</span>
+          <span style={{ color: 'var(--gray-400)', fontSize: '0.85rem' }}>
+            P2: ניתוח תנאי סף
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Link
+            to="/analysis"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              color: 'var(--gray-400)',
+              textDecoration: 'none',
+              fontSize: '0.85rem',
+              padding: '0.4rem 0.75rem',
+              borderRadius: '6px',
+              background: 'rgba(16, 185, 129, 0.1)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+            }}
+          >
+            <BarChart3 size={14} />
+            P3: מפרט ו-BOQ
+          </Link>
+          <Link
+            to="/decision"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              color: 'var(--gray-400)',
+              textDecoration: 'none',
+              fontSize: '0.85rem',
+              padding: '0.4rem 0.75rem',
+              borderRadius: '6px',
+              background: 'rgba(34, 197, 94, 0.1)',
+              border: '1px solid rgba(34, 197, 94, 0.3)',
+            }}
+          >
+            <Target size={14} />
+            החלטה
+          </Link>
+        </div>
+      </div>
+
       <div className="page-header">
         <h1 className="page-title">
           <CheckSquare size={28} style={{ marginLeft: '0.5rem', verticalAlign: 'middle' }} />
@@ -357,6 +440,35 @@ export function GatesPage() {
           {tender.tender_number && ` | מכרז ${tender.tender_number}`}
         </p>
       </div>
+
+      {/* What's next guidance */}
+      {gates.length > 0 && gateStats.aiAnalyzed === 0 && (
+        <div style={{
+          marginBottom: '1.5rem',
+          padding: '1rem 1.25rem',
+          background: 'linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(124, 58, 237, 0.1))',
+          borderRadius: '12px',
+          border: '1px solid rgba(0, 212, 255, 0.3)',
+          borderRight: '4px solid #00d4ff',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+            <Lightbulb size={24} style={{ color: '#00d4ff', flexShrink: 0, marginTop: '0.1rem' }} />
+            <div>
+              <h4 style={{ margin: '0 0 0.5rem', color: '#00d4ff' }}>מה עכשיו?</h4>
+              <div style={{ color: 'var(--gray-300)', fontSize: '0.9rem', lineHeight: 1.6 }}>
+                <p style={{ margin: '0 0 0.5rem' }}>
+                  <strong>{gates.length} תנאי סף</strong> חולצו מהמסמך. עכשיו אפשר:
+                </p>
+                <ul style={{ margin: '0', paddingRight: '1.25rem' }}>
+                  <li>לחץ על <strong>"נתח את כל התנאים עם AI"</strong> לבדוק התאמה אוטומטית לפרופיל החברה</li>
+                  <li>או לחץ על תנאי ספציפי לניתוח בודד</li>
+                  <li>ניתוח יבדוק: האם עומדים? מה חסר? מה האפשרויות לסגירת פערים?</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Extract Gates from Document - show when text is available but no gates extracted */}
       {hasExtractedText && gates.length === 0 && (
