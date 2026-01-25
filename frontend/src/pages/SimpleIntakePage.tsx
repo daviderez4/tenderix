@@ -5,7 +5,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 // @ts-ignore
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { api } from '../api/tenderix';
-import { setCurrentTender, getCurrentOrgId, getDefaultOrgData, API_CONFIG } from '../api/config';
+import { setCurrentTender, getCurrentOrgId, getDefaultOrgData } from '../api/config';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -31,9 +31,19 @@ async function extractGatesWithClaude(text: string): Promise<{
   const ANTHROPIC_API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
 
   if (!ANTHROPIC_API_KEY) {
-    // Fallback to n8n webhook if no API key
-    console.log('No Anthropic API key, using n8n webhook fallback');
-    return extractGatesViaN8N(text);
+    // No API key configured - return clear error
+    console.error('No Anthropic API key configured in VITE_ANTHROPIC_API_KEY');
+    return {
+      success: false,
+      conditions: [],
+      metadata: {
+        tenderName: '',
+        tenderNumber: '',
+        issuingBody: '',
+        submissionDeadline: '',
+      },
+      error: 'לא הוגדר מפתח API של Anthropic. יש להוסיף VITE_ANTHROPIC_API_KEY לקובץ .env',
+    };
   }
 
   const prompt = `אתה מומחה לניתוח מכרזים ממשלתיים בישראל. נתח את המסמך הבא וחלץ את כל תנאי הסף (תנאים מוקדמים להשתתפות במכרז).
@@ -136,151 +146,6 @@ ${text.substring(0, 100000)}`;
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-}
-
-// Fallback to n8n webhook - tries professional gates first, then v2
-async function extractGatesViaN8N(text: string): Promise<{
-  success: boolean;
-  conditions: Array<{
-    number: string;
-    text: string;
-    type: string;
-    isMandatory: boolean;
-    sourcePage?: number;
-    sourceSection?: string;
-  }>;
-  metadata: {
-    tenderName: string;
-    tenderNumber: string;
-    issuingBody: string;
-    submissionDeadline: string;
-  };
-  error?: string;
-}> {
-  // Helper to normalize n8n response to our format
-  const normalizeConditions = (conditions: any[]): Array<{
-    number: string;
-    text: string;
-    type: string;
-    isMandatory: boolean;
-    sourcePage?: number;
-    sourceSection?: string;
-  }> => {
-    return conditions.map((c: any, i: number) => ({
-      number: c.condition_number || c.number || `${i + 1}`,
-      text: c.condition_text || c.original_text || c.text || '',
-      type: c.type || c.category || 'OTHER',
-      isMandatory: c.is_mandatory !== false,
-      sourcePage: c.source_page || c.sourcePage,
-      sourceSection: c.source_section || c.source_quote || c.sourceSection,
-    }));
-  };
-
-  // ===== נסיון 1: Professional Gates Webhook =====
-  try {
-    console.log('Trying tdx-professional-gates webhook...');
-    const response = await fetch(`${API_CONFIG.WEBHOOK_BASE}/tdx-professional-gates`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tender_text: text }),
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log('Professional gates response:', data);
-
-      if (data.success && data.conditions && data.conditions.length > 0) {
-        return {
-          success: true,
-          conditions: normalizeConditions(data.conditions),
-          metadata: data.metadata || {
-            tenderName: '',
-            tenderNumber: '',
-            issuingBody: '',
-            submissionDeadline: '',
-          },
-        };
-      }
-      console.log('Professional gates returned no conditions, trying v2...');
-    } else {
-      console.log(`Professional gates returned ${response.status}, trying v2...`);
-    }
-  } catch (err) {
-    console.log('Professional gates webhook error:', err);
-  }
-
-  // ===== נסיון 2: Extract Gates V2 Webhook =====
-  try {
-    console.log('Trying tdx-extract-gates-v2 webhook...');
-    const response = await fetch(`${API_CONFIG.WEBHOOK_BASE}/tdx-extract-gates-v2`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tender_text: text }),
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log('Extract gates v2 response:', data);
-
-      if (data.success && data.conditions && data.conditions.length > 0) {
-        return {
-          success: true,
-          conditions: normalizeConditions(data.conditions),
-          metadata: data.metadata || {
-            tenderName: '',
-            tenderNumber: '',
-            issuingBody: '',
-            submissionDeadline: '',
-          },
-        };
-      }
-    }
-    console.log(`Extract gates v2 returned ${response.status}`);
-  } catch (err) {
-    console.log('Extract gates v2 webhook error:', err);
-  }
-
-  // ===== נסיון 3: Legacy tdx-extract-gates Webhook =====
-  try {
-    console.log('Trying legacy tdx-extract-gates webhook...');
-    const response = await fetch(`${API_CONFIG.WEBHOOK_BASE}/tdx-extract-gates`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tender_text: text }),
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log('Legacy extract gates response:', data);
-
-      if (data.conditions && data.conditions.length > 0) {
-        return {
-          success: true,
-          conditions: normalizeConditions(data.conditions),
-          metadata: data.metadata || {
-            tenderName: '',
-            tenderNumber: '',
-            issuingBody: '',
-            submissionDeadline: '',
-          },
-        };
-      }
-    }
-  } catch (err) {
-    console.log('Legacy extract gates webhook error:', err);
-  }
-
-  return {
-    success: false,
-    conditions: [],
-    metadata: {
-      tenderName: '',
-      tenderNumber: '',
-      issuingBody: '',
-      submissionDeadline: '',
-    },
-    error: 'כל ה-webhooks של n8n נכשלו. בדוק את החיבור או הגדר מפתח API של Anthropic.',
-  };
 }
 
 export function SimpleIntakePage() {
