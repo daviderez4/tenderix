@@ -1398,7 +1398,7 @@ export const api = {
         const webhookResponse = await fetch(webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tender_id: tenderId }),
+          body: JSON.stringify({ tender_id: tenderId, tender_text: tenderText }),
         });
 
         if (webhookResponse.ok) {

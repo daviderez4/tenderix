@@ -73,6 +73,8 @@ export function TenderIntakePage() {
   const [savedTenderName, setSavedTenderName] = useState<string | null>(null);
   const [manualText, setManualText] = useState('');
   const [showManualInput, setShowManualInput] = useState(false);
+  const [isExtractingGates, setIsExtractingGates] = useState(false);
+  const [gatesExtractionStatus, setGatesExtractionStatus] = useState<string | null>(null);
   const filesRef = useRef<Map<string, File>>(new Map());
   const [extractionProgress, setExtractionProgress] = useState<string>('');
 
@@ -761,6 +763,63 @@ export function TenderIntakePage() {
       setError(`שגיאה בשמירה: ${err instanceof Error ? err.message : 'שגיאה לא ידועה'}`);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Extract gate conditions and navigate to gates page
+  const extractGatesAndNavigate = async () => {
+    if (!savedTenderId) return;
+
+    setIsExtractingGates(true);
+    setGatesExtractionStatus('מתחיל חילוץ תנאי סף...');
+    setError(null);
+
+    try {
+      // Get the extracted text
+      const docTexts = documents
+        .filter((d) => d.extractedText && d.extractedText.length > 50)
+        .map((d) => d.extractedText || '');
+      if (manualText && manualText.trim().length > 10) {
+        docTexts.push(manualText.trim());
+      }
+      const gatesText = docTexts.join('\n\n');
+
+      if (gatesText.length < 100) {
+        throw new Error('אין מספיק טקסט לחילוץ תנאי סף. נא להעלות מסמכים או להדביק טקסט.');
+      }
+
+      setGatesExtractionStatus('מחלץ תנאי סף מהמסמכים...');
+
+      // Call the extract gates workflow
+      const result = await api.workflows.extractGates(savedTenderId, gatesText);
+
+      if (result.success && result.conditions && result.conditions.length > 0) {
+        setGatesExtractionStatus(`נמצאו ${result.conditions.length} תנאי סף! מעביר לדף הניתוח...`);
+
+        // Update tender status
+        try {
+          await api.tenders.update(savedTenderId, { current_step: 'GATES_ANALYSIS' });
+        } catch (e) {
+          console.warn('Could not update tender step:', e);
+        }
+
+        // Navigate to gates page after short delay
+        setTimeout(() => {
+          navigate('/gates');
+        }, 1500);
+      } else {
+        // Even if no conditions found, still navigate
+        setGatesExtractionStatus('לא נמצאו תנאי סף ספציפיים. מעביר לדף הניתוח...');
+        setTimeout(() => {
+          navigate('/gates');
+        }, 1500);
+      }
+    } catch (err) {
+      console.error('Gates extraction error:', err);
+      setError(`שגיאה בחילוץ תנאי סף: ${err instanceof Error ? err.message : 'שגיאה לא ידועה'}`);
+      setGatesExtractionStatus(null);
+    } finally {
+      setIsExtractingGates(false);
     }
   };
 
@@ -1733,23 +1792,60 @@ export function TenderIntakePage() {
                 </div>
               </div>
 
+              {/* Gates extraction status */}
+              {gatesExtractionStatus && (
+                <div style={{
+                  padding: '1rem',
+                  background: 'rgba(124, 58, 237, 0.1)',
+                  borderRadius: '8px',
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                }}>
+                  <Loader2 size={20} className="spin" style={{ color: '#7c3aed' }} />
+                  <span style={{ color: '#a78bfa' }}>{gatesExtractionStatus}</span>
+                </div>
+              )}
+
               {/* Navigation buttons */}
               <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                 <button
                   onClick={() => navigate('/')}
                   className="btn-primary"
                   style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                  disabled={isExtractingGates}
                 >
                   עבור לדשבורד
                   <ArrowRight size={18} />
                 </button>
                 <button
-                  onClick={() => navigate('/gates')}
+                  onClick={extractGatesAndNavigate}
+                  disabled={isExtractingGates}
                   className="btn-primary"
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'linear-gradient(135deg, #7c3aed, #6d28d9)' }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    background: isExtractingGates
+                      ? 'linear-gradient(135deg, #6b7280, #4b5563)'
+                      : 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                    minWidth: '200px',
+                    justifyContent: 'center',
+                  }}
                 >
-                  המשך לניתוח תנאי סף
-                  <ArrowRight size={18} />
+                  {isExtractingGates ? (
+                    <>
+                      <Loader2 size={18} className="spin" />
+                      מחלץ תנאי סף...
+                    </>
+                  ) : (
+                    <>
+                      <FileSearch size={18} />
+                      חלץ תנאי סף והמשך
+                      <ArrowRight size={18} />
+                    </>
+                  )}
                 </button>
               </div>
             </div>
