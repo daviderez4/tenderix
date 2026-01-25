@@ -5,7 +5,6 @@ import {
   BarChart3,
   Target,
   Home,
-  PlusCircle,
   LogOut,
   Upload,
   Building2,
