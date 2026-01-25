@@ -286,12 +286,27 @@ export function SimpleIntakePage() {
         settings: orgData.settings,
       });
 
+      // Parse submission deadline to valid date format
+      let parsedDeadline: string | undefined;
+      if (results.metadata.submissionDeadline) {
+        // Try to extract date from Hebrew format like "09/02/2023 עד לשעה: 16:00"
+        const dateMatch = results.metadata.submissionDeadline.match(/(\d{1,2})[\/\.](\d{1,2})[\/\.](\d{4})/);
+        if (dateMatch) {
+          const [, day, month, year] = dateMatch;
+          // Extract time if present
+          const timeMatch = results.metadata.submissionDeadline.match(/(\d{1,2}):(\d{2})/);
+          const hours = timeMatch ? timeMatch[1].padStart(2, '0') : '23';
+          const minutes = timeMatch ? timeMatch[2] : '59';
+          parsedDeadline = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hours}:${minutes}:00`;
+        }
+      }
+
       // Create tender
       const tender = await api.tenders.create({
         tender_name: results.metadata.tenderName || fileName || 'מכרז חדש',
         tender_number: results.metadata.tenderNumber || undefined,
         issuing_body: results.metadata.issuingBody || 'לא צוין',
-        submission_deadline: results.metadata.submissionDeadline || undefined,
+        submission_deadline: parsedDeadline,
         org_id: orgId,
         status: 'ACTIVE',
         current_step: 'GATES_ANALYSIS',
