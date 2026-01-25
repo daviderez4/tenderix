@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Sparkles, ArrowRight, Copy, Eye, EyeOff, FileCheck, Database, BarChart3 } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Sparkles, ArrowRight, Copy, Eye, EyeOff, FileCheck, Database, BarChart3, RotateCcw, Home, CheckSquare, Target } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 // @ts-ignore
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -385,6 +385,19 @@ export function SimpleIntakePage() {
     OTHER: '#6b7280',
   };
 
+  // Reset function to start over
+  const resetAll = () => {
+    setText('');
+    setFileName(null);
+    setCurrentFile(null);
+    setResults(null);
+    setSavedTenderId(null);
+    setCurrentStep('upload');
+    setExtractionStatus('');
+    setError(null);
+    setShowPreview(false);
+  };
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -392,6 +405,96 @@ export function SimpleIntakePage() {
       padding: '2rem',
     }}>
       <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+        {/* Breadcrumb Navigation */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '1.5rem',
+          padding: '0.75rem 1rem',
+          background: 'rgba(255,255,255,0.03)',
+          borderRadius: '8px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <Link
+              to="/"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                color: '#94a3b8',
+                textDecoration: 'none',
+                fontSize: '0.9rem',
+              }}
+            >
+              <Home size={16} />
+              דשבורד
+            </Link>
+            <span style={{ color: '#475569' }}>/</span>
+            <span style={{ color: '#00d4ff', fontSize: '0.9rem', fontWeight: 500 }}>
+              P1: חילוץ מהיר
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {(text || results) && (
+              <button
+                onClick={resetAll}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.4rem 0.75rem',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '6px',
+                  color: '#f87171',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                }}
+              >
+                <RotateCcw size={14} />
+                מכרז חדש
+              </button>
+            )}
+            <Link
+              to="/gates"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.4rem 0.75rem',
+                background: 'rgba(124, 58, 237, 0.1)',
+                border: '1px solid rgba(124, 58, 237, 0.3)',
+                borderRadius: '6px',
+                color: '#a78bfa',
+                fontSize: '0.85rem',
+                textDecoration: 'none',
+              }}
+            >
+              <CheckSquare size={14} />
+              P2: תנאי סף
+            </Link>
+            <Link
+              to="/decision"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.4rem 0.75rem',
+                background: 'rgba(34, 197, 94, 0.1)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+                borderRadius: '6px',
+                color: '#86efac',
+                fontSize: '0.85rem',
+                textDecoration: 'none',
+              }}
+            >
+              <Target size={14} />
+              החלטה
+            </Link>
+          </div>
+        </div>
+
         {/* Header */}
         <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
           <h1 style={{
