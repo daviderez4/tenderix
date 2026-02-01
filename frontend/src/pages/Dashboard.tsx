@@ -11,16 +11,16 @@ import { TenderFilters } from '../components/TenderFilters';
 import type { FilterType } from '../components/TenderFilters';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
-// Light theme colors
+// Clean white theme colors
 const THEME = {
-  pageBg: '#f0f9fb',
-  headerText: '#1e3a4c',
-  subtitleText: '#5a7d8a',
-  accentPrimary: '#00b4d8',
-  accentGradient: 'linear-gradient(135deg, #00b4d8, #0096c7)',
+  pageBg: '#f8fafc',
+  headerText: '#1e293b',
+  subtitleText: '#64748b',
+  accentPrimary: '#2563eb',
+  accentGradient: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
   cardBg: '#ffffff',
-  cardBorder: '#c8e4eb',
-  emptyIcon: '#00b4d8',
+  cardBorder: '#e2e8f0',
+  emptyIcon: '#2563eb',
 };
 
 export function Dashboard() {

@@ -20,21 +20,21 @@ interface TenderCardProps {
   onDelete: (tender: TenderData) => void;
 }
 
-// Light teal/cyan metallic theme colors
+// Clean white theme colors
 const THEME = {
   cardBg: '#ffffff',
-  cardBorder: '#b8e0e6',
-  cardBorderHover: '#7dd3e1',
-  cardShadow: '0 2px 8px rgba(0, 180, 216, 0.08)',
-  cardShadowHover: '0 8px 24px rgba(0, 180, 216, 0.15)',
-  headerBorder: '#e0f4f7',
-  progressBg: '#f0fafb',
-  textPrimary: '#1e3a4c',
-  textSecondary: '#5a7d8a',
-  textMuted: '#8aa4ae',
-  accentPrimary: '#00b4d8',
-  accentGradient: 'linear-gradient(135deg, #00b4d8, #0096c7)',
-  accentGradientHover: 'linear-gradient(135deg, #48cae4, #00b4d8)',
+  cardBorder: '#e2e8f0',
+  cardBorderHover: '#2563eb',
+  cardShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+  cardShadowHover: '0 4px 12px rgba(37, 99, 235, 0.15)',
+  headerBorder: '#f1f5f9',
+  progressBg: '#f8fafc',
+  textPrimary: '#1e293b',
+  textSecondary: '#64748b',
+  textMuted: '#94a3b8',
+  accentPrimary: '#2563eb',
+  accentGradient: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+  accentGradientHover: 'linear-gradient(135deg, #3b82f6, #2563eb)',
   starActive: '#fbbf24',
   deleteHover: '#ef4444',
 };

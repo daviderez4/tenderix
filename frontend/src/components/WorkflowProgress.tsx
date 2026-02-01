@@ -64,7 +64,7 @@ export function getDefaultStages(currentStep?: string): WorkflowStage[] {
   ];
 }
 
-// Light theme colors (teal/cyan metallic)
+// Light theme colors (clean blue)
 const lightColors = {
   completed: {
     bg: 'linear-gradient(135deg, #10b981, #059669)',
@@ -73,14 +73,14 @@ const lightColors = {
     icon: 'white',
   },
   current: {
-    bg: 'linear-gradient(135deg, #00b4d8, #0096c7)',
-    border: '#48cae4',
-    text: '#0077b6',
+    bg: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+    border: '#3b82f6',
+    text: '#1d4ed8',
     icon: 'white',
   },
   pending: {
     bg: '#f8fafc',
-    border: '#cbd5e1',
+    border: '#e2e8f0',
     text: '#94a3b8',
     icon: '#94a3b8',
   },
@@ -188,7 +188,7 @@ export function WorkflowProgress({ stages, onStageClick, size = 'medium', lightT
                   color: stageColors.icon,
                   boxShadow: stage.status === 'current'
                     ? lightTheme
-                      ? '0 0 12px rgba(0, 180, 216, 0.4)'
+                      ? '0 0 12px rgba(37, 99, 235, 0.4)'
                       : '0 0 12px rgba(124, 58, 237, 0.5)'
                     : 'none',
                 }}

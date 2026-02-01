@@ -15,24 +15,24 @@ interface TenderFiltersProps {
   };
 }
 
-// Light teal/cyan metallic theme colors
+// Clean white/blue theme colors
 const THEME = {
-  containerBg: '#f8fcfd',
-  containerBorder: '#d4eef3',
+  containerBg: '#ffffff',
+  containerBorder: '#e2e8f0',
   buttonBg: '#ffffff',
-  buttonBorder: '#c8e4eb',
-  buttonBorderHover: '#90d4e4',
-  buttonActiveBg: '#e6f7fa',
-  buttonActiveBorder: '#00b4d8',
-  textPrimary: '#1e3a4c',
-  textSecondary: '#5a7d8a',
-  textMuted: '#8aa4ae',
-  accentPrimary: '#00b4d8',
-  countBg: '#e0f4f7',
-  countActiveBg: '#cceef5',
+  buttonBorder: '#e2e8f0',
+  buttonBorderHover: '#2563eb',
+  buttonActiveBg: '#eff6ff',
+  buttonActiveBorder: '#2563eb',
+  textPrimary: '#1e293b',
+  textSecondary: '#64748b',
+  textMuted: '#94a3b8',
+  accentPrimary: '#2563eb',
+  countBg: '#f1f5f9',
+  countActiveBg: '#dbeafe',
   inputBg: '#ffffff',
-  inputBorder: '#c8e4eb',
-  inputFocusBorder: '#00b4d8',
+  inputBorder: '#e2e8f0',
+  inputFocusBorder: '#2563eb',
 };
 
 export function TenderFilters({

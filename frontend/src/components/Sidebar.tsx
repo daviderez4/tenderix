@@ -85,13 +85,13 @@ export function Sidebar() {
         right: '1.5rem',
         left: '1.5rem',
         padding: '1rem',
-        background: 'rgba(255,255,255,0.1)',
+        background: '#f1f5f9',
         borderRadius: '8px',
         fontSize: '0.75rem',
-        color: 'var(--gray-400)'
+        color: 'var(--gray-500)'
       }}>
         <div style={{ marginBottom: '0.25rem' }}>מכרז נוכחי:</div>
-        <div style={{ color: 'white', fontWeight: 500 }}>
+        <div style={{ color: 'var(--gray-800)', fontWeight: 500 }}>
           {localStorage.getItem('currentTenderName') || 'לא נבחר מכרז'}
         </div>
       </div>
@@ -108,8 +108,8 @@ export function Sidebar() {
           justifyContent: 'center',
           gap: '0.5rem',
           padding: '0.75rem',
-          background: 'rgba(239, 68, 68, 0.2)',
-          color: '#fca5a5',
+          background: '#fee2e2',
+          color: '#dc2626',
           border: 'none',
           borderRadius: '8px',
           cursor: 'pointer',
