@@ -90,6 +90,11 @@ body {
   padding: 2rem;
 }
 
+.main-content-full {
+  flex: 1;
+  padding: 0;
+}
+
 /* Header */
 .page-header {
   margin-bottom: 2rem;

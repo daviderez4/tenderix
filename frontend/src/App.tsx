@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { Login } from './components/Login';
+import { HomePage } from './pages/HomePage';
 import { Dashboard } from './pages/Dashboard';
 import { NewTenderPage } from './pages/NewTenderPage';
 import { GatesPage } from './pages/GatesPage';
@@ -38,6 +39,34 @@ function handleOAuthHash(): boolean {
   return false;
 }
 
+// Layout wrapper - hide sidebar on home page for clean flow
+function AppLayout() {
+  const location = useLocation();
+  const isHomePage = location.pathname === '/';
+
+  return (
+    <div className="app">
+      {!isHomePage && <Sidebar />}
+      <main className={isHomePage ? 'main-content-full' : 'main-content'}>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/new" element={<NewTenderPage />} />
+          <Route path="/intake" element={<TenderIntakePage />} />
+          <Route path="/simple" element={<SimpleIntakePage />} />
+          <Route path="/gates" element={<GatesPage />} />
+          <Route path="/analysis" element={<AnalysisPage />} />
+          <Route path="/competitors" element={<CompetitorsPage />} />
+          <Route path="/decision" element={<DecisionPage />} />
+          <Route path="/company" element={<CompanyProfilePage />} />
+          <Route path="/feedback-admin" element={<FeedbackAdminPage />} />
+        </Routes>
+      </main>
+      <FeedbackWidget />
+    </div>
+  );
+}
+
 function App() {
   // DEV MODE: Skip authentication for local development
   const isDev = import.meta.env.DEV;
@@ -61,25 +90,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="app">
-        <Sidebar />
-        <main className="main-content">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/new" element={<NewTenderPage />} />
-            <Route path="/intake" element={<TenderIntakePage />} />
-            <Route path="/simple" element={<SimpleIntakePage />} />
-            <Route path="/gates" element={<GatesPage />} />
-            <Route path="/analysis" element={<AnalysisPage />} />
-            <Route path="/competitors" element={<CompetitorsPage />} />
-            <Route path="/decision" element={<DecisionPage />} />
-            <Route path="/company" element={<CompanyProfilePage />} />
-            <Route path="/feedback-admin" element={<FeedbackAdminPage />} />
-          </Routes>
-        </main>
-        {/* Feedback Widget - visible on all pages */}
-        <FeedbackWidget />
-      </div>
+      <AppLayout />
     </BrowserRouter>
   );
 }

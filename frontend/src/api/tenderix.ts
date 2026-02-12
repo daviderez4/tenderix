@@ -416,6 +416,9 @@ export const api = {
       return supabaseFetch<Tender[]>(`tenders?org_id=eq.${orgId}&select=*&order=created_at.desc`);
     },
 
+    // List tenders for a specific org (used by HomePage)
+    listByOrg: (orgId: string) => supabaseFetch<Tender[]>(`tenders?org_id=eq.${orgId}&select=*&order=created_at.desc`),
+
     // List ALL tenders (admin only - for debugging)
     listAll: () => supabaseFetch<Tender[]>('tenders?select=*&order=created_at.desc'),
 
@@ -3837,8 +3840,15 @@ export const api = {
   organizations: {
     get: (id: string) => supabaseFetch<Organization[]>(`organizations?id=eq.${id}`).then(r => r[0] || null),
 
+    list: () => supabaseFetch<Organization[]>('organizations?select=*&order=name'),
+
     create: (data: Partial<Organization>) => supabaseFetch<Organization[]>('organizations', {
       method: 'POST',
+      body: JSON.stringify(data),
+    }).then(r => r[0]),
+
+    update: (id: string, data: Partial<Organization>) => supabaseFetch<Organization[]>(`organizations?id=eq.${id}`, {
+      method: 'PATCH',
       body: JSON.stringify(data),
     }).then(r => r[0]),
 

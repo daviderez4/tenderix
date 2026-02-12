@@ -6,18 +6,19 @@ import {
   Target,
   Home,
   LogOut,
-  Upload,
   Building2,
-  Sparkles
+  Sparkles,
 } from 'lucide-react';
 
 export function Sidebar() {
   const location = useLocation();
 
+  const companyName = localStorage.getItem('tenderix_selected_org_name') || '';
+  const currentTenderName = localStorage.getItem('currentTenderName') || '';
+
   const navItems = [
-    { path: '/', icon: Home, label: 'דשבורד', pillar: null },
-    { path: '/simple', icon: Sparkles, label: 'חילוץ מהיר', pillar: 'NEW' },
-    { path: '/intake', icon: Upload, label: 'קליטת מכרז', pillar: 'P1' },
+    { path: '/', icon: Home, label: 'בחירת חברה', pillar: null },
+    { path: '/simple', icon: Sparkles, label: 'טעינת מכרז', pillar: 'P1' },
     { path: '/gates', icon: CheckSquare, label: 'תנאי סף', pillar: 'P2' },
     { path: '/analysis', icon: BarChart3, label: 'מפרט ו-BOQ', pillar: 'P3' },
     { path: '/competitors', icon: Users, label: 'מתחרים', pillar: 'P4' },
@@ -28,11 +29,14 @@ export function Sidebar() {
   function handleLogout() {
     localStorage.removeItem('tenderix_auth');
     localStorage.removeItem('tenderix_current_tender');
+    localStorage.removeItem('tenderix_selected_org_id');
+    localStorage.removeItem('tenderix_selected_org_name');
+    localStorage.removeItem('currentTenderId');
+    localStorage.removeItem('currentTenderName');
     window.location.reload();
   }
 
   const pillarColors: Record<string, string> = {
-    'NEW': '#ec4899',
     'P1': '#00d4ff',
     'P2': '#7c3aed',
     'P3': '#10b981',
@@ -45,7 +49,7 @@ export function Sidebar() {
       <div className="sidebar-logo">
         <Target size={28} />
         <span>Tenderix</span>
-        <span style={{ fontSize: '0.65rem', opacity: 0.6, marginRight: '4px' }}>v3.0</span>
+        <span style={{ fontSize: '0.65rem', opacity: 0.6, marginRight: '4px' }}>v3.1</span>
       </div>
       <nav>
         <ul className="sidebar-nav">
@@ -79,20 +83,31 @@ export function Sidebar() {
         </ul>
       </nav>
 
+      {/* Current context info */}
       <div style={{
         position: 'absolute',
         bottom: '5rem',
         right: '1.5rem',
         left: '1.5rem',
-        padding: '1rem',
-        background: 'rgba(255,255,255,0.1)',
+        padding: '0.75rem',
+        background: 'rgba(255,255,255,0.08)',
         borderRadius: '8px',
         fontSize: '0.75rem',
         color: 'var(--gray-400)'
       }}>
-        <div style={{ marginBottom: '0.25rem' }}>מכרז נוכחי:</div>
-        <div style={{ color: 'white', fontWeight: 500 }}>
-          {localStorage.getItem('currentTenderName') || 'לא נבחר מכרז'}
+        {companyName && (
+          <div style={{ marginBottom: '0.4rem' }}>
+            <div style={{ opacity: 0.7 }}>חברה:</div>
+            <div style={{ color: '#00d4ff', fontWeight: 500, fontSize: '0.8rem' }}>
+              {companyName}
+            </div>
+          </div>
+        )}
+        <div>
+          <div style={{ opacity: 0.7 }}>מכרז:</div>
+          <div style={{ color: 'white', fontWeight: 500, fontSize: '0.8rem' }}>
+            {currentTenderName || 'לא נבחר'}
+          </div>
         </div>
       </div>
 
