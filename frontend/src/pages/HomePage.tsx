@@ -33,6 +33,33 @@ export interface FictionalCompany {
   specializations: string;
   employee_count: number;
   annual_revenue: number; // millions ILS
+  // Seed profile data for AI analysis
+  seedProjects: Array<{
+    project_name: string;
+    client_name: string;
+    client_type: string;
+    start_date: string;
+    end_date: string;
+    total_value: number;
+    project_type: string;
+    category: string;
+    role_type: string;
+  }>;
+  seedFinancials: Array<{
+    fiscal_year: number;
+    annual_revenue: number;
+    net_profit: number;
+    employee_count: number;
+    audited: boolean;
+  }>;
+  seedCertifications: Array<{
+    cert_type: string;
+    cert_name: string;
+    cert_number: string;
+    issuing_body: string;
+    valid_from: string;
+    valid_until: string;
+  }>;
 }
 
 export const FICTIONAL_COMPANIES: FictionalCompany[] = [
@@ -46,6 +73,24 @@ export const FICTIONAL_COMPANIES: FictionalCompany[] = [
     specializations: 'פיתוח תוכנה, אינטגרציה, מערכות ERP, ענן, סייבר',
     employee_count: 180,
     annual_revenue: 95,
+    seedProjects: [
+      { project_name: 'מערכת ERP למשרד הביטחון', client_name: 'משרד הביטחון', client_type: 'ממשלתי', start_date: '2021-01-01', end_date: '2023-06-30', total_value: 18000000, project_type: 'פיתוח תוכנה', category: 'מערכות מידע', role_type: 'prime' },
+      { project_name: 'תשתיות ענן - עיריית תל אביב', client_name: 'עיריית תל אביב', client_type: 'רשות מקומית', start_date: '2022-03-01', end_date: '2024-02-28', total_value: 12000000, project_type: 'תשתיות IT', category: 'ענן ותשתיות', role_type: 'prime' },
+      { project_name: 'מערכת ניהול מידע - משרד הבריאות', client_name: 'משרד הבריאות', client_type: 'ממשלתי', start_date: '2020-06-01', end_date: '2022-12-31', total_value: 8500000, project_type: 'פיתוח תוכנה', category: 'מערכות מידע', role_type: 'prime' },
+      { project_name: 'אינטגרציית מערכות - חברת חשמל', client_name: 'חברת החשמל', client_type: 'ממשלתי', start_date: '2019-01-01', end_date: '2021-03-31', total_value: 15000000, project_type: 'אינטגרציה', category: 'מערכות מידע', role_type: 'prime' },
+      { project_name: 'פורטל שירות - ביטוח לאומי', client_name: 'ביטוח לאומי', client_type: 'ממשלתי', start_date: '2023-01-01', end_date: '2025-06-30', total_value: 22000000, project_type: 'פיתוח תוכנה', category: 'פורטלים', role_type: 'prime' },
+    ],
+    seedFinancials: [
+      { fiscal_year: 2023, annual_revenue: 95000000, net_profit: 9500000, employee_count: 180, audited: true },
+      { fiscal_year: 2022, annual_revenue: 82000000, net_profit: 7800000, employee_count: 160, audited: true },
+      { fiscal_year: 2021, annual_revenue: 68000000, net_profit: 6100000, employee_count: 140, audited: true },
+    ],
+    seedCertifications: [
+      { cert_type: 'ISO', cert_name: 'ISO 27001 - אבטחת מידע', cert_number: 'IL-27001-2022-001', issuing_body: 'מכון התקנים', valid_from: '2022-01-01', valid_until: '2026-12-31' },
+      { cert_type: 'ISO', cert_name: 'ISO 9001 - ניהול איכות', cert_number: 'IL-9001-2021-045', issuing_body: 'מכון התקנים', valid_from: '2021-06-01', valid_until: '2026-05-31' },
+      { cert_type: 'SECURITY', cert_name: 'סיווג ביטחוני - סודי', cert_number: 'SEC-2023-0891', issuing_body: 'מלמ"ב', valid_from: '2023-01-01', valid_until: '2026-12-31' },
+      { cert_type: 'PROFESSIONAL', cert_name: 'רישום קבלני - סיווג ג5', cert_number: 'REG-5-2020-112', issuing_body: 'רשם הקבלנים', valid_from: '2020-01-01', valid_until: '2027-12-31' },
+    ],
   },
   {
     id: 'fictional-construction-01',
@@ -57,6 +102,23 @@ export const FICTIONAL_COMPANIES: FictionalCompany[] = [
     specializations: 'בנייה, תשתיות, חשמל, מיזוג אוויר, אינסטלציה',
     employee_count: 350,
     annual_revenue: 250,
+    seedProjects: [
+      { project_name: 'בניית בית ספר - עיריית ירושלים', client_name: 'עיריית ירושלים', client_type: 'רשות מקומית', start_date: '2020-01-01', end_date: '2023-03-31', total_value: 45000000, project_type: 'בנייה', category: 'מבני ציבור', role_type: 'prime' },
+      { project_name: 'תשתיות מים - מקורות', client_name: 'חברת מקורות', client_type: 'ממשלתי', start_date: '2021-06-01', end_date: '2024-06-30', total_value: 65000000, project_type: 'תשתיות', category: 'תשתיות מים', role_type: 'prime' },
+      { project_name: 'שיפוץ מבנה ממשלתי - קריית הממשלה', client_name: 'רשות מקרקעי ישראל', client_type: 'ממשלתי', start_date: '2022-03-01', end_date: '2023-12-31', total_value: 28000000, project_type: 'שיפוץ', category: 'מבני ציבור', role_type: 'prime' },
+      { project_name: 'פרויקט דיור - משרד הבינוי', client_name: 'משרד הבינוי והשיכון', client_type: 'ממשלתי', start_date: '2019-01-01', end_date: '2022-12-31', total_value: 120000000, project_type: 'בנייה', category: 'מגורים', role_type: 'prime' },
+    ],
+    seedFinancials: [
+      { fiscal_year: 2023, annual_revenue: 250000000, net_profit: 17500000, employee_count: 350, audited: true },
+      { fiscal_year: 2022, annual_revenue: 220000000, net_profit: 15400000, employee_count: 320, audited: true },
+      { fiscal_year: 2021, annual_revenue: 195000000, net_profit: 13650000, employee_count: 290, audited: true },
+    ],
+    seedCertifications: [
+      { cert_type: 'PROFESSIONAL', cert_name: 'רישום קבלני - סיווג ג5 בנייה', cert_number: 'REG-C5-1998-003', issuing_body: 'רשם הקבלנים', valid_from: '1998-01-01', valid_until: '2027-12-31' },
+      { cert_type: 'ISO', cert_name: 'ISO 9001 - ניהול איכות', cert_number: 'IL-9001-2020-089', issuing_body: 'מכון התקנים', valid_from: '2020-01-01', valid_until: '2026-12-31' },
+      { cert_type: 'ISO', cert_name: 'ISO 14001 - ניהול סביבתי', cert_number: 'IL-14001-2021-022', issuing_body: 'מכון התקנים', valid_from: '2021-01-01', valid_until: '2026-12-31' },
+      { cert_type: 'SAFETY', cert_name: 'תעודת בטיחות - ממונה בטיחות', cert_number: 'SAF-2022-1234', issuing_body: 'משרד העבודה', valid_from: '2022-01-01', valid_until: '2027-12-31' },
+    ],
   },
   {
     id: 'fictional-security-01',
@@ -68,6 +130,23 @@ export const FICTIONAL_COMPANIES: FictionalCompany[] = [
     specializations: 'אבטחת מידע, SOC, בדיקות חדירה, ייעוץ סייבר, SIEM',
     employee_count: 85,
     annual_revenue: 45,
+    seedProjects: [
+      { project_name: 'SOC - משרד ראש הממשלה', client_name: 'משרד ראש הממשלה', client_type: 'ממשלתי', start_date: '2021-01-01', end_date: '2024-12-31', total_value: 12000000, project_type: 'SOC', category: 'סייבר', role_type: 'prime' },
+      { project_name: 'בדיקות חדירה - בנק לאומי', client_name: 'בנק לאומי', client_type: 'פרטי', start_date: '2022-06-01', end_date: '2023-05-31', total_value: 3500000, project_type: 'PT', category: 'סייבר', role_type: 'prime' },
+      { project_name: 'SIEM - משרד האוצר', client_name: 'משרד האוצר', client_type: 'ממשלתי', start_date: '2023-01-01', end_date: '2025-12-31', total_value: 8000000, project_type: 'SIEM', category: 'סייבר', role_type: 'prime' },
+      { project_name: 'ייעוץ סייבר - צה"ל', client_name: 'צה"ל', client_type: 'ביטחוני', start_date: '2020-01-01', end_date: '2022-12-31', total_value: 6000000, project_type: 'ייעוץ', category: 'סייבר', role_type: 'prime' },
+    ],
+    seedFinancials: [
+      { fiscal_year: 2023, annual_revenue: 45000000, net_profit: 6750000, employee_count: 85, audited: true },
+      { fiscal_year: 2022, annual_revenue: 38000000, net_profit: 5320000, employee_count: 72, audited: true },
+      { fiscal_year: 2021, annual_revenue: 30000000, net_profit: 3900000, employee_count: 60, audited: true },
+    ],
+    seedCertifications: [
+      { cert_type: 'SECURITY', cert_name: 'סיווג ביטחוני - סודי ביותר', cert_number: 'SEC-TS-2022-0042', issuing_body: 'מלמ"ב', valid_from: '2022-01-01', valid_until: '2026-12-31' },
+      { cert_type: 'ISO', cert_name: 'ISO 27001 - אבטחת מידע', cert_number: 'IL-27001-2021-088', issuing_body: 'מכון התקנים', valid_from: '2021-01-01', valid_until: '2026-12-31' },
+      { cert_type: 'PROFESSIONAL', cert_name: 'CREST - בדיקות חדירה', cert_number: 'CREST-IL-2023-01', issuing_body: 'CREST International', valid_from: '2023-01-01', valid_until: '2026-12-31' },
+      { cert_type: 'ISO', cert_name: 'ISO 27701 - פרטיות מידע', cert_number: 'IL-27701-2023-015', issuing_body: 'מכון התקנים', valid_from: '2023-06-01', valid_until: '2026-05-31' },
+    ],
   },
   {
     id: 'fictional-logistics-01',
@@ -79,6 +158,21 @@ export const FICTIONAL_COMPANIES: FictionalCompany[] = [
     specializations: 'שילוח, אחסנה, הפצה, ניהול מלאי, שרשרת אספקה',
     employee_count: 220,
     annual_revenue: 120,
+    seedProjects: [
+      { project_name: 'שילוח לצה"ל - מרכז לוגיסטי', client_name: 'צה"ל', client_type: 'ביטחוני', start_date: '2020-01-01', end_date: '2024-12-31', total_value: 35000000, project_type: 'שילוח', category: 'לוגיסטיקה', role_type: 'prime' },
+      { project_name: 'הפצה ארצית - סופר פארם', client_name: 'סופר פארם', client_type: 'פרטי', start_date: '2021-01-01', end_date: '2023-12-31', total_value: 18000000, project_type: 'הפצה', category: 'לוגיסטיקה', role_type: 'prime' },
+      { project_name: 'ניהול מחסנים - משרד הביטחון', client_name: 'משרד הביטחון', client_type: 'ממשלתי', start_date: '2022-06-01', end_date: '2025-05-31', total_value: 22000000, project_type: 'אחסנה', category: 'לוגיסטיקה', role_type: 'prime' },
+    ],
+    seedFinancials: [
+      { fiscal_year: 2023, annual_revenue: 120000000, net_profit: 8400000, employee_count: 220, audited: true },
+      { fiscal_year: 2022, annual_revenue: 105000000, net_profit: 7350000, employee_count: 200, audited: true },
+      { fiscal_year: 2021, annual_revenue: 90000000, net_profit: 5400000, employee_count: 180, audited: true },
+    ],
+    seedCertifications: [
+      { cert_type: 'ISO', cert_name: 'ISO 9001 - ניהול איכות', cert_number: 'IL-9001-2020-156', issuing_body: 'מכון התקנים', valid_from: '2020-01-01', valid_until: '2026-12-31' },
+      { cert_type: 'PROFESSIONAL', cert_name: 'רישיון הובלה - משרד התחבורה', cert_number: 'TRN-2021-4567', issuing_body: 'משרד התחבורה', valid_from: '2021-01-01', valid_until: '2027-12-31' },
+      { cert_type: 'SAFETY', cert_name: 'תקן בטיחות מזון', cert_number: 'FOOD-2022-089', issuing_body: 'משרד הבריאות', valid_from: '2022-01-01', valid_until: '2026-12-31' },
+    ],
   },
   {
     id: 'fictional-env-01',
@@ -90,6 +184,21 @@ export const FICTIONAL_COMPANIES: FictionalCompany[] = [
     specializations: 'אנרגיה סולארית, טיפול בפסולת, ייעוץ סביבתי, קיימות',
     employee_count: 65,
     annual_revenue: 30,
+    seedProjects: [
+      { project_name: 'חוות סולארית - אשלים', client_name: 'משרד האנרגיה', client_type: 'ממשלתי', start_date: '2021-01-01', end_date: '2023-12-31', total_value: 8000000, project_type: 'אנרגיה סולארית', category: 'אנרגיה', role_type: 'prime' },
+      { project_name: 'טיפול בפסולת - עיריית חיפה', client_name: 'עיריית חיפה', client_type: 'רשות מקומית', start_date: '2022-06-01', end_date: '2025-05-31', total_value: 5500000, project_type: 'סביבה', category: 'פסולת', role_type: 'prime' },
+      { project_name: 'ייעוץ סביבתי - רשות הטבע', client_name: 'רשות הטבע והגנים', client_type: 'ממשלתי', start_date: '2023-01-01', end_date: '2024-12-31', total_value: 2500000, project_type: 'ייעוץ', category: 'סביבה', role_type: 'prime' },
+    ],
+    seedFinancials: [
+      { fiscal_year: 2023, annual_revenue: 30000000, net_profit: 3000000, employee_count: 65, audited: true },
+      { fiscal_year: 2022, annual_revenue: 24000000, net_profit: 2160000, employee_count: 55, audited: true },
+      { fiscal_year: 2021, annual_revenue: 18000000, net_profit: 1440000, employee_count: 42, audited: true },
+    ],
+    seedCertifications: [
+      { cert_type: 'ISO', cert_name: 'ISO 14001 - ניהול סביבתי', cert_number: 'IL-14001-2021-078', issuing_body: 'מכון התקנים', valid_from: '2021-01-01', valid_until: '2026-12-31' },
+      { cert_type: 'PROFESSIONAL', cert_name: 'רישיון עסק - טיפול בפסולת', cert_number: 'ENV-2022-345', issuing_body: 'המשרד להגנת הסביבה', valid_from: '2022-01-01', valid_until: '2027-12-31' },
+      { cert_type: 'ISO', cert_name: 'ISO 50001 - ניהול אנרגיה', cert_number: 'IL-50001-2023-012', issuing_body: 'מכון התקנים', valid_from: '2023-01-01', valid_until: '2026-12-31' },
+    ],
   },
   {
     id: 'fictional-consulting-01',
@@ -101,6 +210,21 @@ export const FICTIONAL_COMPANIES: FictionalCompany[] = [
     specializations: 'ייעוץ אסטרטגי, ניהול פרויקטים, ליווי מכרזים, שיפור תהליכים',
     employee_count: 40,
     annual_revenue: 22,
+    seedProjects: [
+      { project_name: 'ייעוץ אסטרטגי - משרד החינוך', client_name: 'משרד החינוך', client_type: 'ממשלתי', start_date: '2021-01-01', end_date: '2023-06-30', total_value: 4500000, project_type: 'ייעוץ', category: 'ייעוץ ניהולי', role_type: 'prime' },
+      { project_name: 'ליווי מכרז IT - משרד הפנים', client_name: 'משרד הפנים', client_type: 'ממשלתי', start_date: '2022-03-01', end_date: '2023-02-28', total_value: 2800000, project_type: 'ליווי מכרזים', category: 'ייעוץ ניהולי', role_type: 'prime' },
+      { project_name: 'שיפור תהליכים - ביטוח לאומי', client_name: 'ביטוח לאומי', client_type: 'ממשלתי', start_date: '2023-01-01', end_date: '2024-12-31', total_value: 3200000, project_type: 'ייעוץ', category: 'שיפור תהליכים', role_type: 'prime' },
+      { project_name: 'ניהול פרויקט - רכבת ישראל', client_name: 'רכבת ישראל', client_type: 'ממשלתי', start_date: '2020-06-01', end_date: '2022-12-31', total_value: 6000000, project_type: 'ניהול פרויקטים', category: 'ייעוץ ניהולי', role_type: 'prime' },
+    ],
+    seedFinancials: [
+      { fiscal_year: 2023, annual_revenue: 22000000, net_profit: 3300000, employee_count: 40, audited: true },
+      { fiscal_year: 2022, annual_revenue: 19000000, net_profit: 2660000, employee_count: 35, audited: true },
+      { fiscal_year: 2021, annual_revenue: 16000000, net_profit: 2080000, employee_count: 30, audited: true },
+    ],
+    seedCertifications: [
+      { cert_type: 'ISO', cert_name: 'ISO 9001 - ניהול איכות', cert_number: 'IL-9001-2019-201', issuing_body: 'מכון התקנים', valid_from: '2019-01-01', valid_until: '2026-12-31' },
+      { cert_type: 'PROFESSIONAL', cert_name: 'PMP - ניהול פרויקטים', cert_number: 'PMP-2023-IL-089', issuing_body: 'PMI', valid_from: '2023-01-01', valid_until: '2026-12-31' },
+    ],
   },
 ];
 
@@ -207,6 +331,32 @@ export function HomePage() {
         founding_year: fc.founding_year,
         specializations: fc.specializations,
       });
+      const orgId = org?.id || fc.id;
+
+      // Seed profile data if not already seeded
+      const seedKey = `tenderix_seeded_${orgId}`;
+      if (!localStorage.getItem(seedKey)) {
+        console.log(`Seeding profile data for ${fc.name}...`);
+
+        // Seed projects
+        for (const proj of fc.seedProjects) {
+          await api.company.createProject({ org_id: orgId, ...proj }).catch(e => console.warn('Seed project:', e));
+        }
+
+        // Seed financials
+        for (const fin of fc.seedFinancials) {
+          await api.company.createFinancial({ org_id: orgId, ...fin }).catch(e => console.warn('Seed financial:', e));
+        }
+
+        // Seed certifications
+        for (const cert of fc.seedCertifications) {
+          await api.company.createCertification({ org_id: orgId, ...cert }).catch(e => console.warn('Seed cert:', e));
+        }
+
+        localStorage.setItem(seedKey, 'true');
+        console.log(`Profile data seeded for ${fc.name}: ${fc.seedProjects.length} projects, ${fc.seedFinancials.length} financials, ${fc.seedCertifications.length} certs`);
+      }
+
       selectCompany(org || { id: fc.id, name: fc.name } as Organization);
     } catch (error) {
       console.error('Error creating fictional company:', error);
