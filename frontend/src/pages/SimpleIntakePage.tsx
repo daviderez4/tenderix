@@ -1,11 +1,13 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Sparkles, ArrowRight, Copy, Eye, EyeOff, FileCheck, Database, BarChart3, RotateCcw, Home, CheckSquare, Target } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Sparkles, ArrowRight, Copy, Eye, EyeOff, FileCheck, Database, BarChart3, RotateCcw, Home, CheckSquare, Target, Building2, Search, Star, Wand2 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 // @ts-ignore
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { api } from '../api/tenderix';
+import type { Organization } from '../api/tenderix';
 import { setCurrentTender, getCurrentOrgId, getDefaultOrgData, setTenderExtractedText } from '../api/config';
+import { FICTIONAL_COMPANIES, type FictionalCompany } from './HomePage';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -31,7 +33,6 @@ async function extractGatesWithClaude(text: string): Promise<{
   const ANTHROPIC_API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
 
   if (!ANTHROPIC_API_KEY) {
-    // No API key configured - return clear error
     console.error('No Anthropic API key configured in VITE_ANTHROPIC_API_KEY');
     return {
       success: false,
@@ -114,7 +115,6 @@ ${text.substring(0, 100000)}`;
     const data = await response.json();
     const content = data.content[0].text;
 
-    // Extract JSON from response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error('Could not parse JSON from Claude response');
@@ -148,12 +148,170 @@ ${text.substring(0, 100000)}`;
   }
 }
 
+// Generate a fictional company matching the tender domain using Claude
+async function generateMatchingCompanyWithAI(
+  tenderName: string,
+  tenderDomain: string,
+  conditions: Array<{ text: string; type: string }>
+): Promise<FictionalCompany | null> {
+  const ANTHROPIC_API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
+
+  if (!ANTHROPIC_API_KEY) {
+    console.error('No Anthropic API key for company generation');
+    return null;
+  }
+
+  const conditionsSummary = conditions
+    .slice(0, 10)
+    .map(c => `- [${c.type}] ${c.text}`)
+    .join('\n');
+
+  const prompt = `אתה מומחה למכרזים ממשלתיים בישראל. צור פרופיל חברה פיקטיבית ישראלית שמתאימה לתחום של המכרז הבא.
+
+שם המכרז: ${tenderName}
+תחום: ${tenderDomain}
+
+תנאי הסף העיקריים:
+${conditionsSummary}
+
+צור חברה פיקטיבית ריאליסטית שתתאים לעולם הזה. לדוגמה:
+- אם המכרז בתחום מצלמות אופטיות, צור חברה כמו אלביט או אל-אופ
+- אם בתחום IT, צור חברה כמו מטריקס או סאפ
+- אם בתחום בנייה, צור חברה כמו שיכון ובינוי
+
+החברה צריכה להיות ריאליסטית עם:
+- שם עברי מתאים לתחום
+- פרויקטים שרלוונטיים לתנאי הסף (3-5 פרויקטים)
+- נתונים כספיים הגיוניים (3 שנים)
+- הסמכות רלוונטיות (2-4 הסמכות)
+
+החזר JSON בלבד:
+{
+  "name": "שם החברה בע\"מ",
+  "description": "תיאור קצר",
+  "domain": "תחום ההתמחות",
+  "founding_year": 2005,
+  "specializations": "התמחויות מופרדות בפסיקים",
+  "employee_count": 150,
+  "annual_revenue": 80,
+  "seedProjects": [
+    {
+      "project_name": "שם הפרויקט",
+      "client_name": "שם הלקוח",
+      "client_type": "ממשלתי",
+      "start_date": "2021-01-01",
+      "end_date": "2023-12-31",
+      "total_value": 15000000,
+      "project_type": "סוג",
+      "category": "קטגוריה",
+      "role_type": "prime"
+    }
+  ],
+  "seedFinancials": [
+    {
+      "fiscal_year": 2023,
+      "annual_revenue": 80000000,
+      "net_profit": 8000000,
+      "employee_count": 150,
+      "audited": true
+    }
+  ],
+  "seedCertifications": [
+    {
+      "cert_type": "ISO",
+      "cert_name": "ISO 9001 - ניהול איכות",
+      "cert_number": "IL-9001-2022-XXX",
+      "issuing_body": "מכון התקנים",
+      "valid_from": "2022-01-01",
+      "valid_until": "2026-12-31"
+    }
+  ]
+}`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Claude API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.content[0].text;
+
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Could not parse JSON');
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    const uniqueId = `ai-generated-${Date.now()}`;
+
+    return {
+      id: uniqueId,
+      name: parsed.name || 'חברה מחוללת',
+      company_number: `52${Math.floor(1000000 + Math.random() * 9000000)}`,
+      description: parsed.description || '',
+      domain: parsed.domain || tenderDomain,
+      founding_year: parsed.founding_year || 2010,
+      specializations: parsed.specializations || '',
+      employee_count: parsed.employee_count || 100,
+      annual_revenue: parsed.annual_revenue || 50,
+      seedProjects: parsed.seedProjects || [],
+      seedFinancials: parsed.seedFinancials || [],
+      seedCertifications: parsed.seedCertifications || [],
+    };
+  } catch (error) {
+    console.error('Company generation error:', error);
+    return null;
+  }
+}
+
+// Score how relevant a fictional company is to the tender
+function scoreFictionalRelevance(
+  fc: FictionalCompany,
+  tenderName: string,
+  conditions: Array<{ text: string; type: string }>
+): number {
+  let score = 0;
+  const searchText = `${tenderName} ${conditions.map(c => c.text).join(' ')}`.toLowerCase();
+  const companyText = `${fc.domain} ${fc.specializations} ${fc.description}`.toLowerCase();
+
+  // Check domain keywords overlap
+  const domainWords = companyText.split(/[\s,]+/).filter(w => w.length > 2);
+  for (const word of domainWords) {
+    if (searchText.includes(word)) score += 3;
+  }
+
+  // Check project categories match condition types
+  const conditionTypes = new Set(conditions.map(c => c.type));
+  if (conditionTypes.has('CERTIFICATION') && fc.seedCertifications.length > 2) score += 5;
+  if (conditionTypes.has('FINANCIAL') && fc.annual_revenue > 50) score += 3;
+  if (conditionTypes.has('EXPERIENCE') && fc.seedProjects.length > 3) score += 3;
+
+  return score;
+}
+
 export function SimpleIntakePage() {
   const navigate = useNavigate();
 
-  // Check if company is selected
-  const selectedOrgId = localStorage.getItem('tenderix_selected_org_id');
-  const selectedOrgName = localStorage.getItem('tenderix_selected_org_name');
+  // Check if company is already selected (optional now)
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(
+    localStorage.getItem('tenderix_selected_org_id')
+  );
+  const [selectedOrgName, setSelectedOrgName] = useState<string | null>(
+    localStorage.getItem('tenderix_selected_org_name')
+  );
 
   const [text, setText] = useState('');
   const [fileName, setFileName] = useState<string | null>(null);
@@ -180,8 +338,48 @@ export function SimpleIntakePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [savedTenderId, setSavedTenderId] = useState<string | null>(null);
   const [currentFile, setCurrentFile] = useState<{ name: string; size: number; type: string } | null>(null);
-  const [currentStep, setCurrentStep] = useState<'upload' | 'extract' | 'save' | 'done'>('upload');
+  const [currentStep, setCurrentStep] = useState<'upload' | 'extract' | 'company' | 'save' | 'done'>('upload');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Company matching state
+  const [dbCompanies, setDbCompanies] = useState<Organization[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
+  const [companySearchQuery, setCompanySearchQuery] = useState('');
+  const [isGeneratingCompany, setIsGeneratingCompany] = useState(false);
+  const [generatedCompany, setGeneratedCompany] = useState<FictionalCompany | null>(null);
+  const [rankedFictional, setRankedFictional] = useState<FictionalCompany[]>([]);
+
+  // Load DB companies when entering company step
+  useEffect(() => {
+    if (currentStep === 'company') {
+      loadCompaniesForMatching();
+    }
+  }, [currentStep]);
+
+  async function loadCompaniesForMatching() {
+    setLoadingCompanies(true);
+    try {
+      const orgs = await api.organizations.list();
+      setDbCompanies(orgs || []);
+
+      // Rank fictional companies by relevance to tender
+      if (results) {
+        const ranked = [...FICTIONAL_COMPANIES]
+          .map(fc => ({
+            company: fc,
+            score: scoreFictionalRelevance(fc, results.metadata.tenderName, results.conditions),
+          }))
+          .sort((a, b) => b.score - a.score)
+          .map(r => r.company);
+        setRankedFictional(ranked);
+      }
+    } catch (error) {
+      console.error('Error loading companies:', error);
+      setDbCompanies([]);
+    } finally {
+      setLoadingCompanies(false);
+    }
+  }
 
   // Extract text from PDF
   const extractPdfText = async (file: File): Promise<string> => {
@@ -268,7 +466,12 @@ export function SimpleIntakePage() {
         conditions: result.conditions,
         metadata: result.metadata,
       });
-      setCurrentStep('save');
+      // If company already selected, skip company step
+      if (selectedOrgId) {
+        setCurrentStep('save');
+      } else {
+        setCurrentStep('company');
+      }
       setExtractionStatus(`נמצאו ${result.conditions.length} תנאי סף!`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'שגיאה בניתוח');
@@ -278,6 +481,89 @@ export function SimpleIntakePage() {
     }
   };
 
+  // Select a DB company
+  function selectDbCompany(company: Organization) {
+    setSelectedOrgId(company.id);
+    setSelectedOrgName(company.name);
+    localStorage.setItem('tenderix_selected_org_id', company.id);
+    localStorage.setItem('tenderix_selected_org_name', company.name);
+    localStorage.setItem('tenderix_session_org_id', company.id);
+    setCurrentStep('save');
+  }
+
+  // Select a fictional company (create in DB + seed data)
+  async function selectFictionalCompanyAndSeed(fc: FictionalCompany) {
+    setLoadingCompanies(true);
+    try {
+      const org = await api.organizations.ensureExists(fc.id, {
+        name: fc.name,
+        company_number: fc.company_number,
+        founding_year: fc.founding_year,
+        specializations: fc.specializations,
+      });
+      const orgId = org?.id || fc.id;
+
+      // Seed profile data if not already seeded
+      const seedKey = `tenderix_seeded_${orgId}`;
+      if (!localStorage.getItem(seedKey)) {
+        for (const proj of fc.seedProjects) {
+          await api.company.createProject({ org_id: orgId, ...proj }).catch(e => console.warn('Seed project:', e));
+        }
+        for (const fin of fc.seedFinancials) {
+          await api.company.createFinancial({ org_id: orgId, ...fin }).catch(e => console.warn('Seed financial:', e));
+        }
+        for (const cert of fc.seedCertifications) {
+          await api.company.createCertification({ org_id: orgId, ...cert }).catch(e => console.warn('Seed cert:', e));
+        }
+        localStorage.setItem(seedKey, 'true');
+      }
+
+      setSelectedOrgId(orgId);
+      setSelectedOrgName(fc.name);
+      localStorage.setItem('tenderix_selected_org_id', orgId);
+      localStorage.setItem('tenderix_selected_org_name', fc.name);
+      localStorage.setItem('tenderix_session_org_id', orgId);
+      setCurrentStep('save');
+    } catch (error) {
+      console.error('Error creating fictional company:', error);
+      setSelectedOrgId(fc.id);
+      setSelectedOrgName(fc.name);
+      localStorage.setItem('tenderix_selected_org_id', fc.id);
+      localStorage.setItem('tenderix_selected_org_name', fc.name);
+      localStorage.setItem('tenderix_session_org_id', fc.id);
+      setCurrentStep('save');
+    } finally {
+      setLoadingCompanies(false);
+    }
+  }
+
+  // Generate a matching company with AI
+  async function generateCompany() {
+    if (!results) return;
+
+    setIsGeneratingCompany(true);
+    setError(null);
+    try {
+      // Detect domain from tender name + conditions
+      const tenderDomain = results.metadata.tenderName || 'כללי';
+      const fc = await generateMatchingCompanyWithAI(
+        tenderDomain,
+        results.metadata.issuingBody || '',
+        results.conditions.map(c => ({ text: c.text, type: c.type }))
+      );
+
+      if (fc) {
+        setGeneratedCompany(fc);
+      } else {
+        setError('לא הצלחתי לחולל חברה. נסה שוב.');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'שגיאה בחילול חברה');
+    } finally {
+      setIsGeneratingCompany(false);
+    }
+  }
+
   // Save tender and gates to database
   const saveTender = async () => {
     if (!results) return;
@@ -286,25 +572,20 @@ export function SimpleIntakePage() {
     setError(null);
 
     try {
-      // Use the selected company's org ID
       const orgId = selectedOrgId || getCurrentOrgId();
       const orgData = getDefaultOrgData();
 
-      // Ensure organization exists
       await api.organizations.ensureExists(orgId, {
         name: selectedOrgName || orgData.name,
         company_number: orgData.company_number,
         settings: orgData.settings,
       });
 
-      // Parse submission deadline to valid date format
       let parsedDeadline: string | undefined;
       if (results.metadata.submissionDeadline) {
-        // Try to extract date from Hebrew format like "09/02/2023 עד לשעה: 16:00"
         const dateMatch = results.metadata.submissionDeadline.match(/(\d{1,2})[\/\.](\d{1,2})[\/\.](\d{4})/);
         if (dateMatch) {
           const [, day, month, year] = dateMatch;
-          // Extract time if present
           const timeMatch = results.metadata.submissionDeadline.match(/(\d{1,2}):(\d{2})/);
           const hours = timeMatch ? timeMatch[1].padStart(2, '0') : '23';
           const minutes = timeMatch ? timeMatch[2] : '59';
@@ -312,7 +593,6 @@ export function SimpleIntakePage() {
         }
       }
 
-      // Create tender
       const tender = await api.tenders.create({
         tender_name: results.metadata.tenderName || fileName || 'מכרז חדש',
         tender_number: results.metadata.tenderNumber || undefined,
@@ -327,13 +607,12 @@ export function SimpleIntakePage() {
         throw new Error('Failed to create tender');
       }
 
-      // Create gate conditions
       for (const condition of results.conditions) {
         await api.gates.create({
           tender_id: tender.id,
           condition_number: condition.number || '1',
           condition_text: condition.text || 'תנאי סף',
-          condition_type: condition.type || 'OTHER', // Required field in DB
+          condition_type: condition.type || 'OTHER',
           requirement_type: condition.type || 'OTHER',
           is_mandatory: condition.isMandatory !== false,
           source_page: condition.sourcePage,
@@ -342,25 +621,22 @@ export function SimpleIntakePage() {
         });
       }
 
-      // Save document metadata
       if (currentFile) {
         await api.documents.create({
           tender_id: tender.id,
           file_name: currentFile.name,
           file_type: currentFile.type.includes('pdf') ? 'PDF' : 'TXT',
-          storage_path: `local/${currentFile.name}`, // Reference to local file
-          doc_type: 'INVITATION', // Main tender document
+          storage_path: `local/${currentFile.name}`,
+          doc_type: 'INVITATION',
           file_size_bytes: currentFile.size,
           version: 1,
           is_original: true,
-          processed_text: text.substring(0, 50000), // Store first 50K chars of extracted text
+          processed_text: text.substring(0, 50000),
           processing_status: 'COMPLETED',
         });
       }
 
-      // Save extracted text for later analysis stages
       setTenderExtractedText(tender.id, text);
-
       setCurrentTender(tender.id, results.metadata.tenderName || 'מכרז חדש');
       setSavedTenderId(tender.id);
       setCurrentStep('done');
@@ -402,50 +678,35 @@ export function SimpleIntakePage() {
     setExtractionStatus('');
     setError(null);
     setShowPreview(false);
+    setGeneratedCompany(null);
+    setCompanySearchQuery('');
   };
 
-  // If no company selected, redirect to home
-  if (!selectedOrgId) {
+  // Filter DB companies by search
+  const filteredDbCompanies = dbCompanies.filter(c => {
+    if (!companySearchQuery.trim()) return true;
+    const q = companySearchQuery.toLowerCase();
     return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-        padding: '2rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-        <div style={{
-          textAlign: 'center',
-          background: 'rgba(255,255,255,0.05)',
-          borderRadius: '16px',
-          padding: '3rem',
-          border: '1px solid rgba(255,255,255,0.1)',
-        }}>
-          <Home size={48} style={{ color: '#00d4ff', marginBottom: '1rem' }} />
-          <h2 style={{ color: '#fff', marginBottom: '0.5rem' }}>יש לבחור חברה תחילה</h2>
-          <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>
-            לפני טעינת מכרז, יש לבחור חברה מהמאגר
-          </p>
-          <button
-            onClick={() => navigate('/')}
-            style={{
-              padding: '0.75rem 2rem',
-              borderRadius: '12px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #00b4d8, #0096c7)',
-              color: 'white',
-              fontSize: '1rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            בחר חברה
-          </button>
-        </div>
-      </div>
+      c.name?.toLowerCase().includes(q) ||
+      c.company_number?.toLowerCase().includes(q) ||
+      c.specializations?.toLowerCase().includes(q)
     );
-  }
+  });
+
+  // Filter fictional companies by search
+  const filteredFictional = rankedFictional.filter(fc => {
+    if (!companySearchQuery.trim()) return true;
+    const q = companySearchQuery.toLowerCase();
+    return (
+      fc.name.toLowerCase().includes(q) ||
+      fc.domain.toLowerCase().includes(q) ||
+      fc.specializations.toLowerCase().includes(q)
+    );
+  });
+
+  // Don't show fictional companies already in DB
+  const dbIds = new Set(dbCompanies.map(c => c.id));
+  const availableFictional = filteredFictional.filter(fc => !dbIds.has(fc.id));
 
   return (
     <div style={{
@@ -544,35 +805,46 @@ export function SimpleIntakePage() {
           </div>
         </div>
 
-        {/* Company Context Banner */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-          marginBottom: '1rem',
-          padding: '0.6rem 1rem',
-          background: 'rgba(0, 180, 216, 0.1)',
-          borderRadius: '8px',
-          border: '1px solid rgba(0, 180, 216, 0.2)',
-        }}>
-          <span style={{ color: '#00d4ff', fontSize: '0.85rem' }}>
-            מנתח עבור:
-          </span>
-          <span style={{ color: '#fff', fontWeight: 600, fontSize: '0.9rem' }}>
-            {selectedOrgName}
-          </span>
-          <span style={{ flex: 1 }} />
-          <Link
-            to="/"
-            style={{
-              color: '#94a3b8',
-              fontSize: '0.8rem',
-              textDecoration: 'none',
-            }}
-          >
-            החלף חברה
-          </Link>
-        </div>
+        {/* Company Context Banner - show only if company already selected */}
+        {selectedOrgName && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            marginBottom: '1rem',
+            padding: '0.6rem 1rem',
+            background: 'rgba(0, 180, 216, 0.1)',
+            borderRadius: '8px',
+            border: '1px solid rgba(0, 180, 216, 0.2)',
+          }}>
+            <Building2 size={16} style={{ color: '#00d4ff' }} />
+            <span style={{ color: '#00d4ff', fontSize: '0.85rem' }}>
+              מנתח עבור:
+            </span>
+            <span style={{ color: '#fff', fontWeight: 600, fontSize: '0.9rem' }}>
+              {selectedOrgName}
+            </span>
+            <span style={{ flex: 1 }} />
+            <button
+              onClick={() => {
+                setSelectedOrgId(null);
+                setSelectedOrgName(null);
+                localStorage.removeItem('tenderix_selected_org_id');
+                localStorage.removeItem('tenderix_selected_org_name');
+              }}
+              style={{
+                color: '#94a3b8',
+                fontSize: '0.8rem',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+              }}
+            >
+              החלף חברה
+            </button>
+          </div>
+        )}
 
         {/* Header */}
         <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
@@ -602,14 +874,19 @@ export function SimpleIntakePage() {
           {[
             { key: 'upload', icon: Upload, label: 'העלאה' },
             { key: 'extract', icon: Sparkles, label: 'חילוץ' },
+            { key: 'company', icon: Building2, label: 'חברה' },
             { key: 'save', icon: Database, label: 'שמירה' },
             { key: 'done', icon: BarChart3, label: 'ניתוח' },
           ].map((step, index) => {
-            const stepOrder = ['upload', 'extract', 'save', 'done'];
+            const stepOrder = ['upload', 'extract', 'company', 'save', 'done'];
             const currentIndex = stepOrder.indexOf(currentStep);
             const stepIndex = stepOrder.indexOf(step.key);
             const isActive = stepIndex === currentIndex;
             const isComplete = stepIndex < currentIndex;
+            // Skip company step indicator if company was already selected
+            if (step.key === 'company' && selectedOrgId && currentStep !== 'company') {
+              // Still show it but as complete
+            }
 
             return (
               <div key={step.key} style={{ display: 'flex', alignItems: 'center' }}>
@@ -646,7 +923,7 @@ export function SimpleIntakePage() {
                     {step.label}
                   </span>
                 </div>
-                {index < 3 && (
+                {index < 4 && (
                   <div style={{
                     width: '40px',
                     height: '2px',
@@ -857,8 +1134,355 @@ export function SimpleIntakePage() {
           </button>
         </div>
 
+        {/* ==================== COMPANY MATCHING STEP ==================== */}
+        {currentStep === 'company' && results && (
+          <div style={{
+            background: 'rgba(255,255,255,0.05)',
+            borderRadius: '16px',
+            padding: '2rem',
+            marginBottom: '1.5rem',
+            border: '1px solid rgba(0, 180, 216, 0.3)',
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+              <Building2 size={36} style={{ color: '#00d4ff', marginBottom: '0.5rem' }} />
+              <h2 style={{ color: '#fff', fontSize: '1.4rem', margin: '0 0 0.5rem' }}>
+                בחר חברה למכרז
+              </h2>
+              <p style={{ color: '#94a3b8', fontSize: '0.95rem', margin: 0 }}>
+                בחר חברה מהמאגר או חולל פרופיל חברה פיקטיבית שמתאימה לתחום המכרז
+              </p>
+              <div style={{
+                marginTop: '0.75rem',
+                padding: '0.5rem 1rem',
+                background: 'rgba(124, 58, 237, 0.15)',
+                borderRadius: '8px',
+                display: 'inline-block',
+              }}>
+                <span style={{ color: '#a78bfa', fontSize: '0.85rem' }}>
+                  תחום המכרז: <strong style={{ color: '#fff' }}>{results.metadata.tenderName}</strong>
+                </span>
+              </div>
+            </div>
+
+            {/* Search */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              marginBottom: '1.5rem',
+              padding: '0.75rem 1rem',
+              background: 'rgba(255,255,255,0.05)',
+              borderRadius: '12px',
+              border: '1px solid rgba(255,255,255,0.1)',
+            }}>
+              <Search size={18} color="#94a3b8" />
+              <input
+                type="text"
+                value={companySearchQuery}
+                onChange={e => setCompanySearchQuery(e.target.value)}
+                placeholder="חפש חברה לפי שם, תחום או מספר..."
+                style={{
+                  flex: 1,
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: '0.95rem',
+                  fontFamily: 'inherit',
+                  background: 'transparent',
+                  color: '#fff',
+                }}
+              />
+            </div>
+
+            {loadingCompanies && (
+              <div style={{ textAlign: 'center', padding: '2rem' }}>
+                <Loader2 size={24} className="spin" style={{ color: '#00d4ff' }} />
+                <p style={{ color: '#94a3b8', marginTop: '0.5rem' }}>טוען חברות...</p>
+              </div>
+            )}
+
+            {!loadingCompanies && (
+              <>
+                {/* AI Generate Company Button */}
+                <div style={{
+                  marginBottom: '1.5rem',
+                  padding: '1.25rem',
+                  background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(0, 180, 216, 0.1))',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(124, 58, 237, 0.3)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <Wand2 size={28} style={{ color: '#a78bfa', flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ margin: '0 0 0.25rem', color: '#a78bfa' }}>חולל חברה מתאימה למכרז</h4>
+                      <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.85rem' }}>
+                        AI יחולל פרופיל חברה פיקטיבית עם פרויקטים, הסמכות ונתונים כספיים שמתאימים לתחום המכרז
+                      </p>
+                    </div>
+                    <button
+                      onClick={generateCompany}
+                      disabled={isGeneratingCompany}
+                      style={{
+                        padding: '0.75rem 1.5rem',
+                        borderRadius: '10px',
+                        border: 'none',
+                        background: isGeneratingCompany
+                          ? 'rgba(124, 58, 237, 0.3)'
+                          : 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                        color: 'white',
+                        fontSize: '0.95rem',
+                        fontWeight: 600,
+                        cursor: isGeneratingCompany ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {isGeneratingCompany ? (
+                        <>
+                          <Loader2 size={18} className="spin" />
+                          מחולל...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 size={18} />
+                          חולל חברה
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Show generated company */}
+                  {generatedCompany && (
+                    <div style={{
+                      marginTop: '1rem',
+                      padding: '1rem',
+                      background: 'rgba(34, 197, 94, 0.1)',
+                      borderRadius: '10px',
+                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                        <Sparkles size={18} style={{ color: '#22c55e' }} />
+                        <span style={{ color: '#22c55e', fontWeight: 600 }}>חברה חוללה בהצלחה!</span>
+                      </div>
+                      <div style={{ marginBottom: '0.75rem' }}>
+                        <div style={{ color: '#fff', fontWeight: 600, fontSize: '1.1rem' }}>{generatedCompany.name}</div>
+                        <div style={{ color: '#94a3b8', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                          {generatedCompany.domain} | {generatedCompany.employee_count} עובדים | מחזור {generatedCompany.annual_revenue}M
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                          {generatedCompany.description}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                        <span style={{
+                          background: 'rgba(124, 58, 237, 0.2)',
+                          color: '#a78bfa',
+                          padding: '0.2rem 0.6rem',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                        }}>
+                          {generatedCompany.seedProjects.length} פרויקטים
+                        </span>
+                        <span style={{
+                          background: 'rgba(217, 119, 6, 0.2)',
+                          color: '#fbbf24',
+                          padding: '0.2rem 0.6rem',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                        }}>
+                          {generatedCompany.seedCertifications.length} הסמכות
+                        </span>
+                        <span style={{
+                          background: 'rgba(5, 150, 105, 0.2)',
+                          color: '#34d399',
+                          padding: '0.2rem 0.6rem',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                        }}>
+                          {generatedCompany.seedFinancials.length} שנות כספים
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => selectFictionalCompanyAndSeed(generatedCompany)}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          borderRadius: '8px',
+                          border: 'none',
+                          background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                          color: 'white',
+                          fontSize: '1rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem',
+                        }}
+                      >
+                        <CheckCircle size={18} />
+                        בחר חברה זו והמשך
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* DB Companies */}
+                {filteredDbCompanies.length > 0 && (
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <h4 style={{
+                      color: '#00d4ff',
+                      fontSize: '0.95rem',
+                      marginBottom: '0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}>
+                      <Database size={16} />
+                      חברות מהמאגר ({filteredDbCompanies.length})
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {filteredDbCompanies.map(company => (
+                        <button
+                          key={company.id}
+                          onClick={() => selectDbCompany(company)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '1rem',
+                            padding: '0.75rem 1rem',
+                            background: 'rgba(255,255,255,0.03)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '10px',
+                            cursor: 'pointer',
+                            textAlign: 'right',
+                            width: '100%',
+                            fontFamily: 'inherit',
+                            transition: 'all 0.2s',
+                          }}
+                          onMouseOver={e => {
+                            e.currentTarget.style.borderColor = '#00d4ff';
+                            e.currentTarget.style.background = 'rgba(0, 180, 216, 0.08)';
+                          }}
+                          onMouseOut={e => {
+                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                          }}
+                        >
+                          <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '10px',
+                            background: 'linear-gradient(135deg, #00b4d8, #0096c7)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}>
+                            <Building2 size={20} color="white" />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 600, color: '#fff' }}>{company.name}</div>
+                            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                              {company.company_number && `ח.פ. ${company.company_number}`}
+                              {company.specializations && ` | ${company.specializations}`}
+                            </div>
+                          </div>
+                          <ArrowRight size={16} color="#94a3b8" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Fictional Companies (ranked by relevance) */}
+                {availableFictional.length > 0 && (
+                  <div>
+                    <h4 style={{
+                      color: '#f59e0b',
+                      fontSize: '0.95rem',
+                      marginBottom: '0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}>
+                      <Star size={16} />
+                      חברות לדוגמה - ממוינות לפי רלוונטיות ({availableFictional.length})
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {availableFictional.map((fc, idx) => (
+                        <button
+                          key={fc.id}
+                          onClick={() => selectFictionalCompanyAndSeed(fc)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '1rem',
+                            padding: '0.75rem 1rem',
+                            background: idx === 0 ? 'rgba(245, 158, 11, 0.08)' : 'rgba(255,255,255,0.03)',
+                            border: idx === 0 ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '10px',
+                            cursor: 'pointer',
+                            textAlign: 'right',
+                            width: '100%',
+                            fontFamily: 'inherit',
+                            transition: 'all 0.2s',
+                          }}
+                          onMouseOver={e => {
+                            e.currentTarget.style.borderColor = '#f59e0b';
+                            e.currentTarget.style.background = 'rgba(245, 158, 11, 0.1)';
+                          }}
+                          onMouseOut={e => {
+                            e.currentTarget.style.borderColor = idx === 0 ? 'rgba(245, 158, 11, 0.3)' : 'rgba(255,255,255,0.1)';
+                            e.currentTarget.style.background = idx === 0 ? 'rgba(245, 158, 11, 0.08)' : 'rgba(255,255,255,0.03)';
+                          }}
+                        >
+                          <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '10px',
+                            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}>
+                            <Star size={20} color="white" />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 600, color: '#fff' }}>
+                              {fc.name}
+                              {idx === 0 && (
+                                <span style={{
+                                  marginRight: '0.5rem',
+                                  background: 'rgba(245, 158, 11, 0.2)',
+                                  color: '#fbbf24',
+                                  padding: '0.15rem 0.5rem',
+                                  borderRadius: '4px',
+                                  fontSize: '0.7rem',
+                                }}>
+                                  הכי רלוונטית
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                              {fc.domain} | {fc.employee_count} עובדים | מחזור {fc.annual_revenue}M
+                            </div>
+                          </div>
+                          <ArrowRight size={16} color="#94a3b8" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
         {/* Results Section */}
-        {results && (
+        {results && currentStep !== 'company' && (
           <div style={{
             background: 'rgba(255,255,255,0.05)',
             borderRadius: '16px',
@@ -892,6 +1516,24 @@ export function SimpleIntakePage() {
                 <div style={{ color: '#ef4444', fontWeight: 600 }}>{results.metadata.submissionDeadline || 'לא זוהה'}</div>
               </div>
             </div>
+
+            {/* Selected company indicator */}
+            {selectedOrgName && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                marginBottom: '1.5rem',
+                padding: '0.75rem 1rem',
+                background: 'rgba(0, 180, 216, 0.1)',
+                borderRadius: '8px',
+                border: '1px solid rgba(0, 180, 216, 0.2)',
+              }}>
+                <Building2 size={18} style={{ color: '#00d4ff' }} />
+                <span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>חברה נבחרת:</span>
+                <span style={{ color: '#fff', fontWeight: 600 }}>{selectedOrgName}</span>
+              </div>
+            )}
 
             {/* Conditions Header */}
             <div style={{
@@ -1054,9 +1696,9 @@ export function SimpleIntakePage() {
                     <div style={{ color: '#fff', fontSize: '0.85rem' }}>{results?.conditions.length} נשמרו</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <BarChart3 size={20} style={{ color: '#00d4ff', marginBottom: '0.25rem' }} />
-                    <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>סטטוס</div>
-                    <div style={{ color: '#fff', fontSize: '0.85rem' }}>מוכן לניתוח</div>
+                    <Building2 size={20} style={{ color: '#00d4ff', marginBottom: '0.25rem' }} />
+                    <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>חברה</div>
+                    <div style={{ color: '#fff', fontSize: '0.85rem' }}>{selectedOrgName || 'ברירת מחדל'}</div>
                   </div>
                 </div>
 
@@ -1118,4 +1760,3 @@ export function SimpleIntakePage() {
     </div>
   );
 }
-// Trigger rebuild 1769369918
