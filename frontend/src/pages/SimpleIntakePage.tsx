@@ -150,6 +150,11 @@ ${text.substring(0, 100000)}`;
 
 export function SimpleIntakePage() {
   const navigate = useNavigate();
+
+  // Check if company is selected
+  const selectedOrgId = localStorage.getItem('tenderix_selected_org_id');
+  const selectedOrgName = localStorage.getItem('tenderix_selected_org_name');
+
   const [text, setText] = useState('');
   const [fileName, setFileName] = useState<string | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
@@ -281,12 +286,13 @@ export function SimpleIntakePage() {
     setError(null);
 
     try {
-      const orgId = getCurrentOrgId();
+      // Use the selected company's org ID
+      const orgId = selectedOrgId || getCurrentOrgId();
       const orgData = getDefaultOrgData();
 
       // Ensure organization exists
       await api.organizations.ensureExists(orgId, {
-        name: orgData.name,
+        name: selectedOrgName || orgData.name,
         company_number: orgData.company_number,
         settings: orgData.settings,
       });
@@ -398,6 +404,49 @@ export function SimpleIntakePage() {
     setShowPreview(false);
   };
 
+  // If no company selected, redirect to home
+  if (!selectedOrgId) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+        padding: '2rem',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        <div style={{
+          textAlign: 'center',
+          background: 'rgba(255,255,255,0.05)',
+          borderRadius: '16px',
+          padding: '3rem',
+          border: '1px solid rgba(255,255,255,0.1)',
+        }}>
+          <Home size={48} style={{ color: '#00d4ff', marginBottom: '1rem' }} />
+          <h2 style={{ color: '#fff', marginBottom: '0.5rem' }}>יש לבחור חברה תחילה</h2>
+          <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>
+            לפני טעינת מכרז, יש לבחור חברה מהמאגר
+          </p>
+          <button
+            onClick={() => navigate('/')}
+            style={{
+              padding: '0.75rem 2rem',
+              borderRadius: '12px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #00b4d8, #0096c7)',
+              color: 'white',
+              fontSize: '1rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            בחר חברה
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -428,11 +477,11 @@ export function SimpleIntakePage() {
               }}
             >
               <Home size={16} />
-              דשבורד
+              {selectedOrgName || 'בית'}
             </Link>
             <span style={{ color: '#475569' }}>/</span>
             <span style={{ color: '#00d4ff', fontSize: '0.9rem', fontWeight: 500 }}>
-              P1: חילוץ מהיר
+              P1: טעינת מכרז
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -495,6 +544,36 @@ export function SimpleIntakePage() {
           </div>
         </div>
 
+        {/* Company Context Banner */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          marginBottom: '1rem',
+          padding: '0.6rem 1rem',
+          background: 'rgba(0, 180, 216, 0.1)',
+          borderRadius: '8px',
+          border: '1px solid rgba(0, 180, 216, 0.2)',
+        }}>
+          <span style={{ color: '#00d4ff', fontSize: '0.85rem' }}>
+            מנתח עבור:
+          </span>
+          <span style={{ color: '#fff', fontWeight: 600, fontSize: '0.9rem' }}>
+            {selectedOrgName}
+          </span>
+          <span style={{ flex: 1 }} />
+          <Link
+            to="/"
+            style={{
+              color: '#94a3b8',
+              fontSize: '0.8rem',
+              textDecoration: 'none',
+            }}
+          >
+            החלף חברה
+          </Link>
+        </div>
+
         {/* Header */}
         <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
           <h1 style={{
@@ -505,10 +584,10 @@ export function SimpleIntakePage() {
             WebkitTextFillColor: 'transparent',
             marginBottom: '0.5rem',
           }}>
-            חילוץ תנאי סף
+            טעינת מכרז
           </h1>
           <p style={{ color: '#94a3b8', fontSize: '1.1rem' }}>
-            העלה מסמך או הדבק טקסט - קבל תוצאות תוך שניות
+            העלה מסמך או הדבק טקסט - חלץ תנאי סף תוך שניות
           </p>
         </div>
 
