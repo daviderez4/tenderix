@@ -5,13 +5,15 @@ import {
   ArrowRight, Copy, Eye, EyeOff, FileCheck, Database, BarChart3,
   RotateCcw, Home, CheckSquare, Target, Building2, Search, Wand2,
   Users, Award, TrendingUp, Briefcase, ChevronDown, ChevronUp,
+  Play,
 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 // @ts-ignore
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { api } from '../api/tenderix';
 import type { Organization } from '../api/tenderix';
-import { setCurrentTender, getCurrentOrgId, getDefaultOrgData, setTenderExtractedText } from '../api/config';
+import { setCurrentTender, getCurrentTenderId, getCurrentOrgId, getDefaultOrgData, setTenderExtractedText } from '../api/config';
+import { API_CONFIG } from '../api/config';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -72,33 +74,49 @@ type GenPhase = 0 | 1 | 2 | 3 | 4; // 0=idle, 1=profile, 2=projects, 3=financial
 
 async function callClaude(prompt: string, maxTokens = 4000): Promise<string> {
   const ANTHROPIC_API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
-  if (!ANTHROPIC_API_KEY) {
-    throw new Error('לא הוגדר מפתח API של Anthropic. יש להוסיף VITE_ANTHROPIC_API_KEY לקובץ .env');
+
+  // Try direct API first, then fall back to webhook
+  if (ANTHROPIC_API_KEY) {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: maxTokens,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('Claude API error:', errText);
+      throw new Error(`שגיאת API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.content[0].text;
   }
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  // Fallback: use n8n webhook for AI calls
+  console.log('No ANTHROPIC_API_KEY, using n8n webhook fallback...');
+  const response = await fetch(`${API_CONFIG.WEBHOOK_BASE}/tdx-ai-call`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: maxTokens,
-      messages: [{ role: 'user', content: prompt }],
-    }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, max_tokens: maxTokens }),
   });
 
   if (!response.ok) {
-    const errText = await response.text();
-    console.error('Claude API error:', errText);
-    throw new Error(`שגיאת API: ${response.status}`);
+    // If webhook also fails, try professional gates extraction directly
+    throw new Error('שגיאת חיבור - ודא שה-webhook פעיל או הוסף VITE_ANTHROPIC_API_KEY ל-.env');
   }
 
   const data = await response.json();
-  return data.content[0].text;
+  return data.text || data.content?.[0]?.text || JSON.stringify(data);
 }
 
 function parseJSON<T>(text: string): T {
@@ -401,6 +419,11 @@ export function SimpleIntakePage() {
     localStorage.getItem('tenderix_selected_org_name')
   );
 
+  // Existing tender detection
+  const [existingTenderId, setExistingTenderId] = useState<string | null>(null);
+  const [existingTenderName, setExistingTenderName] = useState<string | null>(null);
+  const [existingGatesCount, setExistingGatesCount] = useState(0);
+
   // Upload state
   const [text, setText] = useState('');
   const [fileName, setFileName] = useState<string | null>(null);
@@ -447,6 +470,20 @@ export function SimpleIntakePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [savedTenderId, setSavedTenderId] = useState<string | null>(null);
   const [showConditions, setShowConditions] = useState(false);
+
+  // Check for existing tender on mount
+  useEffect(() => {
+    const tenderId = getCurrentTenderId();
+    const tenderName = localStorage.getItem('currentTenderName');
+    if (tenderId && tenderName) {
+      setExistingTenderId(tenderId);
+      setExistingTenderName(tenderName);
+      // Load existing gates count
+      api.getGateConditions(tenderId)
+        .then(gates => setExistingGatesCount(gates?.length || 0))
+        .catch(() => setExistingGatesCount(0));
+    }
+  }, []);
 
   // Load DB companies when entering search mode
   useEffect(() => {
@@ -521,7 +558,7 @@ export function SimpleIntakePage() {
     }
   };
 
-  // Run extraction
+  // Run extraction - try direct Claude, then webhook fallback
   const runExtraction = async () => {
     if (text.length < 100) {
       setError('נא להעלות קובץ או להדביק טקסט מהמכרז');
@@ -532,8 +569,54 @@ export function SimpleIntakePage() {
     setExtractionStatus('שולח לניתוח AI...');
     setResults(null);
     try {
-      const result = await extractGatesWithClaude(text);
-      if (!result.success) throw new Error(result.error || 'שגיאה בחילוץ');
+      let result;
+      try {
+        // Try direct Claude API extraction first
+        result = await extractGatesWithClaude(text);
+      } catch (directErr) {
+        console.warn('Direct Claude extraction failed, trying webhook...', directErr);
+        setExtractionStatus('מנסה חיבור חלופי...');
+
+        // Fallback: Use n8n webhook for extraction
+        try {
+          const webhookRes = await fetch(`${API_CONFIG.WEBHOOK_BASE}/tdx-professional-gates`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tender_id: 'temp-' + Date.now(), tender_text: text.substring(0, 100000) }),
+          });
+          if (webhookRes.ok) {
+            const webhookData = await webhookRes.json();
+            // Map webhook response to our expected format
+            result = {
+              success: true,
+              conditions: (webhookData.conditions || webhookData.gates || []).map(
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (c: any) => ({
+                  number: c.condition_number || c.number || String(c.id || ''),
+                  text: c.condition_text || c.text || '',
+                  type: c.requirement_type || c.type || 'OTHER',
+                  isMandatory: c.is_mandatory !== false,
+                  sourcePage: c.source_page,
+                  sourceSection: c.source_section,
+                })
+              ),
+              metadata: webhookData.metadata || {
+                tenderName: webhookData.tender_name || '',
+                tenderNumber: webhookData.tender_number || '',
+                issuingBody: webhookData.issuing_body || '',
+                submissionDeadline: webhookData.submission_deadline || '',
+              },
+            };
+          } else {
+            throw new Error('Webhook returned error');
+          }
+        } catch (webhookErr) {
+          console.error('Webhook extraction also failed:', webhookErr);
+          throw new Error('שגיאה בחילוץ - ודא שמפתח API מוגדר או שה-webhook פעיל');
+        }
+      }
+
+      if (!result || !result.success) throw new Error(result?.error || 'שגיאה בחילוץ');
       setResults({ conditions: result.conditions, metadata: result.metadata });
       if (selectedOrgId) {
         setCurrentStep('save');
@@ -853,6 +936,65 @@ export function SimpleIntakePage() {
           </div>
         )}
 
+        {/* ========== EXISTING TENDER BANNER ========== */}
+        {existingTenderId && existingTenderName && currentStep === 'upload' && !text && (
+          <div style={{
+            marginBottom: '1.5rem', padding: '1.25rem 1.5rem',
+            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(16, 185, 129, 0.05))',
+            borderRadius: '12px',
+            border: '1px solid rgba(34, 197, 94, 0.3)',
+            borderRight: '4px solid #22c55e',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{
+                width: '48px', height: '48px', borderRadius: '12px',
+                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <FileCheck size={24} color="white" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ color: '#22c55e', fontWeight: 700, fontSize: '1rem', marginBottom: '0.25rem' }}>
+                  יש מכרז פעיל!
+                </div>
+                <div style={{ color: '#fff', fontSize: '0.95rem', fontWeight: 500 }}>
+                  {existingTenderName}
+                </div>
+                {existingGatesCount > 0 && (
+                  <div style={{ color: '#94a3b8', fontSize: '0.85rem', marginTop: '0.2rem' }}>
+                    {existingGatesCount} תנאי סף כבר חולצו
+                  </div>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem', flexShrink: 0 }}>
+                <button
+                  onClick={() => navigate('/gates')}
+                  style={{
+                    padding: '0.7rem 1.25rem', borderRadius: '10px', border: 'none',
+                    background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                    color: 'white', fontSize: '0.9rem', fontWeight: 600,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <Play size={16} /> המשך לתנאי סף
+                </button>
+                <button
+                  onClick={() => { setExistingTenderId(null); setExistingTenderName(null); }}
+                  style={{
+                    padding: '0.7rem 1rem', borderRadius: '10px',
+                    border: '1px solid rgba(255,255,255,0.2)', background: 'transparent',
+                    color: '#94a3b8', fontSize: '0.85rem', cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  טען מכרז חדש
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ========== HEADER ========== */}
         <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
           <h1 style={{
@@ -864,7 +1006,7 @@ export function SimpleIntakePage() {
             טעינת מכרז
           </h1>
           <p style={{ color: '#94a3b8', fontSize: '1.1rem' }}>
-            העלה מסמך, חלץ תנאי סף, בחר חברה - והמשך לניתוח
+            העלה מסמך או הדבק טקסט - חלץ תנאי סף תוך שניות
           </p>
         </div>
 
@@ -960,7 +1102,16 @@ export function SimpleIntakePage() {
                   </button>
                 )}
                 <button
-                  onClick={async () => { const clipText = await navigator.clipboard.readText(); setText(prev => prev + clipText); }}
+                  onClick={async () => {
+                    const clipText = await navigator.clipboard.readText();
+                    setText(prev => {
+                      const newText = prev + clipText;
+                      if (newText.length >= 100 && currentStep === 'upload') {
+                        setCurrentStep('extract');
+                      }
+                      return newText;
+                    });
+                  }}
                   style={{
                     background: 'transparent', border: '1px solid #334155', borderRadius: '6px',
                     padding: '0.4rem 0.75rem', color: '#94a3b8', cursor: 'pointer',
@@ -973,7 +1124,12 @@ export function SimpleIntakePage() {
             </div>
             <textarea
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => {
+                setText(e.target.value);
+                if (e.target.value.length >= 100 && currentStep === 'upload') {
+                  setCurrentStep('extract');
+                }
+              }}
               placeholder="הדבק כאן את תוכן המכרז..."
               style={{
                 width: '100%', minHeight: showPreview ? '400px' : '120px',
