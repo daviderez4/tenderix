@@ -5,15 +5,14 @@
  * and running them against the semantic matching engine to validate quality
  */
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   FlaskConical, Play, CheckCircle, XCircle, AlertTriangle,
-  RefreshCw, ChevronDown, ChevronUp, ArrowRight, Sparkles,
+  RefreshCw, ChevronDown, ChevronUp, ArrowRight,
   Users, Building, FileText, Trophy, Skull
 } from 'lucide-react';
 import { api, type Tender, type GateCondition } from '../api/tenderix';
-import { GateMatchExplanation } from '../components/GateMatchExplanation';
 
 interface GeneratedProfile {
   id?: string;
@@ -50,7 +49,7 @@ interface GeneratedProfile {
   test_run_at?: string;
 }
 
-const profileTypeConfig: Record<string, { label: string; icon: JSX.Element; color: string; description: string }> = {
+const profileTypeConfig: Record<string, { label: string; icon: React.ReactNode; color: string; description: string }> = {
   PASSING: {
     label: 'פרופיל עובר',
     icon: <Trophy size={20} />,
