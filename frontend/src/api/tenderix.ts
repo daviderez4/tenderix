@@ -197,6 +197,60 @@ export interface RequiredDocument {
   notes?: string;
 }
 
+export interface TenderDefinition {
+  id: string;
+  tender_id: string;
+  term: string;
+  definition?: string;
+  constraints?: string;
+  interpretation_type?: 'RESTRICTIVE' | 'EXPANSIVE' | 'NEUTRAL';
+  interpretation_notes?: string;
+  definition_category?: string;
+  includes_examples?: string[];
+  excludes_examples?: string[];
+  equivalent_terms?: string[];
+  structured_constraints?: Record<string, unknown>;
+  source_page?: number;
+  source_section?: string;
+  source_quote?: string;
+}
+
+export interface GateMatchExplanation {
+  id: string;
+  gate_condition_id: string;
+  tender_id: string;
+  org_id: string;
+  definition_term?: string;
+  definition_text?: string;
+  overall_status: string;
+  required_count?: number;
+  matching_count?: number;
+  project_analyses: Array<Record<string, unknown>>;
+  gap_description?: string;
+  gap_closure_options?: Array<Record<string, unknown>>;
+  restrictive_result?: Record<string, unknown>;
+  expansive_result?: Record<string, unknown>;
+  recommended_interpretation?: string;
+  explanation_markdown?: string;
+}
+
+export interface GeneratedProfile {
+  id: string;
+  tender_id: string;
+  profile_type: 'PASSING' | 'FAILING' | 'ADVERSARIAL';
+  profile_name: string;
+  company_data: Record<string, unknown>;
+  generated_projects: Array<Record<string, unknown>>;
+  generated_financials: Array<Record<string, unknown>>;
+  generated_certifications: Array<Record<string, unknown>>;
+  generated_personnel: Array<Record<string, unknown>>;
+  expected_result: Record<string, unknown>;
+  adversarial_tricks?: Array<Record<string, unknown>>;
+  test_run_at?: string;
+  test_result?: Record<string, unknown>;
+  test_passed?: boolean;
+}
+
 export interface Organization {
   id: string;
   name: string;
@@ -3916,6 +3970,99 @@ export const api = {
 
   deleteCompetitor: (id: string) =>
     supabaseFetch<void>(`competitors?id=eq.${id}`, { method: 'DELETE' }),
+
+  // ==================== DEFINITION-AWARE MATCHING (v4.0) ====================
+
+  definitions: {
+    /** Get all definitions for a tender */
+    getByTender: (tenderId: string) =>
+      supabaseFetch<any[]>(`tender_definitions?tender_id=eq.${tenderId}&order=created_at`),
+
+    /** Extract definitions from tender text via AI */
+    extract: async (tenderId: string, documentText: string) => {
+      const webhookUrl = `${API_CONFIG.WEBHOOK_BASE}/tdx-extract-definitions`;
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tender_id: tenderId, document_text: documentText }),
+      });
+      if (!response.ok) throw new Error('Failed to extract definitions');
+      return response.json();
+    },
+
+    /** Link definitions to gate conditions */
+    linkToGates: async (tenderId: string) => {
+      const webhookUrl = `${API_CONFIG.WEBHOOK_BASE}/tdx-link-definitions`;
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tender_id: tenderId }),
+      });
+      if (!response.ok) throw new Error('Failed to link definitions');
+      return response.json();
+    },
+  },
+
+  semanticMatching: {
+    /** Run full semantic matching (replaces keyword matching) */
+    run: async (tenderId: string, orgId: string) => {
+      const webhookUrl = `${API_CONFIG.WEBHOOK_BASE}/tdx-semantic-matching`;
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tender_id: tenderId, org_id: orgId }),
+      });
+      if (!response.ok) throw new Error('Failed to run semantic matching');
+      return response.json();
+    },
+
+    /** Get match explanations for a tender */
+    getExplanations: (tenderId: string, orgId: string) =>
+      supabaseFetch<any[]>(`gate_match_explanations?tender_id=eq.${tenderId}&org_id=eq.${orgId}`),
+
+    /** Get single explanation */
+    getExplanation: (conditionId: string, orgId: string) =>
+      supabaseFetch<any[]>(`gate_match_explanations?gate_condition_id=eq.${conditionId}&org_id=eq.${orgId}`)
+        .then(r => r[0] || null),
+  },
+
+  profileTest: {
+    /** Get all generated profiles for a tender */
+    getProfiles: (tenderId: string) =>
+      supabaseFetch<any[]>(`generated_profiles?tender_id=eq.${tenderId}&order=created_at.desc`),
+
+    /** Generate a test profile */
+    generate: async (tenderId: string, profileType: string) => {
+      const webhookUrl = `${API_CONFIG.WEBHOOK_BASE}/tdx-generate-profile`;
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tender_id: tenderId, profile_type: profileType }),
+      });
+      if (!response.ok) throw new Error('Failed to generate profile');
+      return response.json();
+    },
+
+    /** Test a generated profile against matching engine */
+    test: async (tenderId: string, profileId: string) => {
+      const webhookUrl = `${API_CONFIG.WEBHOOK_BASE}/tdx-test-profile`;
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tender_id: tenderId, profile_id: profileId }),
+      });
+      if (!response.ok) throw new Error('Failed to test profile');
+      return response.json();
+    },
+
+    /** Delete a generated profile */
+    delete: (profileId: string) =>
+      supabaseFetch<void>(`generated_profiles?id=eq.${profileId}`, { method: 'DELETE' }),
+  },
+
+  getGateSummary: (tenderId: string) =>
+    supabaseFetch<any[]>(`gate_conditions_summary?tender_id=eq.${tenderId}`)
+      .then(r => r[0] || null),
 };
 
 // ==================== SAMPLE COMPETITORS DATA ====================

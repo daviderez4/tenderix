@@ -49,6 +49,22 @@ import {
   STRATEGIC_QUESTIONS_PROMPT
 } from './prompts-professional-v2.js';
 
+// Definition-Aware Matching Engine (v4.0)
+import {
+  extractDefinitions,
+  saveDefinitions,
+  linkDefinitionsToGates,
+  saveLinkedDefinitions,
+  classifyProjectAgainstDefinition,
+  batchClassifyProjects,
+  performSemanticMatching,
+  generateMatchExplanation,
+  generateTestProfile,
+  saveGeneratedProfile,
+  testGeneratedProfile,
+  generateDefinitionClarifications
+} from './definition-engine.js';
+
 // Configuration
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://rerfjgjwjqodevkvhkxu.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY;
@@ -721,6 +737,97 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ['tender_id', 'analysis_result']
         }
       },
+      // ============================================
+      // v4.0: Definition-Aware Matching Tools
+      // ============================================
+      {
+        name: 'extract_tender_definitions',
+        description: 'חילוץ הגדרות מכרז - זיהוי כל ההגדרות הספציפיות שמשפיעות על פרשנות תנאי הסף (למשל: "פרויקט דומה" = ?)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            tender_id: { type: 'string', description: 'מזהה המכרז (UUID)' },
+            document_text: { type: 'string', description: 'טקסט המכרז המלא' },
+            save_to_db: { type: 'boolean', description: 'האם לשמור בDB', default: true }
+          },
+          required: ['tender_id', 'document_text']
+        }
+      },
+      {
+        name: 'link_definitions_to_gates',
+        description: 'קישור הגדרות המכרז לתנאי הסף - יצירת "דרישה מפורשת" לכל תנאי',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            tender_id: { type: 'string', description: 'מזהה המכרז' }
+          },
+          required: ['tender_id']
+        }
+      },
+      {
+        name: 'semantic_gate_matching',
+        description: 'התאמה סמנטית מלאה - בדיקת פרופיל חברה מול תנאי סף לפי הגדרות המכרז (מחליף keyword matching)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            tender_id: { type: 'string', description: 'מזהה המכרז' },
+            org_id: { type: 'string', description: 'מזהה הארגון' }
+          },
+          required: ['tender_id', 'org_id']
+        }
+      },
+      {
+        name: 'classify_project_against_definition',
+        description: 'סיווג פרויקט בודד מול הגדרה של המכרז - האם הפרויקט מתאים להגדרה?',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            definition: { type: 'object', description: 'הגדרת המכרז {term, definition, includes, excludes, constraints}' },
+            project: { type: 'object', description: 'הפרויקט לבדיקה' }
+          },
+          required: ['definition', 'project']
+        }
+      },
+      {
+        name: 'generate_test_profile',
+        description: 'יצירת פרופיל חברה לדוגמה (עובר/נכשל/מטעה) לבדיקת איכות המערכת',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            tender_id: { type: 'string', description: 'מזהה המכרז' },
+            profile_type: {
+              type: 'string',
+              description: 'סוג הפרופיל',
+              enum: ['PASSING', 'FAILING', 'ADVERSARIAL']
+            },
+            save_to_db: { type: 'boolean', default: true }
+          },
+          required: ['tender_id', 'profile_type']
+        }
+      },
+      {
+        name: 'test_generated_profile',
+        description: 'הרצת בדיקה על פרופיל שנוצר - טוען, מריץ matching, ומשווה לתוצאה הצפויה',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            tender_id: { type: 'string', description: 'מזהה המכרז' },
+            profile_id: { type: 'string', description: 'מזהה הפרופיל שנוצר' }
+          },
+          required: ['tender_id', 'profile_id']
+        }
+      },
+      {
+        name: 'generate_definition_clarifications',
+        description: 'יצירת שאלות הבהרה למונחים לא מוגדרים - שאלות אסטרטגיות שמיטיבות עם החברה',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            tender_id: { type: 'string', description: 'מזהה המכרז' }
+          },
+          required: ['tender_id']
+        }
+      },
       // Legacy tools (kept for compatibility)
       {
         name: 'chunk_document',
@@ -776,6 +883,104 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'save_analysis_to_db':
         result = await saveAnalysisResults(args.tender_id, args.analysis_result);
         break;
+
+      // ============================================
+      // v4.0: Definition-Aware Matching Tools
+      // ============================================
+
+      case 'extract_tender_definitions': {
+        const gateConditions = [];
+        if (supabase) {
+          const { data } = await supabase
+            .from('gate_conditions')
+            .select('condition_number, condition_text')
+            .eq('tender_id', args.tender_id);
+          if (data) gateConditions.push(...data);
+        }
+
+        const extracted = await extractDefinitions(anthropic, args.document_text, gateConditions);
+
+        if (args.save_to_db !== false && supabase) {
+          const saveResult = await saveDefinitions(supabase, args.tender_id, extracted);
+          extracted.save_result = saveResult;
+        }
+
+        result = { success: true, ...extracted };
+        break;
+      }
+
+      case 'link_definitions_to_gates': {
+        const { data: defs } = await supabase
+          .from('tender_definitions').select('*').eq('tender_id', args.tender_id);
+        const { data: gates } = await supabase
+          .from('gate_conditions').select('*').eq('tender_id', args.tender_id);
+
+        const linked = await linkDefinitionsToGates(anthropic, defs || [], gates || []);
+        const saveRes = await saveLinkedDefinitions(supabase, linked);
+
+        result = { success: true, linked_conditions: linked, save_result: saveRes };
+        break;
+      }
+
+      case 'semantic_gate_matching': {
+        const matchResult = await performSemanticMatching(
+          anthropic, supabase, args.tender_id, args.org_id
+        );
+        result = { success: true, ...matchResult };
+        break;
+      }
+
+      case 'classify_project_against_definition': {
+        const classification = await classifyProjectAgainstDefinition(
+          anthropic, args.definition, args.project
+        );
+        result = { success: true, ...classification };
+        break;
+      }
+
+      case 'generate_test_profile': {
+        const { data: gatesForProfile } = await supabase
+          .from('gate_conditions').select('*').eq('tender_id', args.tender_id);
+        const { data: defsForProfile } = await supabase
+          .from('tender_definitions').select('*').eq('tender_id', args.tender_id);
+
+        const profile = await generateTestProfile(
+          anthropic, gatesForProfile || [], defsForProfile || [], args.profile_type
+        );
+
+        if (args.save_to_db !== false && supabase) {
+          const saved = await saveGeneratedProfile(supabase, args.tender_id, profile, args.profile_type);
+          profile.saved_id = saved.id;
+        }
+
+        result = { success: true, ...profile };
+        break;
+      }
+
+      case 'test_generated_profile': {
+        const testResult = await testGeneratedProfile(
+          anthropic, supabase, args.tender_id, args.profile_id
+        );
+        result = { success: true, ...testResult };
+        break;
+      }
+
+      case 'generate_definition_clarifications': {
+        const { data: defsForClarify } = await supabase
+          .from('tender_definitions').select('*').eq('tender_id', args.tender_id);
+        const { data: gatesForClarify } = await supabase
+          .from('gate_conditions').select('*').eq('tender_id', args.tender_id);
+
+        const undefinedTerms = (defsForClarify || [])
+          .filter(d => !d.definition || d.definition.includes('אין הגדרה'));
+
+        const clarifications = await generateDefinitionClarifications(
+          anthropic, undefinedTerms, gatesForClarify || [], {}
+        );
+
+        result = { success: true, ...clarifications };
+        break;
+      }
 
       // Legacy tools
       case 'chunk_document':
