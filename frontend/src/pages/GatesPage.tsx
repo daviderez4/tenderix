@@ -275,7 +275,7 @@ export function GatesPage() {
     }
   }
 
-  async function runWorkflow(type: 'match' | 'clarifications' | 'strategic' | 'documents' | 'reanalysis' | 'priorities' | 'pricing') {
+  async function runWorkflow(type: 'match' | 'semantic-match' | 'clarifications' | 'strategic' | 'documents' | 'reanalysis' | 'priorities' | 'pricing') {
     const tenderId = getCurrentTenderId();
     const orgId = getCurrentOrgId();
 
@@ -286,6 +286,23 @@ export function GatesPage() {
         case 'match':
           result = await api.workflows.matchGates(tenderId, orgId);
           await loadData();
+          break;
+        case 'semantic-match':
+          addToast('info', 'מריץ התאמה סמנטית v4.0', 'חילוץ הגדרות + סיווג AI + הסברים מפורטים...');
+          // Step 1: Extract definitions (if not already done)
+          try {
+            const tenderText = getTenderExtractedText(tenderId);
+            if (tenderText && tenderText.length > 100) {
+              await api.definitions.extract(tenderId, tenderText);
+              addToast('success', 'הגדרות חולצו בהצלחה', '');
+            }
+          } catch (defError) {
+            console.warn('Definition extraction failed (may already exist):', defError);
+          }
+          // Step 2: Run semantic matching
+          result = await api.semanticMatching.run(tenderId, orgId);
+          await loadData();
+          addToast('success', 'התאמה סמנטית הושלמה', 'הגדרות המכרז שימשו לסיווג הפרויקטים');
           break;
         case 'clarifications':
           result = await api.workflows.getClarifications(tenderId, orgId);
@@ -440,6 +457,24 @@ export function GatesPage() {
           >
             <Target size={14} />
             החלטה
+          </Link>
+          <Link
+            to={`/profile-test/${tender?.id || ''}`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              color: 'var(--gray-400)',
+              textDecoration: 'none',
+              fontSize: '0.85rem',
+              padding: '0.4rem 0.75rem',
+              borderRadius: '6px',
+              background: 'rgba(99, 102, 241, 0.1)',
+              border: '1px solid rgba(99, 102, 241, 0.3)',
+            }}
+          >
+            <Sparkles size={14} />
+            בדיקת פרופילים
           </Link>
         </div>
       </div>
@@ -602,6 +637,15 @@ export function GatesPage() {
           >
             {runningWorkflow === 'match' ? <div className="spinner" /> : <RefreshCw size={18} />}
             התאמה מהירה לפרופיל
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => runWorkflow('semantic-match')}
+            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates}
+            style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none' }}
+          >
+            {runningWorkflow === 'semantic-match' ? <div className="spinner" /> : <Zap size={18} />}
+            התאמה סמנטית (v4.0)
           </button>
           <button
             className="btn btn-secondary"

@@ -14,6 +14,7 @@ import { TenderIntakePage } from './pages/TenderIntakePage';
 import { SimpleIntakePage } from './pages/SimpleIntakePage';
 import { FeedbackWidget } from './components/FeedbackWidget';
 import { FeedbackAdminPage } from './pages/FeedbackAdminPage';
+import ProfileTestPage from './pages/ProfileTestPage';
 import './index.css';
 
 // Check for OAuth token in URL hash and handle it immediately
@@ -59,6 +60,8 @@ function AppLayout() {
           <Route path="/competitors" element={<CompetitorsPage />} />
           <Route path="/decision" element={<DecisionPage />} />
           <Route path="/company" element={<CompanyProfilePage />} />
+          <Route path="/profile-test/:tenderId" element={<ProfileTestPage />} />
+          <Route path="/profile-test" element={<ProfileTestPage />} />
           <Route path="/feedback-admin" element={<FeedbackAdminPage />} />
         </Routes>
       </main>
