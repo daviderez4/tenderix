@@ -1,4 +1,5 @@
 import { API_CONFIG, getCurrentOrgId } from './config';
+import { saveAnalysis } from './analysisCache';
 
 // ==================== TYPES ====================
 
@@ -4184,10 +4185,26 @@ export async function runFullAnalysis(tenderId: string, orgId: string, onProgres
     { name: 'decision', label: 'Final Decision', fn: () => api.workflows.getFinalDecision(tenderId, orgId) },
   ];
 
+  // Map step names to cache analysis types
+  const cacheMap: Record<string, import('./analysisCache').AnalysisType> = {
+    clarifications: 'clarifications',
+    strategic: 'strategic',
+    requiredDocs: 'requiredDocs',
+    competitors: 'competitorMapping',
+    pricing: 'pricingIntel',
+    competitive: 'competitiveIntel',
+    decision: 'decision',
+  };
+
   for (const step of steps) {
     onProgress?.(step.label);
     try {
-      results[step.name] = await step.fn();
+      const result = await step.fn();
+      results[step.name] = result;
+      // Cache each step result for PDF export
+      if (cacheMap[step.name]) {
+        saveAnalysis(tenderId, cacheMap[step.name], result);
+      }
     } catch (error) {
       results[step.name] = { error: error instanceof Error ? error.message : 'Unknown error' };
     }

@@ -1,15 +1,20 @@
 import { useState, useEffect } from 'react';
-import { Target, RefreshCw, AlertTriangle, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { Target, RefreshCw, AlertTriangle, CheckCircle, XCircle, Clock, AlertCircle, FileDown } from 'lucide-react';
+import { pdf } from '@react-pdf/renderer';
 import { api } from '../api/tenderix';
 import type { Tender } from '../api/tenderix';
 import { getCurrentTenderId, getCurrentOrgId } from '../api/config';
+import { saveAnalysis, getAnalysis } from '../api/analysisCache';
 import { StatusBadge } from '../components/StatusBadge';
 import { Loading } from '../components/Loading';
+import { TenderReportPDF } from '../pdf/TenderReportPDF';
+import type { TenderReportData, BOQAnalysisData, SOWAnalysisData, ClarificationData, StrategicQuestionsData, RequiredDocsData, PricingIntelData, CompetitiveIntelData, CompetitorMappingData, DecisionData } from '../pdf/types';
 
 export function DecisionPage() {
   const [tender, setTender] = useState<Tender | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [decision, setDecision] = useState<any>(null);
 
@@ -43,10 +48,56 @@ export function DecisionPage() {
     try {
       const result = await api.workflows.getFinalDecision(tenderId, orgId);
       setDecision(result);
+      // Cache decision for PDF export
+      if (result && tenderId) {
+        saveAnalysis(tenderId, 'decision', result);
+      }
     } catch (error) {
       console.error('Error generating decision:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function exportPDF() {
+    if (!tender) return;
+    setExporting(true);
+    try {
+      const tenderId = getCurrentTenderId();
+
+      // Build comprehensive report data from cache
+      const reportData: TenderReportData = {
+        tenderName: tender.tender_name,
+        tenderNumber: tender.tender_number,
+        issuingBody: tender.issuing_body,
+        submissionDeadline: tender.submission_deadline,
+        estimatedValue: tender.estimated_value,
+        generatedAt: new Date().toLocaleDateString('he-IL'),
+        // Decision (current or cached)
+        decision: decision?.success ? decision as DecisionData : getAnalysis<DecisionData>(tenderId, 'decision') || undefined,
+        // Cached analysis sections
+        boq: getAnalysis<BOQAnalysisData>(tenderId, 'boq') || undefined,
+        sow: getAnalysis<SOWAnalysisData>(tenderId, 'sow') || undefined,
+        clarifications: getAnalysis<ClarificationData>(tenderId, 'clarifications') || undefined,
+        strategic: getAnalysis<StrategicQuestionsData>(tenderId, 'strategic') || undefined,
+        requiredDocs: getAnalysis<RequiredDocsData>(tenderId, 'requiredDocs') || undefined,
+        pricingIntel: getAnalysis<PricingIntelData>(tenderId, 'pricingIntel') || undefined,
+        competitiveIntel: getAnalysis<CompetitiveIntelData>(tenderId, 'competitiveIntel') || undefined,
+        competitorMapping: getAnalysis<CompetitorMappingData>(tenderId, 'competitorMapping') || undefined,
+      };
+
+      const blob = await pdf(<TenderReportPDF data={reportData} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const safeName = tender.tender_name.replace(/[^א-תa-zA-Z0-9\s-]/g, '').trim();
+      link.href = url;
+      link.download = `דוח-מכרז-מקיף-${safeName}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -275,8 +326,8 @@ export function DecisionPage() {
             </div>
           )}
 
-          {/* Regenerate Button */}
-          <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '2rem' }}>
             <button
               className="btn btn-secondary"
               onClick={generateDecision}
@@ -284,6 +335,15 @@ export function DecisionPage() {
             >
               {loading ? <div className="spinner" /> : <RefreshCw size={18} />}
               הפק דוח מחדש
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={exportPDF}
+              disabled={exporting}
+              style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', border: 'none' }}
+            >
+              {exporting ? <div className="spinner" /> : <FileDown size={18} />}
+              {exporting ? 'מייצא PDF...' : 'ייצא דוח מקיף PDF'}
             </button>
           </div>
         </div>

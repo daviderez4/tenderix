@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api/tenderix';
 import type { GateCondition, Tender } from '../api/tenderix';
 import { getCurrentTenderId, getCurrentOrgId, getTenderExtractedText } from '../api/config';
+import { saveAnalysis } from '../api/analysisCache';
 import { Loading } from '../components/Loading';
 import { StatusBadge } from '../components/StatusBadge';
 
@@ -326,6 +327,14 @@ export function GatesPage() {
           break;
       }
       setWorkflowResults(prev => ({ ...prev, [type]: result }));
+
+      // Cache results for PDF export
+      if (result && tenderId) {
+        if (type === 'clarifications') saveAnalysis(tenderId, 'clarifications', result);
+        if (type === 'strategic') saveAnalysis(tenderId, 'strategic', result);
+        if (type === 'documents') saveAnalysis(tenderId, 'requiredDocs', result);
+        if (type === 'pricing') saveAnalysis(tenderId, 'pricingIntel', result);
+      }
     } catch (error) {
       console.error('Workflow error:', error);
     } finally {
