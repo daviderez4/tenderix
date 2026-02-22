@@ -1340,7 +1340,7 @@ export function SimpleIntakePage() {
                       {genSteps.map(step => {
                         const isDone = genPhase > step.phase;
                         const isActive = genPhase === step.phase;
-                        const isPending = genPhase < step.phase;
+                        void (genPhase < step.phase); // isPending - unused
                         return (
                           <div key={step.phase} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                             <div style={{
