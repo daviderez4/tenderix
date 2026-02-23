@@ -10,7 +10,8 @@ export type AnalysisType =
   | 'pricingIntel'
   | 'competitiveIntel'
   | 'competitorMapping'
-  | 'decision';
+  | 'decision'
+  | 'gateConditions';
 
 interface CachedEntry<T = unknown> {
   data: T;
@@ -48,6 +49,7 @@ export function getAllAvailable(tenderId: string): AnalysisType[] {
   const types: AnalysisType[] = [
     'boq', 'sow', 'clarifications', 'strategic', 'requiredDocs',
     'pricingIntel', 'competitiveIntel', 'competitorMapping', 'decision',
+    'gateConditions',
   ];
   return types.filter(t => localStorage.getItem(cacheKey(tenderId, t)) !== null);
 }

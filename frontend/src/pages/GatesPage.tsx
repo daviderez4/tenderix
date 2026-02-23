@@ -5,6 +5,7 @@ import { api } from '../api/tenderix';
 import type { GateCondition, Tender } from '../api/tenderix';
 import { getCurrentTenderId, getCurrentOrgId, getTenderExtractedText } from '../api/config';
 import { saveAnalysis } from '../api/analysisCache';
+import type { GateConditionsData } from '../pdf/types';
 import { Loading } from '../components/Loading';
 import { StatusBadge } from '../components/StatusBadge';
 
@@ -50,6 +51,45 @@ export function GatesPage() {
 
   const removeToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  // Cache gate conditions for PDF export whenever gates change
+  const cacheGateConditions = useCallback((currentGates: GateCondition[]) => {
+    const tenderId = getCurrentTenderId();
+    if (!tenderId || currentGates.length === 0) return;
+
+    const gateData: GateConditionsData = {
+      conditions: currentGates.map(g => ({
+        condition_number: g.condition_number,
+        condition_text: g.condition_text,
+        status: (g.status as 'MEETS' | 'PARTIALLY_MEETS' | 'DOES_NOT_MEET' | 'UNKNOWN') || 'UNKNOWN',
+        is_mandatory: g.is_mandatory,
+        requirement_type: g.requirement_type,
+        evidence: g.evidence,
+        gap_description: g.gap_description,
+        ai_summary: g.ai_summary,
+        ai_confidence: g.ai_confidence,
+        legal_classification: g.legal_classification,
+        legal_reasoning: g.legal_reasoning,
+        technical_requirement: g.technical_requirement,
+        equivalent_options: g.equivalent_options,
+        closure_options: g.closure_options,
+        source_section: g.source_section,
+        source_page: g.source_page,
+        required_years: g.required_years,
+        required_amount: g.required_amount,
+        required_count: g.required_count,
+      })),
+      summary: {
+        total: currentGates.length,
+        meets: currentGates.filter(g => g.status === 'MEETS').length,
+        partial: currentGates.filter(g => g.status === 'PARTIALLY_MEETS').length,
+        fails: currentGates.filter(g => g.status === 'DOES_NOT_MEET').length,
+        unknown: currentGates.filter(g => !g.status || g.status === 'UNKNOWN').length,
+        mandatory: currentGates.filter(g => g.is_mandatory).length,
+      },
+    };
+    saveAnalysis(tenderId, 'gateConditions', gateData);
   }, []);
 
   useEffect(() => {
@@ -169,6 +209,9 @@ export function GatesPage() {
 
       // Expand to show results
       setExpandedGates(prev => new Set([...prev, gate.id]));
+
+      // Cache for PDF export
+      setGates(current => { cacheGateConditions(current); return current; });
     } catch (error) {
       console.error('Error analyzing gate:', error);
     } finally {
@@ -266,6 +309,9 @@ export function GatesPage() {
 
       addToast('success', `הניתוח הושלם! נותחו ${unanalyzedGates.length} תנאים`,
         `✅ עומד: ${meetsCount} | ⚠️ חלקי: ${partialCount} | ❌ לא עומד: ${failsCount}`);
+
+      // Cache for PDF export
+      setGates(current => { cacheGateConditions(current); return current; });
 
     } catch (error) {
       console.error('Error in analyzeAllGates:', error);
@@ -783,28 +829,59 @@ export function GatesPage() {
               OTHER: 'אחר',
             };
 
+            const statusBorderColor =
+              gate.status === 'MEETS' ? '#10b981' :
+              gate.status === 'DOES_NOT_MEET' ? '#ef4444' :
+              gate.status === 'PARTIALLY_MEETS' ? '#f59e0b' :
+              'transparent';
+
+            const hasAnalysis = gate.status && gate.status !== 'UNKNOWN';
+            const confidencePct = gate.ai_confidence != null ? Math.round(gate.ai_confidence * 100) : null;
+
             return (
-              <div key={gate.id} className="card" style={{ marginBottom: '0.75rem', padding: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+              <div
+                key={gate.id}
+                className="card"
+                style={{
+                  marginBottom: '0.75rem',
+                  padding: 0,
+                  overflow: 'hidden',
+                  borderRight: `4px solid ${statusBorderColor}`,
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {/* Card header - always visible */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.75rem',
+                    padding: '1rem 1rem 0.75rem',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => toggleGateExpanded(gate.id)}
+                >
                   {/* Number badge */}
                   <div style={{
-                    background: 'linear-gradient(135deg, var(--primary), #6d28d9)',
+                    background: `linear-gradient(135deg, ${categoryColors[gate.requirement_type || 'OTHER'] || '#6b7280'}, ${categoryColors[gate.requirement_type || 'OTHER'] || '#6b7280'}dd)`,
                     color: 'white',
-                    borderRadius: '8px',
-                    padding: '0.5rem 0.75rem',
+                    borderRadius: '10px',
+                    padding: '0.4rem 0.65rem',
                     fontWeight: 'bold',
-                    minWidth: '45px',
-                    textAlign: 'center'
+                    minWidth: '40px',
+                    textAlign: 'center',
+                    fontSize: '0.85rem',
+                    flexShrink: 0,
                   }}>
                     #{gate.condition_number}
                   </div>
 
                   {/* Content */}
-                  <div style={{ flex: 1 }}>
-                    <div style={{ marginBottom: '0.5rem' }}>{gate.condition_text}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ marginBottom: '0.4rem', lineHeight: 1.5 }}>{gate.condition_text}</div>
 
                     {/* Meta row */}
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
                       <StatusBadge status={gate.status || 'UNKNOWN'} />
                       {gate.is_mandatory && <span className="badge badge-danger">חובה</span>}
                       {gate.requirement_type && (
@@ -815,213 +892,322 @@ export function GatesPage() {
                           {categoryLabels[gate.requirement_type] || gate.requirement_type}
                         </span>
                       )}
-                      {gate.required_years && (
+                      {gate.required_years != null && (
                         <span className="badge" style={{ background: 'var(--gray-700)', color: 'white' }}>
                           {gate.required_years} שנים
                         </span>
                       )}
-                      {gate.required_amount && (
+                      {gate.required_amount != null && (
                         <span className="badge" style={{ background: 'var(--gray-700)', color: 'white' }}>
-                          {(gate.required_amount / 1000000).toFixed(1)}M ₪
+                          {(gate.required_amount / 1000000).toFixed(1)}M
                         </span>
                       )}
-                      {gate.required_count && (
+                      {gate.required_count != null && (
                         <span className="badge" style={{ background: 'var(--gray-700)', color: 'white' }}>
                           {gate.required_count} פרויקטים
                         </span>
                       )}
                       {gate.source_section && (
-                        <span style={{ fontSize: '0.8rem', color: 'var(--gray-500)' }}>
-                          📄 עמוד {gate.source_page || '?'} | סעיף {gate.source_section}
+                        <span style={{ fontSize: '0.75rem', color: 'var(--gray-500)' }}>
+                          עמ' {gate.source_page || '?'} | {gate.source_section}
                         </span>
                       )}
                     </div>
 
-                    {/* Expanded details */}
-                    {isExpanded && (
+                    {/* Collapsed preview: show mini-summary if analyzed but not expanded */}
+                    {hasAnalysis && !isExpanded && gate.ai_summary && (
                       <div style={{
-                        marginTop: '1rem',
-                        padding: '1rem',
+                        marginTop: '0.5rem',
+                        padding: '0.4rem 0.6rem',
                         background: gate.status === 'MEETS'
-                          ? 'rgba(16, 185, 129, 0.08)'
+                          ? 'rgba(16, 185, 129, 0.06)'
                           : gate.status === 'DOES_NOT_MEET'
-                            ? 'rgba(239, 68, 68, 0.08)'
-                            : gate.status === 'PARTIALLY_MEETS'
-                              ? 'rgba(245, 158, 11, 0.08)'
-                              : 'rgba(124, 58, 237, 0.08)',
-                        borderRadius: '8px',
-                        borderRight: `3px solid ${
-                          gate.status === 'MEETS' ? 'var(--success)' :
-                          gate.status === 'DOES_NOT_MEET' ? 'var(--danger)' :
-                          gate.status === 'PARTIALLY_MEETS' ? 'var(--warning)' :
-                          'var(--primary)'
-                        }`
+                            ? 'rgba(239, 68, 68, 0.06)'
+                            : 'rgba(245, 158, 11, 0.06)',
+                        borderRadius: '6px',
+                        fontSize: '0.82rem',
+                        color: 'var(--gray-500)',
+                        lineHeight: 1.4,
                       }}>
-                        {/* Status summary */}
-                        {gate.ai_summary && (
-                          <div style={{
-                            marginBottom: '0.75rem',
-                            padding: '0.75rem',
-                            background: 'rgba(255,255,255,0.5)',
-                            borderRadius: '6px',
-                          }}>
-                            <strong>סיכום AI:</strong>
-                            <p style={{ margin: '0.25rem 0 0', color: 'var(--gray-700)' }}>{gate.ai_summary}</p>
-                          </div>
-                        )}
-
-                        {gate.evidence && (
-                          <div style={{ marginBottom: '0.75rem' }}>
-                            <strong style={{ color: 'var(--success)' }}>&#10003; מתאים - ראיה:</strong>
-                            <p style={{ margin: '0.25rem 0 0', color: 'var(--gray-600)' }}>{gate.evidence}</p>
-                          </div>
-                        )}
-
-                        {gate.gap_description && (
-                          <div style={{
-                            marginBottom: '0.75rem',
-                            padding: '0.75rem',
-                            background: 'rgba(239, 68, 68, 0.08)',
-                            borderRadius: '6px',
-                          }}>
-                            <strong style={{ color: 'var(--danger)' }}>&#10007; פער - לא מתאים:</strong>
-                            <p style={{ margin: '0.25rem 0 0', color: 'var(--gray-700)' }}>{gate.gap_description}</p>
-                          </div>
-                        )}
-
-                        {/* Recommendations for closing gaps */}
-                        {(gate.status === 'DOES_NOT_MEET' || gate.status === 'PARTIALLY_MEETS') && (
-                          <div style={{
-                            marginBottom: '0.75rem',
-                            padding: '0.75rem',
-                            background: 'linear-gradient(135deg, rgba(0, 180, 216, 0.08), rgba(124, 58, 237, 0.08))',
-                            borderRadius: '6px',
-                            border: '1px solid rgba(0, 180, 216, 0.2)',
-                          }}>
-                            <strong style={{ color: '#0096c7' }}>&#128161; המלצות לסגירת הפער:</strong>
-                            <div style={{ margin: '0.5rem 0 0', color: 'var(--gray-700)', fontSize: '0.9rem', lineHeight: 1.7 }}>
-                              {gate.equivalent_options && gate.equivalent_options.length > 0 ? (
-                                <ul style={{ margin: 0, paddingRight: '1.25rem' }}>
-                                  {gate.equivalent_options.map((opt, i) => (
-                                    <li key={i}>{opt}</li>
-                                  ))}
-                                </ul>
-                              ) : gate.closure_options && gate.closure_options.length > 0 ? (
-                                <ul style={{ margin: 0, paddingRight: '1.25rem' }}>
-                                  {gate.closure_options.map((opt, i) => (
-                                    <li key={i}>{opt}</li>
-                                  ))}
-                                </ul>
-                              ) : (
-                                <div>
-                                  {gate.legal_classification === 'open' && (
-                                    <p style={{ margin: '0 0 0.25rem' }}>&#8226; התנאי פתוח לפרשנות - ניתן לנסות להוכיח עמידה חלקית</p>
-                                  )}
-                                  {gate.bearer_entity === 'subcontractor_allowed' && (
-                                    <p style={{ margin: '0 0 0.25rem' }}>&#8226; ניתן לצרף קבלן משנה שעומד בדרישה</p>
-                                  )}
-                                  {gate.bearer_entity === 'consortium_member' && (
-                                    <p style={{ margin: '0 0 0.25rem' }}>&#8226; ניתן לצרף שותף למיזם משותף</p>
-                                  )}
-                                  {gate.subcontractor_allowed && (
-                                    <p style={{ margin: '0 0 0.25rem' }}>&#8226; מותר שימוש בקבלן משנה{gate.subcontractor_limit ? ` (עד ${gate.subcontractor_limit}%)` : ''}</p>
-                                  )}
-                                  {gate.group_companies_allowed && (
-                                    <p style={{ margin: '0 0 0.25rem' }}>&#8226; ניתן להשתמש בניסיון של חברות קבוצה</p>
-                                  )}
-                                  <p style={{ margin: '0 0 0.25rem' }}>&#8226; לחץ "נתח תנאי זה" לקבלת המלצות מפורטות</p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {gate.legal_classification && (
-                          <div style={{ marginBottom: '0.75rem' }}>
-                            <strong>פרשנות משפטית:</strong>
-                            <span className="badge" style={{ marginRight: '0.5rem' }}>
-                              {gate.legal_classification === 'strict' ? 'קשיח' :
-                               gate.legal_classification === 'open' ? 'פתוח לפרשנות' : 'תלוי הוכחות'}
-                            </span>
-                            {gate.legal_reasoning && <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>{gate.legal_reasoning}</span>}
-                          </div>
-                        )}
-                        {gate.technical_requirement && (
-                          <div style={{ marginBottom: '0.5rem' }}>
-                            <strong>דרישה טכנית:</strong>
-                            <p style={{ margin: '0.25rem 0 0', color: 'var(--gray-600)' }}>{gate.technical_requirement}</p>
-                          </div>
-                        )}
-                        {gate.bearer_entity && (
-                          <div style={{ marginTop: '0.5rem' }}>
-                            <strong>נושא הדרישה:</strong>
-                            <span className="badge" style={{ marginRight: '0.5rem' }}>
-                              {gate.bearer_entity === 'bidder_only' ? 'המציע בלבד' :
-                               gate.bearer_entity === 'consortium_member' ? 'שותף במיזם' : 'קבלן משנה מותר'}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Confidence indicator */}
-                        {gate.ai_confidence != null && (
-                          <div style={{
-                            marginTop: '0.75rem',
-                            paddingTop: '0.5rem',
-                            borderTop: '1px solid rgba(0,0,0,0.05)',
-                            fontSize: '0.8rem',
-                            color: 'var(--gray-400)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                          }}>
-                            רמת ביטחון: {Math.round(gate.ai_confidence * 100)}%
-                            <div style={{
-                              flex: 1,
-                              maxWidth: '100px',
-                              height: '4px',
-                              background: 'var(--gray-200)',
-                              borderRadius: '2px',
-                              overflow: 'hidden',
-                            }}>
-                              <div style={{
-                                width: `${gate.ai_confidence * 100}%`,
-                                height: '100%',
-                                background: gate.ai_confidence > 0.7 ? 'var(--success)' : gate.ai_confidence > 0.4 ? 'var(--warning)' : 'var(--danger)',
-                              }} />
-                            </div>
-                          </div>
-                        )}
+                        {gate.ai_summary.length > 120 ? gate.ai_summary.substring(0, 120) + '...' : gate.ai_summary}
                       </div>
                     )}
                   </div>
 
-                  {/* Actions */}
-                  <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
+                  {/* Right column: confidence + actions */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                    {/* Confidence circle */}
+                    {confidencePct !== null && (
+                      <div style={{
+                        width: '44px',
+                        height: '44px',
+                        borderRadius: '50%',
+                        background: `conic-gradient(${
+                          confidencePct > 70 ? '#10b981' : confidencePct > 40 ? '#f59e0b' : '#ef4444'
+                        } ${confidencePct * 3.6}deg, rgba(255,255,255,0.08) 0deg)`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                        <div style={{
+                          width: '34px',
+                          height: '34px',
+                          borderRadius: '50%',
+                          background: 'var(--gray-900, #1a1a2e)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.7rem',
+                          fontWeight: 700,
+                          color: confidencePct > 70 ? '#10b981' : confidencePct > 40 ? '#f59e0b' : '#ef4444',
+                        }}>
+                          {confidencePct}%
+                        </div>
+                      </div>
+                    )}
+
                     <button
                       className="btn btn-secondary"
-                      onClick={() => analyzeGate(gate)}
+                      onClick={(e) => { e.stopPropagation(); analyzeGate(gate); }}
                       disabled={isAnalyzing || runningWorkflow !== null}
                       style={{
-                        padding: '0.5rem 0.75rem',
-                        fontSize: '0.85rem',
+                        padding: '0.35rem 0.6rem',
+                        fontSize: '0.78rem',
                         background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
                         color: 'white',
-                        border: 'none'
+                        border: 'none',
+                        whiteSpace: 'nowrap',
                       }}
                     >
-                      {isAnalyzing ? <div className="spinner" style={{ width: '14px', height: '14px' }} /> : <Sparkles size={14} />}
-                      נתח תנאי זה
+                      {isAnalyzing ? <div className="spinner" style={{ width: '12px', height: '12px' }} /> : <Sparkles size={12} />}
+                      {isAnalyzing ? '...' : 'נתח'}
                     </button>
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => toggleGateExpanded(gate.id)}
-                      style={{ padding: '0.5rem 0.75rem', fontSize: '0.85rem' }}
-                    >
+                    <div style={{ color: 'var(--gray-500)', fontSize: '0.7rem' }}>
                       {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                      {isExpanded ? 'הסתר' : 'פרטים'}
-                    </button>
+                    </div>
                   </div>
                 </div>
+
+                {/* Expanded details */}
+                {isExpanded && (
+                  <div style={{
+                    padding: '0 1rem 1rem',
+                    borderTop: '1px solid rgba(255,255,255,0.06)',
+                  }}>
+                    <div style={{
+                      marginTop: '0.75rem',
+                      display: 'grid',
+                      gap: '0.75rem',
+                    }}>
+                      {/* AI Summary */}
+                      {gate.ai_summary && (
+                        <div style={{
+                          padding: '0.75rem 1rem',
+                          background: 'rgba(124, 58, 237, 0.06)',
+                          borderRadius: '8px',
+                          borderRight: '3px solid #7c3aed',
+                        }}>
+                          <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#a78bfa', marginBottom: '0.3rem' }}>
+                            סיכום ניתוח AI
+                          </div>
+                          <div style={{ color: 'var(--gray-300)', lineHeight: 1.6, fontSize: '0.9rem' }}>
+                            {gate.ai_summary}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Evidence - what matches */}
+                      {gate.evidence && (
+                        <div style={{
+                          padding: '0.75rem 1rem',
+                          background: 'rgba(16, 185, 129, 0.06)',
+                          borderRadius: '8px',
+                          borderRight: '3px solid #10b981',
+                        }}>
+                          <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#34d399', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <CheckCircle size={14} /> ראיות להתאמה
+                          </div>
+                          <div style={{ color: 'var(--gray-300)', lineHeight: 1.6, fontSize: '0.88rem' }}>
+                            {gate.evidence}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Gap - what's missing */}
+                      {gate.gap_description && (
+                        <div style={{
+                          padding: '0.75rem 1rem',
+                          background: 'rgba(239, 68, 68, 0.06)',
+                          borderRadius: '8px',
+                          borderRight: '3px solid #ef4444',
+                        }}>
+                          <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#f87171', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <AlertTriangle size={14} /> פערים שזוהו
+                          </div>
+                          <div style={{ color: 'var(--gray-300)', lineHeight: 1.6, fontSize: '0.88rem' }}>
+                            {gate.gap_description}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Recommendations for closing gaps */}
+                      {(gate.status === 'DOES_NOT_MEET' || gate.status === 'PARTIALLY_MEETS') && (
+                        <div style={{
+                          padding: '0.75rem 1rem',
+                          background: 'linear-gradient(135deg, rgba(0, 180, 216, 0.06), rgba(124, 58, 237, 0.04))',
+                          borderRadius: '8px',
+                          borderRight: '3px solid #00b4d8',
+                        }}>
+                          <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#22d3ee', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <Lightbulb size={14} /> המלצות לסגירת הפער
+                          </div>
+                          <div style={{ color: 'var(--gray-300)', fontSize: '0.88rem', lineHeight: 1.7 }}>
+                            {gate.equivalent_options && gate.equivalent_options.length > 0 ? (
+                              <ul style={{ margin: 0, paddingRight: '1.25rem' }}>
+                                {gate.equivalent_options.map((opt, i) => (
+                                  <li key={i} style={{ marginBottom: '0.3rem' }}>{opt}</li>
+                                ))}
+                              </ul>
+                            ) : gate.closure_options && gate.closure_options.length > 0 ? (
+                              <ul style={{ margin: 0, paddingRight: '1.25rem' }}>
+                                {gate.closure_options.map((opt, i) => (
+                                  <li key={i} style={{ marginBottom: '0.3rem' }}>{opt}</li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <ul style={{ margin: 0, paddingRight: '1.25rem' }}>
+                                {gate.legal_classification === 'open' && (
+                                  <li style={{ marginBottom: '0.3rem' }}>התנאי פתוח לפרשנות - ניתן לנסות להוכיח עמידה חלקית</li>
+                                )}
+                                {gate.bearer_entity === 'subcontractor_allowed' && (
+                                  <li style={{ marginBottom: '0.3rem' }}>ניתן לצרף קבלן משנה שעומד בדרישה</li>
+                                )}
+                                {gate.bearer_entity === 'consortium_member' && (
+                                  <li style={{ marginBottom: '0.3rem' }}>ניתן לצרף שותף למיזם משותף</li>
+                                )}
+                                {gate.subcontractor_allowed && (
+                                  <li style={{ marginBottom: '0.3rem' }}>מותר שימוש בקבלן משנה{gate.subcontractor_limit ? ` (עד ${gate.subcontractor_limit}%)` : ''}</li>
+                                )}
+                                {gate.group_companies_allowed && (
+                                  <li style={{ marginBottom: '0.3rem' }}>ניתן להשתמש בניסיון של חברות קבוצה</li>
+                                )}
+                                <li>לחץ "נתח" לקבלת המלצות מפורטות</li>
+                              </ul>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Legal & Technical details - side by side if both exist */}
+                      {(gate.legal_classification || gate.technical_requirement || gate.bearer_entity) && (
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: gate.legal_classification && gate.technical_requirement ? '1fr 1fr' : '1fr',
+                          gap: '0.75rem',
+                        }}>
+                          {gate.legal_classification && (
+                            <div style={{
+                              padding: '0.6rem 0.8rem',
+                              background: 'rgba(99, 102, 241, 0.06)',
+                              borderRadius: '8px',
+                            }}>
+                              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#818cf8', marginBottom: '0.25rem' }}>
+                                סיווג משפטי
+                              </div>
+                              <span className="badge" style={{
+                                background: gate.legal_classification === 'strict' ? '#ef4444' :
+                                  gate.legal_classification === 'open' ? '#10b981' : '#f59e0b',
+                                color: 'white',
+                                fontSize: '0.75rem',
+                              }}>
+                                {gate.legal_classification === 'strict' ? 'קשיח - פסילה' :
+                                 gate.legal_classification === 'open' ? 'פתוח לפרשנות' : 'תלוי הוכחות'}
+                              </span>
+                              {gate.legal_reasoning && (
+                                <div style={{ marginTop: '0.3rem', fontSize: '0.8rem', color: 'var(--gray-500)', lineHeight: 1.4 }}>
+                                  {gate.legal_reasoning}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {gate.technical_requirement && (
+                            <div style={{
+                              padding: '0.6rem 0.8rem',
+                              background: 'rgba(6, 182, 212, 0.06)',
+                              borderRadius: '8px',
+                            }}>
+                              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#22d3ee', marginBottom: '0.25rem' }}>
+                                דרישה טכנית
+                              </div>
+                              <div style={{ fontSize: '0.85rem', color: 'var(--gray-300)', lineHeight: 1.5 }}>
+                                {gate.technical_requirement}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {gate.bearer_entity && (
+                        <div style={{
+                          padding: '0.4rem 0.8rem',
+                          background: 'rgba(255,255,255,0.03)',
+                          borderRadius: '6px',
+                          fontSize: '0.82rem',
+                          color: 'var(--gray-400)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                        }}>
+                          <strong>נושא הדרישה:</strong>
+                          <span className="badge" style={{ background: 'var(--gray-700)', color: 'white', fontSize: '0.75rem' }}>
+                            {gate.bearer_entity === 'bidder_only' ? 'המציע בלבד' :
+                             gate.bearer_entity === 'consortium_member' ? 'שותף במיזם' : 'קבלן משנה מותר'}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Confidence bar - prominent at bottom */}
+                      {confidencePct !== null && (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          padding: '0.5rem 0',
+                          borderTop: '1px solid rgba(255,255,255,0.05)',
+                          fontSize: '0.8rem',
+                          color: 'var(--gray-500)',
+                        }}>
+                          <span>רמת ביטחון בניתוח:</span>
+                          <div style={{
+                            flex: 1,
+                            height: '8px',
+                            background: 'rgba(255,255,255,0.06)',
+                            borderRadius: '4px',
+                            overflow: 'hidden',
+                          }}>
+                            <div style={{
+                              width: `${confidencePct}%`,
+                              height: '100%',
+                              background: `linear-gradient(90deg, ${
+                                confidencePct > 70 ? '#10b981, #34d399' :
+                                confidencePct > 40 ? '#f59e0b, #fbbf24' :
+                                '#ef4444, #f87171'
+                              })`,
+                              borderRadius: '4px',
+                              transition: 'width 0.5s ease',
+                            }} />
+                          </div>
+                          <span style={{
+                            fontWeight: 700,
+                            color: confidencePct > 70 ? '#34d399' : confidencePct > 40 ? '#fbbf24' : '#f87171',
+                          }}>
+                            {confidencePct}%
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}

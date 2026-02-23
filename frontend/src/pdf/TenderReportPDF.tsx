@@ -1,6 +1,7 @@
 import { Document, Page, View, Text } from '@react-pdf/renderer';
 import type { TenderReportData } from './types';
 import { pdfStyles, colors } from './styles';
+import { GateConditionsAnalysis } from './sections/GateConditionsAnalysis';
 import { BOQAnalysis } from './sections/BOQAnalysis';
 import { SOWAnalysis } from './sections/SOWAnalysis';
 import { ClarificationQuestions } from './sections/ClarificationQuestions';
@@ -8,6 +9,33 @@ import { StrategicQuestions } from './sections/StrategicQuestions';
 import { RequiredDocuments } from './sections/RequiredDocuments';
 import { PricingIntelligence } from './sections/PricingIntelligence';
 import { CompetitiveIntelligence } from './sections/CompetitiveIntelligence';
+
+function PageFooter({ data }: { data: TenderReportData }) {
+  return (
+    <View style={{
+      position: 'absolute',
+      bottom: 20,
+      left: 40,
+      right: 40,
+      flexDirection: 'row-reverse',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      borderTopWidth: 0.5,
+      borderTopColor: colors.gray200,
+      paddingTop: 6,
+    }} fixed>
+      <Text style={{ fontSize: 7, color: colors.gray500 }}>
+        Tenderix | {data.tenderName}
+      </Text>
+      <Text style={{ fontSize: 7, color: colors.gray500 }}>
+        {data.generatedAt}
+      </Text>
+      <Text style={{ fontSize: 7, color: colors.gray500 }} render={({ pageNumber, totalPages }) => (
+        `${pageNumber} / ${totalPages}`
+      )} />
+    </View>
+  );
+}
 
 function CoverPage({ data }: { data: TenderReportData }) {
   const decisionColor = data.decision?.decision === 'GO' ? colors.success
@@ -253,47 +281,60 @@ export function TenderReportPDF({ data }: { data: TenderReportData }) {
       {/* 2. Executive Summary + Gates */}
       <ExecutiveSummaryPage data={data} />
 
-      {/* 3. Risks / Actions / Resources */}
+      {/* 3. Gate Conditions Detail */}
+      {data.gateConditions && data.gateConditions.conditions.length > 0 && (
+        <Page size="A4" style={[pdfStyles.page, { paddingBottom: 50 }]} wrap>
+          <GateConditionsAnalysis data={data.gateConditions} />
+          <PageFooter data={data} />
+        </Page>
+      )}
+
+      {/* 4. Risks / Actions / Resources */}
       <RisksActionsPage data={data} />
 
-      {/* 4. BOQ Analysis */}
+      {/* 5. BOQ Analysis */}
       {data.boq && (
-        <Page size="A4" style={pdfStyles.page}>
+        <Page size="A4" style={[pdfStyles.page, { paddingBottom: 50 }]}>
           <BOQAnalysis data={data.boq} />
+          <PageFooter data={data} />
         </Page>
       )}
 
-      {/* 5. SOW Analysis */}
+      {/* 6. SOW Analysis */}
       {data.sow && (
-        <Page size="A4" style={pdfStyles.page}>
+        <Page size="A4" style={[pdfStyles.page, { paddingBottom: 50 }]}>
           <SOWAnalysis data={data.sow} />
+          <PageFooter data={data} />
         </Page>
       )}
 
-      {/* 6. Clarifications */}
+      {/* 7. Clarifications */}
       {data.clarifications && (
-        <Page size="A4" style={pdfStyles.page}>
+        <Page size="A4" style={[pdfStyles.page, { paddingBottom: 50 }]}>
           <ClarificationQuestions data={data.clarifications} />
+          <PageFooter data={data} />
         </Page>
       )}
 
-      {/* 7. Strategic Questions */}
+      {/* 8. Strategic Questions */}
       {data.strategic && (
-        <Page size="A4" style={pdfStyles.page}>
+        <Page size="A4" style={[pdfStyles.page, { paddingBottom: 50 }]}>
           <StrategicQuestions data={data.strategic} />
+          <PageFooter data={data} />
         </Page>
       )}
 
-      {/* 8. Required Documents */}
+      {/* 9. Required Documents */}
       {data.requiredDocs && (
-        <Page size="A4" style={pdfStyles.page}>
+        <Page size="A4" style={[pdfStyles.page, { paddingBottom: 50 }]}>
           <RequiredDocuments data={data.requiredDocs} />
+          <PageFooter data={data} />
         </Page>
       )}
 
-      {/* 9. Competitors */}
+      {/* 10. Competitors */}
       {data.competitorMapping && (
-        <Page size="A4" style={pdfStyles.page}>
+        <Page size="A4" style={[pdfStyles.page, { paddingBottom: 50 }]}>
           <Text style={pdfStyles.sectionTitle}>מיפוי מתחרים</Text>
           {data.competitorMapping.market_analysis && (
             <View style={[pdfStyles.card, { marginBottom: 10 }]}>
@@ -321,20 +362,23 @@ export function TenderReportPDF({ data }: { data: TenderReportData }) {
               </View>
             ))}
           </View>
+          <PageFooter data={data} />
         </Page>
       )}
 
-      {/* 10. Pricing Intelligence */}
+      {/* 11. Pricing Intelligence */}
       {data.pricingIntel && (
-        <Page size="A4" style={pdfStyles.page}>
+        <Page size="A4" style={[pdfStyles.page, { paddingBottom: 50 }]}>
           <PricingIntelligence data={data.pricingIntel} />
+          <PageFooter data={data} />
         </Page>
       )}
 
-      {/* 11. Competitive Intelligence */}
+      {/* 12. Competitive Intelligence */}
       {data.competitiveIntel && (
-        <Page size="A4" style={pdfStyles.page}>
+        <Page size="A4" style={[pdfStyles.page, { paddingBottom: 50 }]}>
           <CompetitiveIntelligence data={data.competitiveIntel} />
+          <PageFooter data={data} />
         </Page>
       )}
     </Document>
