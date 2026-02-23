@@ -168,9 +168,10 @@ export function FeedbackWidget() {
           bottom: '5rem',
           right: '1rem',
           width: '340px',
-          background: 'var(--gray-900)',
+          background: 'white',
           borderRadius: '12px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+          border: '1px solid var(--gray-200)',
           zIndex: 1001,
           overflow: 'hidden',
           animation: 'fadeIn 0.2s ease-out',
@@ -203,7 +204,7 @@ export function FeedbackWidget() {
             <div style={{ padding: '1rem' }}>
               {/* Author Name with Quick Select */}
               <div style={{ marginBottom: '0.75rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--gray-400)' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--gray-600)' }}>
                   מי אתה? (לחץ לבחירה מהירה)
                 </label>
 
@@ -217,9 +218,9 @@ export function FeedbackWidget() {
                         flex: 1,
                         padding: '0.5rem 0.75rem',
                         borderRadius: '8px',
-                        border: authorName === name ? '2px solid #7c3aed' : '1px solid var(--gray-600)',
-                        background: authorName === name ? 'linear-gradient(135deg, #7c3aed, #6d28d9)' : 'var(--gray-800)',
-                        color: authorName === name ? 'white' : 'var(--gray-300)',
+                        border: authorName === name ? '2px solid #7c3aed' : '1px solid var(--gray-300)',
+                        background: authorName === name ? 'linear-gradient(135deg, #7c3aed, #6d28d9)' : 'var(--gray-50)',
+                        color: authorName === name ? 'white' : 'var(--gray-700)',
                         cursor: 'pointer',
                         fontSize: '0.9rem',
                         fontWeight: authorName === name ? 600 : 500,
@@ -242,9 +243,9 @@ export function FeedbackWidget() {
                       width: '100%',
                       padding: '0.5rem 0.75rem',
                       borderRadius: '6px',
-                      border: '1px solid var(--gray-700)',
-                      background: 'var(--gray-800)',
-                      color: 'white',
+                      border: '1px solid var(--gray-200)',
+                      background: 'var(--gray-50)',
+                      color: 'var(--gray-800)',
                       fontSize: '0.9rem',
                     }}
                   />
@@ -280,7 +281,7 @@ export function FeedbackWidget() {
 
               {/* Priority */}
               <div style={{ marginBottom: '0.75rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', color: 'var(--gray-400)' }}>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', color: 'var(--gray-600)' }}>
                   עדיפות
                 </label>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -292,14 +293,14 @@ export function FeedbackWidget() {
                         flex: 1,
                         padding: '0.4rem',
                         borderRadius: '6px',
-                        border: priority === p ? '2px solid' : '1px solid var(--gray-700)',
+                        border: priority === p ? '2px solid' : '1px solid var(--gray-300)',
                         borderColor: priority === p ?
                           (p === 'critical' ? '#dc2626' : p === 'high' ? '#f59e0b' : p === 'medium' ? '#7c3aed' : '#6b7280') :
-                          'var(--gray-700)',
+                          'var(--gray-300)',
                         background: priority === p ?
                           (p === 'critical' ? 'rgba(220, 38, 38, 0.2)' : p === 'high' ? 'rgba(245, 158, 11, 0.2)' : p === 'medium' ? 'rgba(124, 58, 237, 0.2)' : 'rgba(107, 114, 128, 0.2)') :
                           'transparent',
-                        color: p === 'critical' ? '#fca5a5' : p === 'high' ? '#fcd34d' : p === 'medium' ? '#c4b5fd' : 'var(--gray-400)',
+                        color: p === 'critical' ? '#dc2626' : p === 'high' ? '#d97706' : p === 'medium' ? '#7c3aed' : 'var(--gray-500)',
                         cursor: 'pointer',
                         fontSize: '0.75rem',
                         fontWeight: 500,
@@ -313,7 +314,7 @@ export function FeedbackWidget() {
 
               {/* Message */}
               <div style={{ marginBottom: '0.75rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', color: 'var(--gray-400)' }}>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem', color: 'var(--gray-600)' }}>
                   ההודעה שלך
                 </label>
                 <textarea
@@ -325,9 +326,9 @@ export function FeedbackWidget() {
                     width: '100%',
                     padding: '0.75rem',
                     borderRadius: '6px',
-                    border: '1px solid var(--gray-700)',
-                    background: 'var(--gray-800)',
-                    color: 'white',
+                    border: '1px solid var(--gray-200)',
+                    background: 'var(--gray-50)',
+                    color: 'var(--gray-800)',
                     fontSize: '0.95rem',
                     resize: 'vertical',
                     fontFamily: 'inherit',

@@ -13,10 +13,10 @@ import {
 
 const pillarColors: Record<string, string> = {
   P1: '#06b6d4',
-  P2: '#7c3aed',
-  P3: '#10b981',
+  P2: '#8b5cf6',
+  P3: '#22c55e',
   P4: '#f59e0b',
-  OUT: '#22c55e',
+  OUT: '#10b981',
 };
 
 const navItems = [
@@ -56,27 +56,60 @@ export function Sidebar() {
       {/* Logo */}
       <div className="sidebar-logo">
         <div style={{
-          width: 36,
-          height: 36,
+          width: 34,
+          height: 34,
           borderRadius: 10,
-          background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+          background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)',
+          boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)',
         }}>
-          <Target size={20} color="white" />
+          <Target size={18} color="white" />
         </div>
-        <span>Tenderix</span>
+        <span style={{ letterSpacing: '-0.02em' }}>Tenderix</span>
         <span style={{
-          fontSize: '0.6rem',
-          opacity: 0.4,
+          fontSize: '0.55rem',
+          opacity: 0.35,
           marginRight: '4px',
-          background: 'rgba(255,255,255,0.1)',
-          padding: '2px 6px',
+          background: 'rgba(255,255,255,0.08)',
+          padding: '2px 5px',
           borderRadius: 4,
-        }}>v3.1</span>
+          fontWeight: 600,
+        }}>v4</span>
       </div>
+
+      {/* Flow progress indicator */}
+      {activeStep > 0 && (
+        <div style={{
+          marginBottom: '1rem',
+          padding: '0.5rem 0.65rem',
+          background: 'rgba(255,255,255,0.04)',
+          borderRadius: 8,
+          border: '1px solid rgba(255,255,255,0.06)',
+        }}>
+          <div style={{
+            display: 'flex',
+            gap: '2px',
+            marginBottom: '4px',
+          }}>
+            {[1,2,3,4,5].map(step => (
+              <div key={step} style={{
+                flex: 1,
+                height: 3,
+                borderRadius: 2,
+                background: step <= activeStep
+                  ? pillarColors[navItems.find(n => n.step === step)?.pillar || 'P1']
+                  : 'rgba(255,255,255,0.08)',
+                transition: 'all 0.3s ease',
+              }} />
+            ))}
+          </div>
+          <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
+            שלב {activeStep} מתוך 5
+          </div>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav>
@@ -93,13 +126,13 @@ export function Sidebar() {
                 {isFlowStep && item.step > 1 && (
                   <div style={{
                     position: 'absolute',
-                    top: -4,
-                    right: 25,
+                    top: -3,
+                    right: 23,
                     width: 2,
-                    height: 8,
+                    height: 6,
                     background: item.step <= activeStep
                       ? `linear-gradient(180deg, ${pillarColors[navItems.find(n => n.step === item.step - 1)?.pillar || 'P1']}, ${color})`
-                      : 'rgba(255,255,255,0.08)',
+                      : 'rgba(255,255,255,0.06)',
                     borderRadius: 1,
                   }} />
                 )}
@@ -107,54 +140,54 @@ export function Sidebar() {
                   to={item.path}
                   className={isActive ? 'active' : ''}
                   style={{
-                    borderRight: color ? `3px solid ${isActive ? color : `${color}60`}` : 'none',
-                    paddingRight: color ? '12px' : '15px',
+                    borderRight: color ? `3px solid ${isActive ? color : `${color}40`}` : 'none',
+                    paddingRight: color ? '10px' : '13px',
                     ...(isActive && color ? {
-                      background: `linear-gradient(90deg, transparent, ${color}15)`,
+                      background: `linear-gradient(90deg, transparent, ${color}12)`,
                     } : {}),
                   }}
                 >
                   {/* Step number or icon */}
                   {isFlowStep ? (
                     <div style={{
-                      width: 26,
-                      height: 26,
+                      width: 24,
+                      height: 24,
                       borderRadius: '50%',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
+                      fontSize: '0.65rem',
+                      fontWeight: 800,
                       transition: 'all 0.2s',
                       ...(isPassed ? {
-                        background: `${color}30`,
+                        background: `${color}25`,
                         color: color,
                       } : isActive ? {
                         background: color,
                         color: 'white',
-                        boxShadow: `0 0 12px ${color}50`,
+                        boxShadow: `0 0 14px ${color}40`,
                       } : {
-                        background: 'rgba(255,255,255,0.06)',
-                        color: 'rgba(255,255,255,0.3)',
-                        border: '1.5px solid rgba(255,255,255,0.1)',
+                        background: 'rgba(255,255,255,0.04)',
+                        color: 'rgba(255,255,255,0.25)',
+                        border: '1.5px solid rgba(255,255,255,0.08)',
                       }),
                     }}>
-                      {isPassed ? <CheckCircle size={14} /> : item.step}
+                      {isPassed ? <CheckCircle size={13} /> : item.step}
                     </div>
                   ) : (
-                    <item.icon size={20} />
+                    <item.icon size={18} />
                   )}
 
                   <span style={{ flex: 1 }}>{item.label}</span>
 
                   {item.pillar && (
                     <span style={{
-                      fontSize: '0.6rem',
-                      fontWeight: 600,
-                      opacity: isActive ? 1 : 0.5,
-                      background: `${color}20`,
-                      padding: '2px 6px',
+                      fontSize: '0.55rem',
+                      fontWeight: 700,
+                      opacity: isActive ? 1 : 0.4,
+                      background: `${color}18`,
+                      padding: '2px 5px',
                       borderRadius: '4px',
                       color: color,
                       transition: 'opacity 0.2s',
@@ -172,34 +205,37 @@ export function Sidebar() {
       {/* Context info */}
       <div style={{
         position: 'absolute',
-        bottom: '5rem',
-        right: '1.5rem',
-        left: '1.5rem',
-        padding: '0.85rem',
-        background: 'rgba(255,255,255,0.04)',
+        bottom: '4.5rem',
+        right: '1.25rem',
+        left: '1.25rem',
+        padding: '0.75rem',
+        background: 'rgba(255,255,255,0.03)',
         borderRadius: 10,
-        fontSize: '0.75rem',
-        color: 'var(--gray-400)',
-        border: '1px solid rgba(255,255,255,0.06)',
+        fontSize: '0.72rem',
+        color: 'rgba(255,255,255,0.5)',
+        border: '1px solid rgba(255,255,255,0.05)',
       }}>
         {companyName && (
-          <div style={{ marginBottom: '0.5rem' }}>
-            <div style={{ opacity: 0.5, fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>
+          <div style={{ marginBottom: '0.4rem' }}>
+            <div style={{ opacity: 0.45, fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>
               חברה
             </div>
-            <div style={{ color: '#06b6d4', fontWeight: 500, fontSize: '0.8rem' }}>
+            <div style={{ color: '#06b6d4', fontWeight: 600, fontSize: '0.78rem' }}>
               {companyName}
             </div>
           </div>
         )}
         <div>
-          <div style={{ opacity: 0.5, fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>
+          <div style={{ opacity: 0.45, fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>
             מכרז
           </div>
           <div style={{
-            color: currentTenderName ? 'white' : 'rgba(255,255,255,0.3)',
+            color: currentTenderName ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.2)',
             fontWeight: 500,
-            fontSize: '0.8rem',
+            fontSize: '0.75rem',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
           }}>
             {currentTenderName || 'לא נבחר'}
           </div>
@@ -211,25 +247,25 @@ export function Sidebar() {
         onClick={handleLogout}
         style={{
           position: 'absolute',
-          bottom: '1.5rem',
-          right: '1.5rem',
-          left: '1.5rem',
+          bottom: '1.25rem',
+          right: '1.25rem',
+          left: '1.25rem',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '0.5rem',
-          padding: '0.65rem',
-          background: 'rgba(239, 68, 68, 0.1)',
+          gap: '0.4rem',
+          padding: '0.55rem',
+          background: 'rgba(239, 68, 68, 0.08)',
           color: '#fca5a5',
-          border: '1px solid rgba(239, 68, 68, 0.15)',
+          border: '1px solid rgba(239, 68, 68, 0.12)',
           borderRadius: 8,
           cursor: 'pointer',
-          fontSize: '0.85rem',
+          fontSize: '0.8rem',
           fontFamily: 'inherit',
           transition: 'all 0.2s',
         }}
       >
-        <LogOut size={16} />
+        <LogOut size={14} />
         התנתק
       </button>
     </aside>
