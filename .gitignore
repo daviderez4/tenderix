@@ -21,6 +21,7 @@ backup_*/
 !frontend/tsconfig.json
 !frontend/tsconfig.node.json
 !mcp-servers/**/package.json
+!n8n/workflows/*.json
 
 # Allow mcp-servers JS files
 !mcp-servers/**/*.js
