@@ -242,7 +242,7 @@ export function CompanyProfilePage() {
         <AlertCircle size={24} style={{ color: '#7c3aed' }} />
         <div>
           <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>מאגר מידע דינמי</div>
-          <div style={{ fontSize: '0.875rem', color: '#aaa' }}>
+          <div style={{ fontSize: '0.875rem', color: 'var(--gray-500)' }}>
             הנתונים כאן משמשים לבדיקה אוטומטית של עמידה בתנאי סף במכרזים
           </div>
         </div>
@@ -253,7 +253,7 @@ export function CompanyProfilePage() {
         display: 'flex',
         gap: '0.5rem',
         marginBottom: '1.5rem',
-        borderBottom: '1px solid #333',
+        borderBottom: '1px solid var(--gray-200)',
         paddingBottom: '0.5rem',
         overflowX: 'auto',
       }}>
@@ -269,7 +269,7 @@ export function CompanyProfilePage() {
               background: activeTab === tab.id ? 'rgba(124, 58, 237, 0.2)' : 'transparent',
               border: 'none',
               borderRadius: '8px 8px 0 0',
-              color: activeTab === tab.id ? '#a78bfa' : '#888',
+              color: activeTab === tab.id ? '#7c3aed' : 'var(--gray-500)',
               cursor: 'pointer',
               fontSize: '0.9rem',
               fontWeight: activeTab === tab.id ? 600 : 400,
@@ -305,26 +305,26 @@ export function CompanyProfilePage() {
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {organization?.address && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#ccc' }}>
-                  <MapPin size={16} style={{ color: '#888' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--gray-600)' }}>
+                  <MapPin size={16} style={{ color: 'var(--gray-500)' }} />
                   {organization.address}
                 </div>
               )}
               {organization?.phone && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#ccc' }}>
-                  <Phone size={16} style={{ color: '#888' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--gray-600)' }}>
+                  <Phone size={16} style={{ color: 'var(--gray-500)' }} />
                   {organization.phone}
                 </div>
               )}
               {organization?.email && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#ccc' }}>
-                  <Mail size={16} style={{ color: '#888' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--gray-600)' }}>
+                  <Mail size={16} style={{ color: 'var(--gray-500)' }} />
                   {organization.email}
                 </div>
               )}
               {organization?.website && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#ccc' }}>
-                  <Globe size={16} style={{ color: '#888' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--gray-600)' }}>
+                  <Globe size={16} style={{ color: 'var(--gray-500)' }} />
                   {organization.website}
                 </div>
               )}
@@ -343,16 +343,16 @@ export function CompanyProfilePage() {
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   padding: '0.75rem',
-                  background: 'rgba(255,255,255,0.03)',
+                  background: 'var(--gray-50)',
                   borderRadius: '8px',
                   marginBottom: '0.5rem',
                 }}>
-                  <span style={{ color: '#888' }}>{fin.fiscal_year}</span>
+                  <span style={{ color: 'var(--gray-500)' }}>{fin.fiscal_year}</span>
                   <span style={{ fontWeight: 600, color: '#10b981' }}>{formatCurrency(fin.annual_revenue)}</span>
                 </div>
               ))
             ) : (
-              <p style={{ color: '#666', textAlign: 'center' }}>לא הוזנו נתונים פיננסיים</p>
+              <p style={{ color: 'var(--gray-500)', textAlign: 'center' }}>לא הוזנו נתונים פיננסיים</p>
             )}
           </div>
 
@@ -362,15 +362,15 @@ export function CompanyProfilePage() {
               סיכום תיק עבודות
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div style={{ textAlign: 'center', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
+              <div style={{ textAlign: 'center', padding: '1rem', background: 'var(--gray-50)', borderRadius: '8px' }}>
                 <div style={{ fontSize: '2rem', fontWeight: 700, color: '#7c3aed' }}>{projects.length}</div>
-                <div style={{ color: '#888', fontSize: '0.875rem' }}>פרויקטים</div>
+                <div style={{ color: 'var(--gray-500)', fontSize: '0.875rem' }}>פרויקטים</div>
               </div>
-              <div style={{ textAlign: 'center', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
+              <div style={{ textAlign: 'center', padding: '1rem', background: 'var(--gray-50)', borderRadius: '8px' }}>
                 <div style={{ fontSize: '2rem', fontWeight: 700, color: '#10b981' }}>
                   {formatCurrency(projects.reduce((sum, p) => sum + (p.total_value || 0), 0))}
                 </div>
-                <div style={{ color: '#888', fontSize: '0.875rem' }}>היקף כולל</div>
+                <div style={{ color: 'var(--gray-500)', fontSize: '0.875rem' }}>היקף כולל</div>
               </div>
             </div>
           </div>
@@ -382,7 +382,7 @@ export function CompanyProfilePage() {
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <div>
-              <span style={{ fontSize: '0.875rem', color: '#888' }}>סה"כ {projects.length} פרויקטים</span>
+              <span style={{ fontSize: '0.875rem', color: 'var(--gray-500)' }}>סה"כ {projects.length} פרויקטים</span>
             </div>
             <button className="btn btn-primary" onClick={() => { setEditingItem(null); setShowProjectModal(true); }}>
               <Plus size={18} />
@@ -392,8 +392,8 @@ export function CompanyProfilePage() {
 
           {projects.length === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-              <Briefcase size={48} style={{ color: '#444', marginBottom: '1rem' }} />
-              <p style={{ color: '#888' }}>אין פרויקטים עדיין</p>
+              <Briefcase size={48} style={{ color: 'var(--gray-300)', marginBottom: '1rem' }} />
+              <p style={{ color: 'var(--gray-500)' }}>אין פרויקטים עדיין</p>
               <button className="btn btn-primary" style={{ marginTop: '1rem' }} onClick={() => setShowProjectModal(true)}>
                 הוסף פרויקט ראשון
               </button>
@@ -410,7 +410,7 @@ export function CompanyProfilePage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                     <div>
                       <h4 style={{ marginBottom: '0.25rem' }}>{project.project_name}</h4>
-                      <div style={{ fontSize: '0.875rem', color: '#888' }}>{project.client_name}</div>
+                      <div style={{ fontSize: '0.875rem', color: 'var(--gray-500)' }}>{project.client_name}</div>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                       <span style={{
@@ -425,10 +425,10 @@ export function CompanyProfilePage() {
                         {project.project_type === 'ESTABLISHMENT' ? 'הקמה' :
                          project.project_type === 'MAINTENANCE' ? 'אחזקה' : 'משולב'}
                       </span>
-                      <button onClick={() => { setEditingItem(project); setShowProjectModal(true); }} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>
+                      <button onClick={() => { setEditingItem(project); setShowProjectModal(true); }} style={{ background: 'none', border: 'none', color: 'var(--gray-500)', cursor: 'pointer' }}>
                         <Edit2 size={16} />
                       </button>
-                      <button onClick={() => deleteProject(project.id)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>
+                      <button onClick={() => deleteProject(project.id)} style={{ background: 'none', border: 'none', color: 'var(--gray-500)', cursor: 'pointer' }}>
                         <Trash2 size={16} />
                       </button>
                     </div>
@@ -439,27 +439,27 @@ export function CompanyProfilePage() {
                     gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
                     gap: '1rem',
                     padding: '1rem',
-                    background: 'rgba(255,255,255,0.02)',
+                    background: 'var(--gray-50)',
                     borderRadius: '8px',
                   }}>
                     <div>
-                      <div style={{ fontSize: '0.75rem', color: '#888', marginBottom: '0.25rem' }}>היקף כולל</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--gray-500)', marginBottom: '0.25rem' }}>היקף כולל</div>
                       <div style={{ fontWeight: 600 }}>{formatCurrency(project.total_value)}</div>
                     </div>
                     {project.establishment_value && project.establishment_value > 0 && (
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: '#888', marginBottom: '0.25rem' }}>היקף הקמה</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--gray-500)', marginBottom: '0.25rem' }}>היקף הקמה</div>
                         <div style={{ fontWeight: 600, color: '#00d4ff' }}>{formatCurrency(project.establishment_value)}</div>
                       </div>
                     )}
                     {project.maintenance_value && project.maintenance_value > 0 && (
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: '#888', marginBottom: '0.25rem' }}>היקף אחזקה</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--gray-500)', marginBottom: '0.25rem' }}>היקף אחזקה</div>
                         <div style={{ fontWeight: 600, color: '#10b981' }}>{formatCurrency(project.maintenance_value)}</div>
                       </div>
                     )}
                     <div>
-                      <div style={{ fontSize: '0.75rem', color: '#888', marginBottom: '0.25rem' }}>תפקיד</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--gray-500)', marginBottom: '0.25rem' }}>תפקיד</div>
                       <div style={{ fontWeight: 600 }}>
                         {project.role_type === 'PRIMARY' ? 'קבלן ראשי' :
                          project.role_type === 'SUBCONTRACTOR' ? 'קבלן משנה' : 'שותפות'}
@@ -468,7 +468,7 @@ export function CompanyProfilePage() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: '#888', marginTop: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--gray-500)', marginTop: '1rem' }}>
                     <span>
                       <Calendar size={14} style={{ verticalAlign: 'middle', marginLeft: '0.25rem' }} />
                       {project.start_date} - {project.end_date || 'פעיל'}
@@ -494,8 +494,8 @@ export function CompanyProfilePage() {
 
           {certificates.length === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-              <Award size={48} style={{ color: '#444', marginBottom: '1rem' }} />
-              <p style={{ color: '#888' }}>אין הסמכות עדיין</p>
+              <Award size={48} style={{ color: 'var(--gray-300)', marginBottom: '1rem' }} />
+              <p style={{ color: 'var(--gray-500)' }}>אין הסמכות עדיין</p>
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
@@ -511,7 +511,7 @@ export function CompanyProfilePage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
                       <div>
                         <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>{cert.cert_name}</div>
-                        <div style={{ fontSize: '0.875rem', color: '#888' }}>{cert.issuing_body}</div>
+                        <div style={{ fontSize: '0.875rem', color: 'var(--gray-500)' }}>{cert.issuing_body}</div>
                       </div>
                       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                         <span style={{
@@ -526,15 +526,15 @@ export function CompanyProfilePage() {
                           {status === 'valid' ? 'בתוקף' :
                            status === 'expiring' ? 'עומד לפוג' : 'פג תוקף'}
                         </span>
-                        <button onClick={() => { setEditingItem(cert); setShowCertModal(true); }} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>
+                        <button onClick={() => { setEditingItem(cert); setShowCertModal(true); }} style={{ background: 'none', border: 'none', color: 'var(--gray-500)', cursor: 'pointer' }}>
                           <Edit2 size={16} />
                         </button>
-                        <button onClick={() => deleteCertificate(cert.id)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>
+                        <button onClick={() => deleteCertificate(cert.id)} style={{ background: 'none', border: 'none', color: 'var(--gray-500)', cursor: 'pointer' }}>
                           <Trash2 size={16} />
                         </button>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#888', fontSize: '0.875rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--gray-500)', fontSize: '0.875rem' }}>
                       <Clock size={14} />
                       תוקף עד: {cert.valid_until || 'לא צוין'}
                     </div>
@@ -558,8 +558,8 @@ export function CompanyProfilePage() {
 
           {personnel.length === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-              <Users size={48} style={{ color: '#444', marginBottom: '1rem' }} />
-              <p style={{ color: '#888' }}>אין אנשי מפתח עדיין</p>
+              <Users size={48} style={{ color: 'var(--gray-300)', marginBottom: '1rem' }} />
+              <p style={{ color: 'var(--gray-500)' }}>אין אנשי מפתח עדיין</p>
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1rem' }}>
@@ -582,17 +582,17 @@ export function CompanyProfilePage() {
                       </div>
                       <div>
                         <h4 style={{ marginBottom: '0.25rem' }}>{person.full_name}</h4>
-                        <div style={{ color: '#888', fontSize: '0.9rem' }}>{person.role}</div>
+                        <div style={{ color: 'var(--gray-500)', fontSize: '0.9rem' }}>{person.role}</div>
                         {person.years_experience && (
-                          <div style={{ color: '#666', fontSize: '0.85rem' }}>{person.years_experience} שנות ניסיון</div>
+                          <div style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>{person.years_experience} שנות ניסיון</div>
                         )}
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button onClick={() => { setEditingItem(person); setShowPersonModal(true); }} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>
+                      <button onClick={() => { setEditingItem(person); setShowPersonModal(true); }} style={{ background: 'none', border: 'none', color: 'var(--gray-500)', cursor: 'pointer' }}>
                         <Edit2 size={16} />
                       </button>
-                      <button onClick={() => deletePersonnel(person.id)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>
+                      <button onClick={() => deletePersonnel(person.id)} style={{ background: 'none', border: 'none', color: 'var(--gray-500)', cursor: 'pointer' }}>
                         <Trash2 size={16} />
                       </button>
                     </div>
@@ -600,14 +600,14 @@ export function CompanyProfilePage() {
 
                   {person.education && (
                     <div style={{ marginBottom: '0.75rem' }}>
-                      <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '0.25rem' }}>השכלה</div>
-                      <div style={{ color: '#ccc' }}>{person.education} {person.education_institution && `- ${person.education_institution}`}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginBottom: '0.25rem' }}>השכלה</div>
+                      <div style={{ color: 'var(--gray-600)' }}>{person.education} {person.education_institution && `- ${person.education_institution}`}</div>
                     </div>
                   )}
 
                   {person.professional_certifications && person.professional_certifications.length > 0 && (
                     <div>
-                      <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '0.5rem' }}>הסמכות</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginBottom: '0.5rem' }}>הסמכות</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                         {person.professional_certifications.map((cert, i) => (
                           <span key={i} style={{
@@ -615,7 +615,7 @@ export function CompanyProfilePage() {
                             background: 'rgba(124, 58, 237, 0.15)',
                             borderRadius: '4px',
                             fontSize: '0.8rem',
-                            color: '#a78bfa',
+                            color: '#7c3aed',
                           }}>
                             {cert}
                           </span>
@@ -642,25 +642,25 @@ export function CompanyProfilePage() {
 
           {financials.length === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-              <DollarSign size={48} style={{ color: '#444', marginBottom: '1rem' }} />
-              <p style={{ color: '#888' }}>אין נתונים פיננסיים עדיין</p>
+              <DollarSign size={48} style={{ color: 'var(--gray-300)', marginBottom: '1rem' }} />
+              <p style={{ color: 'var(--gray-500)' }}>אין נתונים פיננסיים עדיין</p>
             </div>
           ) : (
             <div className="card">
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #333' }}>
-                    <th style={{ textAlign: 'right', padding: '1rem', color: '#888' }}>שנה</th>
-                    <th style={{ textAlign: 'right', padding: '1rem', color: '#888' }}>מחזור שנתי</th>
-                    <th style={{ textAlign: 'right', padding: '1rem', color: '#888' }}>רווח נקי</th>
-                    <th style={{ textAlign: 'right', padding: '1rem', color: '#888' }}>מספר עובדים</th>
-                    <th style={{ textAlign: 'right', padding: '1rem', color: '#888' }}>מבוקר</th>
-                    <th style={{ textAlign: 'center', padding: '1rem', color: '#888' }}>פעולות</th>
+                  <tr style={{ borderBottom: '1px solid var(--gray-200)' }}>
+                    <th style={{ textAlign: 'right', padding: '1rem', color: 'var(--gray-500)' }}>שנה</th>
+                    <th style={{ textAlign: 'right', padding: '1rem', color: 'var(--gray-500)' }}>מחזור שנתי</th>
+                    <th style={{ textAlign: 'right', padding: '1rem', color: 'var(--gray-500)' }}>רווח נקי</th>
+                    <th style={{ textAlign: 'right', padding: '1rem', color: 'var(--gray-500)' }}>מספר עובדים</th>
+                    <th style={{ textAlign: 'right', padding: '1rem', color: 'var(--gray-500)' }}>מבוקר</th>
+                    <th style={{ textAlign: 'center', padding: '1rem', color: 'var(--gray-500)' }}>פעולות</th>
                   </tr>
                 </thead>
                 <tbody>
                   {financials.map((fin) => (
-                    <tr key={fin.id} style={{ borderBottom: '1px solid #222' }}>
+                    <tr key={fin.id} style={{ borderBottom: '1px solid var(--gray-100)' }}>
                       <td style={{ padding: '1rem', fontWeight: 600 }}>{fin.fiscal_year}</td>
                       <td style={{ padding: '1rem', color: '#10b981' }}>{formatCurrency(fin.annual_revenue)}</td>
                       <td style={{ padding: '1rem' }}>{formatCurrency(fin.net_profit)}</td>
@@ -669,14 +669,14 @@ export function CompanyProfilePage() {
                         {fin.audited ? (
                           <CheckCircle size={18} style={{ color: '#22c55e' }} />
                         ) : (
-                          <span style={{ color: '#666' }}>-</span>
+                          <span style={{ color: 'var(--gray-500)' }}>-</span>
                         )}
                       </td>
                       <td style={{ padding: '1rem', textAlign: 'center' }}>
-                        <button onClick={() => { setEditingItem(fin); setShowFinancialModal(true); }} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', marginLeft: '0.5rem' }}>
+                        <button onClick={() => { setEditingItem(fin); setShowFinancialModal(true); }} style={{ background: 'none', border: 'none', color: 'var(--gray-500)', cursor: 'pointer', marginLeft: '0.5rem' }}>
                           <Edit2 size={16} />
                         </button>
-                        <button onClick={() => deleteFinancial(fin.id)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>
+                        <button onClick={() => deleteFinancial(fin.id)} style={{ background: 'none', border: 'none', color: 'var(--gray-500)', cursor: 'pointer' }}>
                           <Trash2 size={16} />
                         </button>
                       </td>
@@ -739,9 +739,9 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       justifyContent: 'space-between',
       alignItems: 'center',
       padding: '0.5rem 0',
-      borderBottom: '1px solid rgba(255,255,255,0.05)',
+      borderBottom: '1px solid var(--gray-100)',
     }}>
-      <span style={{ color: '#888' }}>{label}</span>
+      <span style={{ color: 'var(--gray-500)' }}>{label}</span>
       <span style={{ fontWeight: 500 }}>{value}</span>
     </div>
   );
@@ -1189,7 +1189,7 @@ function Modal({ title, children, onClose }: { title: string; children: React.Re
       left: 0,
       right: 0,
       bottom: 0,
-      background: 'rgba(0,0,0,0.7)',
+      background: 'rgba(0,0,0,0.4)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -1207,7 +1207,7 @@ function Modal({ title, children, onClose }: { title: string; children: React.Re
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <h3>{title}</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--gray-500)', cursor: 'pointer' }}>
             <X size={24} />
           </button>
         </div>
@@ -1220,7 +1220,7 @@ function Modal({ title, children, onClose }: { title: string; children: React.Re
 function FormField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label style={{ display: 'block', marginBottom: '0.5rem', color: '#888', fontSize: '0.875rem' }}>
+      <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--gray-500)', fontSize: '0.875rem' }}>
         {label}
       </label>
       {children}

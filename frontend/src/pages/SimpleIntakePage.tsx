@@ -775,9 +775,7 @@ export function SimpleIntakePage() {
   ];
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+    <div className="page" style={{
       padding: '2rem',
     }}>
       <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
@@ -786,14 +784,15 @@ export function SimpleIntakePage() {
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           marginBottom: '1.5rem', padding: '0.75rem 1rem',
-          background: 'rgba(255,255,255,0.03)', borderRadius: '8px',
+          background: 'var(--surface)', borderRadius: '8px',
+          border: '1px solid var(--gray-200)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#94a3b8', textDecoration: 'none', fontSize: '0.9rem' }}>
+            <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--gray-500)', textDecoration: 'none', fontSize: '0.9rem' }}>
               <Home size={16} />
               {selectedOrgName || 'בית'}
             </Link>
-            <span style={{ color: '#475569' }}>/</span>
+            <span style={{ color: 'var(--gray-300)' }}>/</span>
             <span style={{ color: '#00d4ff', fontSize: '0.9rem', fontWeight: 500 }}>P1: טעינת מכרז</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -811,7 +810,7 @@ export function SimpleIntakePage() {
               display: 'flex', alignItems: 'center', gap: '0.4rem',
               padding: '0.4rem 0.75rem', background: 'rgba(124, 58, 237, 0.1)',
               border: '1px solid rgba(124, 58, 237, 0.3)', borderRadius: '6px',
-              color: '#a78bfa', fontSize: '0.85rem', textDecoration: 'none',
+              color: '#7c3aed', fontSize: '0.85rem', textDecoration: 'none',
             }}>
               <CheckSquare size={14} /> P2: תנאי סף
             </Link>
@@ -819,7 +818,7 @@ export function SimpleIntakePage() {
               display: 'flex', alignItems: 'center', gap: '0.4rem',
               padding: '0.4rem 0.75rem', background: 'rgba(34, 197, 94, 0.1)',
               border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: '6px',
-              color: '#86efac', fontSize: '0.85rem', textDecoration: 'none',
+              color: '#16a34a', fontSize: '0.85rem', textDecoration: 'none',
             }}>
               <Target size={14} /> החלטה
             </Link>
@@ -836,7 +835,7 @@ export function SimpleIntakePage() {
           }}>
             <Building2 size={16} style={{ color: '#00d4ff' }} />
             <span style={{ color: '#00d4ff', fontSize: '0.85rem' }}>מנתח עבור:</span>
-            <span style={{ color: '#fff', fontWeight: 600, fontSize: '0.9rem' }}>{selectedOrgName}</span>
+            <span style={{ color: 'var(--gray-800)', fontWeight: 600, fontSize: '0.9rem' }}>{selectedOrgName}</span>
             <span style={{ flex: 1 }} />
             <button
               onClick={() => {
@@ -846,7 +845,7 @@ export function SimpleIntakePage() {
                 localStorage.removeItem('tenderix_selected_org_name');
                 if (results && currentStep === 'save') setCurrentStep('company');
               }}
-              style={{ color: '#94a3b8', fontSize: '0.8rem', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+              style={{ color: 'var(--gray-500)', fontSize: '0.8rem', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
             >
               החלף חברה
             </button>
@@ -863,7 +862,7 @@ export function SimpleIntakePage() {
           }}>
             טעינת מכרז
           </h1>
-          <p style={{ color: '#94a3b8', fontSize: '1.1rem' }}>
+          <p style={{ color: 'var(--gray-500)', fontSize: '1.1rem' }}>
             העלה מסמך, חלץ תנאי סף, בחר חברה - והמשך לניתוח
           </p>
         </div>
@@ -894,16 +893,16 @@ export function SimpleIntakePage() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     background: isComplete ? 'linear-gradient(135deg, #22c55e, #16a34a)'
                       : isActive ? 'linear-gradient(135deg, #7c3aed, #6d28d9)'
-                        : 'rgba(255,255,255,0.1)',
+                        : 'var(--gray-100)',
                     border: isActive ? '2px solid #7c3aed' : 'none',
                     transition: 'all 0.3s',
                   }}>
                     {isComplete ? <CheckCircle size={20} style={{ color: 'white' }} />
-                      : <step.icon size={20} style={{ color: isActive ? 'white' : '#64748b' }} />}
+                      : <step.icon size={20} style={{ color: isActive ? 'white' : 'var(--gray-400)' }} />}
                   </div>
                   <span style={{
                     fontSize: '0.75rem',
-                    color: isActive ? '#7c3aed' : isComplete ? '#22c55e' : '#64748b',
+                    color: isActive ? '#7c3aed' : isComplete ? '#22c55e' : 'var(--gray-400)',
                     fontWeight: isActive ? 600 : 400,
                   }}>
                     {step.label}
@@ -912,7 +911,7 @@ export function SimpleIntakePage() {
                 {index < 4 && (
                   <div style={{
                     width: '40px', height: '2px',
-                    background: isComplete ? '#22c55e' : 'rgba(255,255,255,0.1)',
+                    background: isComplete ? '#22c55e' : 'var(--gray-200)',
                     margin: '0 0.5rem', marginBottom: '1.5rem',
                   }} />
                 )}
@@ -923,9 +922,9 @@ export function SimpleIntakePage() {
 
         {/* ========== UPLOAD SECTION ========== */}
         <div style={{
-          background: 'rgba(255,255,255,0.05)', borderRadius: '16px',
+          background: 'var(--surface-glass)', borderRadius: '16px',
           padding: '2rem', marginBottom: '1.5rem',
-          border: '1px solid rgba(255,255,255,0.1)',
+          border: '1px solid var(--gray-200)',
         }}>
           {/* File Upload */}
           <div
@@ -938,21 +937,21 @@ export function SimpleIntakePage() {
           >
             <input ref={fileInputRef} type="file" accept=".pdf,.txt" onChange={handleFileUpload} style={{ display: 'none' }} />
             <Upload size={40} style={{ color: '#00d4ff', marginBottom: '0.75rem' }} />
-            <p style={{ color: '#fff', fontSize: '1rem', marginBottom: '0.25rem' }}>
+            <p style={{ color: 'var(--gray-800)', fontSize: '1rem', marginBottom: '0.25rem' }}>
               {fileName || 'לחץ להעלאת קובץ PDF'}
             </p>
-            <p style={{ color: '#64748b', fontSize: '0.85rem' }}>או גרור קובץ לכאן</p>
+            <p style={{ color: 'var(--gray-400)', fontSize: '0.85rem' }}>או גרור קובץ לכאן</p>
           </div>
 
           {/* Text Input */}
           <div style={{ position: 'relative' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <label style={{ color: '#94a3b8', fontSize: '0.9rem' }}>או הדבק טקסט ישירות:</label>
+              <label style={{ color: 'var(--gray-500)', fontSize: '0.9rem' }}>או הדבק טקסט ישירות:</label>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 {text && (
                   <button onClick={() => setShowPreview(!showPreview)} style={{
-                    background: 'transparent', border: '1px solid #334155', borderRadius: '6px',
-                    padding: '0.4rem 0.75rem', color: '#94a3b8', cursor: 'pointer',
+                    background: 'transparent', border: '1px solid var(--gray-200)', borderRadius: '6px',
+                    padding: '0.4rem 0.75rem', color: 'var(--gray-500)', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem',
                   }}>
                     {showPreview ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -962,8 +961,8 @@ export function SimpleIntakePage() {
                 <button
                   onClick={async () => { const clipText = await navigator.clipboard.readText(); setText(prev => prev + clipText); }}
                   style={{
-                    background: 'transparent', border: '1px solid #334155', borderRadius: '6px',
-                    padding: '0.4rem 0.75rem', color: '#94a3b8', cursor: 'pointer',
+                    background: 'transparent', border: '1px solid var(--gray-200)', borderRadius: '6px',
+                    padding: '0.4rem 0.75rem', color: 'var(--gray-500)', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem',
                   }}
                 >
@@ -977,16 +976,16 @@ export function SimpleIntakePage() {
               placeholder="הדבק כאן את תוכן המכרז..."
               style={{
                 width: '100%', minHeight: showPreview ? '400px' : '120px',
-                padding: '1rem', borderRadius: '8px', border: '1px solid #334155',
-                background: 'rgba(15, 23, 42, 0.8)', color: '#fff',
+                padding: '1rem', borderRadius: '8px', border: '1px solid var(--gray-200)',
+                background: 'var(--surface)', color: 'var(--gray-800)',
                 fontSize: '0.95rem', resize: 'vertical', direction: 'rtl',
               }}
             />
             {text && (
               <div style={{
                 position: 'absolute', bottom: '0.75rem', left: '0.75rem',
-                background: 'rgba(0,0,0,0.5)', padding: '0.25rem 0.5rem',
-                borderRadius: '4px', fontSize: '0.75rem', color: '#64748b',
+                background: 'rgba(255,255,255,0.85)', padding: '0.25rem 0.5rem',
+                borderRadius: '4px', fontSize: '0.75rem', color: 'var(--gray-500)',
               }}>
                 {text.length.toLocaleString()} תווים
               </div>
@@ -1039,7 +1038,7 @@ export function SimpleIntakePage() {
         {/* ========== EXTRACTION SUMMARY (after extraction) ========== */}
         {results && currentStep !== 'upload' && (
           <div style={{
-            background: 'rgba(255,255,255,0.05)', borderRadius: '16px',
+            background: 'var(--surface-glass)', borderRadius: '16px',
             padding: '1.5rem', marginBottom: '1.5rem',
             border: '1px solid rgba(34, 197, 94, 0.2)',
           }}>
@@ -1050,19 +1049,19 @@ export function SimpleIntakePage() {
               padding: '1rem', background: 'rgba(124, 58, 237, 0.1)', borderRadius: '12px',
             }}>
               <div>
-                <div style={{ color: '#94a3b8', fontSize: '0.75rem', marginBottom: '0.2rem' }}>שם המכרז</div>
-                <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.9rem' }}>{results.metadata.tenderName || 'לא זוהה'}</div>
+                <div style={{ color: 'var(--gray-500)', fontSize: '0.75rem', marginBottom: '0.2rem' }}>שם המכרז</div>
+                <div style={{ color: 'var(--gray-800)', fontWeight: 600, fontSize: '0.9rem' }}>{results.metadata.tenderName || 'לא זוהה'}</div>
               </div>
               <div>
-                <div style={{ color: '#94a3b8', fontSize: '0.75rem', marginBottom: '0.2rem' }}>מספר מכרז</div>
-                <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.9rem' }}>{results.metadata.tenderNumber || 'לא זוהה'}</div>
+                <div style={{ color: 'var(--gray-500)', fontSize: '0.75rem', marginBottom: '0.2rem' }}>מספר מכרז</div>
+                <div style={{ color: 'var(--gray-800)', fontWeight: 600, fontSize: '0.9rem' }}>{results.metadata.tenderNumber || 'לא זוהה'}</div>
               </div>
               <div>
-                <div style={{ color: '#94a3b8', fontSize: '0.75rem', marginBottom: '0.2rem' }}>גוף מזמין</div>
-                <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.9rem' }}>{results.metadata.issuingBody || 'לא זוהה'}</div>
+                <div style={{ color: 'var(--gray-500)', fontSize: '0.75rem', marginBottom: '0.2rem' }}>גוף מזמין</div>
+                <div style={{ color: 'var(--gray-800)', fontWeight: 600, fontSize: '0.9rem' }}>{results.metadata.issuingBody || 'לא זוהה'}</div>
               </div>
               <div>
-                <div style={{ color: '#94a3b8', fontSize: '0.75rem', marginBottom: '0.2rem' }}>מועד הגשה</div>
+                <div style={{ color: 'var(--gray-500)', fontSize: '0.75rem', marginBottom: '0.2rem' }}>מועד הגשה</div>
                 <div style={{ color: '#ef4444', fontWeight: 600, fontSize: '0.9rem' }}>{results.metadata.submissionDeadline || 'לא זוהה'}</div>
               </div>
             </div>
@@ -1072,9 +1071,9 @@ export function SimpleIntakePage() {
               onClick={() => setShowConditions(!showConditions)}
               style={{
                 display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%',
-                padding: '0.6rem 0.75rem', background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px',
-                color: '#94a3b8', cursor: 'pointer', fontSize: '0.9rem', fontFamily: 'inherit',
+                padding: '0.6rem 0.75rem', background: 'var(--surface-glass)',
+                border: '1px solid var(--gray-200)', borderRadius: '8px',
+                color: 'var(--gray-500)', cursor: 'pointer', fontSize: '0.9rem', fontFamily: 'inherit',
               }}
             >
               {showConditions ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -1090,7 +1089,7 @@ export function SimpleIntakePage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem', maxHeight: '400px', overflowY: 'auto' }}>
                 {results.conditions.map((condition, index) => (
                   <div key={index} style={{
-                    background: 'rgba(255,255,255,0.03)', borderRadius: '10px',
+                    background: 'rgba(0,0,0,0.02)', borderRadius: '10px',
                     padding: '0.75rem 1rem',
                     borderRight: `3px solid ${typeColors[condition.type] || '#6b7280'}`,
                   }}>
@@ -1103,7 +1102,7 @@ export function SimpleIntakePage() {
                         #{condition.number}
                       </span>
                       <div style={{ flex: 1 }}>
-                        <div style={{ color: '#fff', fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '0.35rem' }}>
+                        <div style={{ color: 'var(--gray-800)', fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '0.35rem' }}>
                           {condition.text}
                         </div>
                         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
@@ -1131,14 +1130,14 @@ export function SimpleIntakePage() {
         {/* ========== COMPANY CHOICE STEP ========== */}
         {currentStep === 'company' && results && (
           <div style={{
-            background: 'rgba(255,255,255,0.05)', borderRadius: '16px',
+            background: 'var(--surface-glass)', borderRadius: '16px',
             padding: '2rem', marginBottom: '1.5rem',
             border: '1px solid rgba(0, 180, 216, 0.3)',
           }}>
             <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
               <Building2 size={36} style={{ color: '#00d4ff', marginBottom: '0.5rem' }} />
-              <h2 style={{ color: '#fff', fontSize: '1.4rem', margin: '0 0 0.5rem' }}>בחר חברה למכרז</h2>
-              <p style={{ color: '#94a3b8', fontSize: '0.95rem', margin: 0 }}>
+              <h2 style={{ color: 'var(--gray-800)', fontSize: '1.4rem', margin: '0 0 0.5rem' }}>בחר חברה למכרז</h2>
+              <p style={{ color: 'var(--gray-500)', fontSize: '0.95rem', margin: 0 }}>
                 חפש חברה אמיתית מהמאגר, או חולל פרופיל פיקטיבי מותאם לתחום המכרז
               </p>
             </div>
@@ -1170,7 +1169,7 @@ export function SimpleIntakePage() {
                   <h3 style={{ color: '#00d4ff', fontSize: '1.2rem', margin: '0 0 0.5rem' }}>
                     חיפוש במאגר
                   </h3>
-                  <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: 0, lineHeight: 1.5 }}>
+                  <p style={{ color: 'var(--gray-500)', fontSize: '0.9rem', margin: 0, lineHeight: 1.5 }}>
                     חפש חברה אמיתית מתוך המאגר החיצוני שנטען למערכת
                   </p>
                 </button>
@@ -1195,10 +1194,10 @@ export function SimpleIntakePage() {
                   }}>
                     <Wand2 size={32} color="white" />
                   </div>
-                  <h3 style={{ color: '#a78bfa', fontSize: '1.2rem', margin: '0 0 0.5rem' }}>
+                  <h3 style={{ color: '#7c3aed', fontSize: '1.2rem', margin: '0 0 0.5rem' }}>
                     יצירת פרופיל פיקטיבי
                   </h3>
-                  <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: 0, lineHeight: 1.5 }}>
+                  <p style={{ color: 'var(--gray-500)', fontSize: '0.9rem', margin: 0, lineHeight: 1.5 }}>
                     AI יחולל חברה מותאמת לתחום המכרז עם פרויקטים, כספים והסמכות
                   </p>
                 </button>
@@ -1214,8 +1213,8 @@ export function SimpleIntakePage() {
                   style={{
                     display: 'flex', alignItems: 'center', gap: '0.4rem',
                     marginBottom: '1rem', padding: '0.4rem 0.75rem',
-                    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '6px', color: '#94a3b8', cursor: 'pointer', fontSize: '0.85rem', fontFamily: 'inherit',
+                    background: 'var(--surface-glass)', border: '1px solid var(--gray-200)',
+                    borderRadius: '6px', color: 'var(--gray-500)', cursor: 'pointer', fontSize: '0.85rem', fontFamily: 'inherit',
                   }}
                 >
                   <ArrowRight size={14} style={{ transform: 'rotate(180deg)' }} /> חזרה לבחירה
@@ -1225,7 +1224,7 @@ export function SimpleIntakePage() {
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: '0.75rem',
                   marginBottom: '1rem', padding: '0.75rem 1rem',
-                  background: 'rgba(255,255,255,0.05)', borderRadius: '12px',
+                  background: 'var(--surface-glass)', borderRadius: '12px',
                   border: '1px solid rgba(0, 180, 216, 0.3)',
                 }}>
                   <Search size={18} color="#00d4ff" />
@@ -1237,7 +1236,7 @@ export function SimpleIntakePage() {
                     autoFocus
                     style={{
                       flex: 1, border: 'none', outline: 'none', fontSize: '0.95rem',
-                      fontFamily: 'inherit', background: 'transparent', color: '#fff',
+                      fontFamily: 'inherit', background: 'transparent', color: 'var(--gray-800)',
                     }}
                   />
                 </div>
@@ -1245,10 +1244,10 @@ export function SimpleIntakePage() {
                 {loadingCompanies ? (
                   <div style={{ textAlign: 'center', padding: '2rem' }}>
                     <Loader2 size={24} className="spin" style={{ color: '#00d4ff' }} />
-                    <p style={{ color: '#94a3b8', marginTop: '0.5rem' }}>טוען חברות מהמאגר...</p>
+                    <p style={{ color: 'var(--gray-500)', marginTop: '0.5rem' }}>טוען חברות מהמאגר...</p>
                   </div>
                 ) : filteredDbCompanies.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-500)' }}>
                     <Database size={36} style={{ opacity: 0.3, marginBottom: '0.75rem' }} />
                     <p>{companySearchQuery ? 'לא נמצאו חברות תואמות' : 'אין חברות במאגר'}</p>
                     <button
@@ -1256,7 +1255,7 @@ export function SimpleIntakePage() {
                       style={{
                         marginTop: '1rem', padding: '0.6rem 1.5rem', borderRadius: '8px',
                         border: '1px solid rgba(124, 58, 237, 0.3)', background: 'rgba(124, 58, 237, 0.1)',
-                        color: '#a78bfa', cursor: 'pointer', fontSize: '0.9rem', fontFamily: 'inherit',
+                        color: '#7c3aed', cursor: 'pointer', fontSize: '0.9rem', fontFamily: 'inherit',
                       }}
                     >
                       <Wand2 size={14} style={{ display: 'inline', marginLeft: '0.4rem', verticalAlign: 'middle' }} />
@@ -1271,13 +1270,13 @@ export function SimpleIntakePage() {
                         onClick={() => selectDbCompany(company)}
                         style={{
                           display: 'flex', alignItems: 'center', gap: '1rem',
-                          padding: '0.85rem 1rem', background: 'rgba(255,255,255,0.03)',
-                          border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px',
+                          padding: '0.85rem 1rem', background: 'rgba(0,0,0,0.02)',
+                          border: '1px solid var(--gray-200)', borderRadius: '10px',
                           cursor: 'pointer', textAlign: 'right', width: '100%', fontFamily: 'inherit',
                           transition: 'all 0.2s',
                         }}
                         onMouseOver={e => { e.currentTarget.style.borderColor = '#00d4ff'; e.currentTarget.style.background = 'rgba(0, 180, 216, 0.08)'; }}
-                        onMouseOut={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+                        onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--gray-200)'; e.currentTarget.style.background = 'rgba(0,0,0,0.02)'; }}
                       >
                         <div style={{
                           width: '42px', height: '42px', borderRadius: '10px',
@@ -1287,13 +1286,13 @@ export function SimpleIntakePage() {
                           <Building2 size={20} color="white" />
                         </div>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 600, color: '#fff' }}>{company.name}</div>
-                          <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                          <div style={{ fontWeight: 600, color: 'var(--gray-800)' }}>{company.name}</div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)' }}>
                             {company.company_number && `ח.פ. ${company.company_number}`}
                             {company.specializations && ` | ${company.specializations}`}
                           </div>
                         </div>
-                        <ArrowRight size={16} color="#94a3b8" />
+                        <ArrowRight size={16} color="var(--gray-500)" />
                       </button>
                     ))}
                   </div>
@@ -1311,8 +1310,8 @@ export function SimpleIntakePage() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: '0.4rem',
                       marginBottom: '1rem', padding: '0.4rem 0.75rem',
-                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: '6px', color: '#94a3b8', cursor: 'pointer', fontSize: '0.85rem', fontFamily: 'inherit',
+                      background: 'var(--surface-glass)', border: '1px solid var(--gray-200)',
+                      borderRadius: '6px', color: 'var(--gray-500)', cursor: 'pointer', fontSize: '0.85rem', fontFamily: 'inherit',
                     }}
                   >
                     <ArrowRight size={14} style={{ transform: 'rotate(180deg)' }} /> חזרה לבחירה
@@ -1325,9 +1324,9 @@ export function SimpleIntakePage() {
                   background: 'rgba(124, 58, 237, 0.1)', borderRadius: '8px',
                   display: 'flex', alignItems: 'center', gap: '0.5rem',
                 }}>
-                  <Sparkles size={16} style={{ color: '#a78bfa' }} />
-                  <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>מחולל פרופיל עבור:</span>
-                  <span style={{ color: '#fff', fontWeight: 600, fontSize: '0.9rem' }}>{results.metadata.tenderName}</span>
+                  <Sparkles size={16} style={{ color: '#7c3aed' }} />
+                  <span style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>מחולל פרופיל עבור:</span>
+                  <span style={{ color: 'var(--gray-800)', fontWeight: 600, fontSize: '0.9rem' }}>{results.metadata.tenderName}</span>
                 </div>
 
                 {/* Generation progress */}
@@ -1348,15 +1347,15 @@ export function SimpleIntakePage() {
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                               background: isDone ? 'linear-gradient(135deg, #22c55e, #16a34a)'
                                 : isActive ? 'linear-gradient(135deg, #7c3aed, #6d28d9)'
-                                  : 'rgba(255,255,255,0.08)',
+                                  : 'var(--gray-100)',
                               transition: 'all 0.3s',
                             }}>
                               {isDone ? <CheckCircle size={18} color="white" />
                                 : isActive ? <Loader2 size={18} color="white" className="spin" />
-                                  : <step.icon size={18} style={{ color: '#64748b' }} />}
+                                  : <step.icon size={18} style={{ color: 'var(--gray-400)' }} />}
                             </div>
                             <span style={{
-                              color: isDone ? '#22c55e' : isActive ? '#a78bfa' : '#64748b',
+                              color: isDone ? '#22c55e' : isActive ? '#7c3aed' : 'var(--gray-400)',
                               fontWeight: isActive ? 600 : 400, fontSize: '0.95rem',
                             }}>
                               {step.label}
@@ -1371,7 +1370,7 @@ export function SimpleIntakePage() {
                     {/* Progress bar */}
                     <div style={{
                       marginTop: '1.25rem', height: '6px', borderRadius: '3px',
-                      background: 'rgba(255,255,255,0.1)', overflow: 'hidden',
+                      background: 'var(--gray-200)', overflow: 'hidden',
                     }}>
                       <div style={{
                         height: '100%', borderRadius: '3px',
@@ -1394,7 +1393,7 @@ export function SimpleIntakePage() {
                       <AlertCircle size={18} style={{ color: '#ef4444' }} />
                       <span style={{ color: '#ef4444', fontWeight: 600 }}>שגיאה בחילול</span>
                     </div>
-                    <p style={{ color: '#fca5a5', fontSize: '0.85rem', margin: '0 0 0.75rem' }}>{genError}</p>
+                    <p style={{ color: '#dc2626', fontSize: '0.85rem', margin: '0 0 0.75rem' }}>{genError}</p>
                     <button
                       onClick={runGeneration}
                       style={{
@@ -1425,13 +1424,13 @@ export function SimpleIntakePage() {
                         <Building2 size={28} color="white" />
                       </div>
                       <div style={{ flex: 1 }}>
-                        <h3 style={{ color: '#fff', fontSize: '1.25rem', margin: '0 0 0.25rem' }}>
+                        <h3 style={{ color: 'var(--gray-800)', fontSize: '1.25rem', margin: '0 0 0.25rem' }}>
                           {generatedCompany.name}
                         </h3>
-                        <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>
+                        <div style={{ color: 'var(--gray-500)', fontSize: '0.9rem' }}>
                           {generatedCompany.domain} | נוסדה {generatedCompany.founding_year}
                         </div>
-                        <div style={{ color: '#cbd5e1', fontSize: '0.85rem', marginTop: '0.5rem', lineHeight: 1.5 }}>
+                        <div style={{ color: 'var(--gray-600)', fontSize: '0.85rem', marginTop: '0.5rem', lineHeight: 1.5 }}>
                           {generatedCompany.description}
                         </div>
                       </div>
@@ -1443,28 +1442,28 @@ export function SimpleIntakePage() {
                       gap: '0.75rem', marginBottom: '1.25rem',
                     }}>
                       <div style={{
-                        padding: '0.75rem', background: 'rgba(255,255,255,0.05)',
+                        padding: '0.75rem', background: 'var(--surface-glass)',
                         borderRadius: '10px', textAlign: 'center',
                       }}>
                         <Users size={20} style={{ color: '#00d4ff', marginBottom: '0.25rem' }} />
-                        <div style={{ color: '#fff', fontWeight: 700, fontSize: '1.1rem' }}>{generatedCompany.employee_count}</div>
-                        <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>עובדים</div>
+                        <div style={{ color: 'var(--gray-800)', fontWeight: 700, fontSize: '1.1rem' }}>{generatedCompany.employee_count}</div>
+                        <div style={{ color: 'var(--gray-500)', fontSize: '0.75rem' }}>עובדים</div>
                       </div>
                       <div style={{
-                        padding: '0.75rem', background: 'rgba(255,255,255,0.05)',
+                        padding: '0.75rem', background: 'var(--surface-glass)',
                         borderRadius: '10px', textAlign: 'center',
                       }}>
                         <TrendingUp size={20} style={{ color: '#22c55e', marginBottom: '0.25rem' }} />
-                        <div style={{ color: '#fff', fontWeight: 700, fontSize: '1.1rem' }}>{generatedCompany.annual_revenue}M</div>
-                        <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>מחזור שנתי</div>
+                        <div style={{ color: 'var(--gray-800)', fontWeight: 700, fontSize: '1.1rem' }}>{generatedCompany.annual_revenue}M</div>
+                        <div style={{ color: 'var(--gray-500)', fontSize: '0.75rem' }}>מחזור שנתי</div>
                       </div>
                       <div style={{
-                        padding: '0.75rem', background: 'rgba(255,255,255,0.05)',
+                        padding: '0.75rem', background: 'var(--surface-glass)',
                         borderRadius: '10px', textAlign: 'center',
                       }}>
                         <Award size={20} style={{ color: '#f59e0b', marginBottom: '0.25rem' }} />
-                        <div style={{ color: '#fff', fontWeight: 700, fontSize: '1.1rem' }}>{generatedCompany.certifications.length}</div>
-                        <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>הסמכות</div>
+                        <div style={{ color: 'var(--gray-800)', fontWeight: 700, fontSize: '1.1rem' }}>{generatedCompany.certifications.length}</div>
+                        <div style={{ color: 'var(--gray-500)', fontSize: '0.75rem' }}>הסמכות</div>
                       </div>
                     </div>
 
@@ -1472,7 +1471,7 @@ export function SimpleIntakePage() {
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
                       <span style={{
                         display: 'flex', alignItems: 'center', gap: '0.3rem',
-                        background: 'rgba(124, 58, 237, 0.15)', color: '#a78bfa',
+                        background: 'rgba(124, 58, 237, 0.15)', color: '#7c3aed',
                         padding: '0.3rem 0.75rem', borderRadius: '6px', fontSize: '0.8rem',
                       }}>
                         <Briefcase size={14} /> {generatedCompany.projects.length} פרויקטים
@@ -1496,12 +1495,12 @@ export function SimpleIntakePage() {
                     {/* Background */}
                     {generatedCompany.background && (
                       <div style={{
-                        padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.03)',
+                        padding: '0.75rem 1rem', background: 'rgba(0,0,0,0.02)',
                         borderRadius: '8px', marginBottom: '1.25rem',
                         borderRight: '3px solid #7c3aed',
                       }}>
-                        <div style={{ color: '#94a3b8', fontSize: '0.75rem', marginBottom: '0.3rem' }}>רקע החברה</div>
-                        <div style={{ color: '#cbd5e1', fontSize: '0.85rem', lineHeight: 1.6 }}>
+                        <div style={{ color: 'var(--gray-500)', fontSize: '0.75rem', marginBottom: '0.3rem' }}>רקע החברה</div>
+                        <div style={{ color: 'var(--gray-600)', fontSize: '0.85rem', lineHeight: 1.6 }}>
                           {generatedCompany.background}
                         </div>
                       </div>
@@ -1509,19 +1508,19 @@ export function SimpleIntakePage() {
 
                     {/* Projects list */}
                     <div style={{ marginBottom: '1.25rem' }}>
-                      <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.5rem', fontWeight: 600 }}>
+                      <div style={{ color: 'var(--gray-500)', fontSize: '0.8rem', marginBottom: '0.5rem', fontWeight: 600 }}>
                         פרויקטים נבחרים:
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                         {generatedCompany.projects.slice(0, 4).map((proj, i) => (
                           <div key={i} style={{
-                            padding: '0.6rem 0.75rem', background: 'rgba(255,255,255,0.03)',
+                            padding: '0.6rem 0.75rem', background: 'rgba(0,0,0,0.02)',
                             borderRadius: '8px', display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
                           }}>
                             <Briefcase size={14} style={{ color: '#7c3aed', marginTop: '0.2rem', flexShrink: 0 }} />
                             <div>
-                              <div style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 500 }}>{proj.project_name}</div>
-                              <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
+                              <div style={{ color: 'var(--gray-800)', fontSize: '0.85rem', fontWeight: 500 }}>{proj.project_name}</div>
+                              <div style={{ color: 'var(--gray-500)', fontSize: '0.75rem' }}>
                                 {proj.client_name} | {(proj.total_value / 1000000).toFixed(1)}M ₪
                               </div>
                             </div>
@@ -1555,7 +1554,7 @@ export function SimpleIntakePage() {
                         style={{
                           flex: 1, padding: '0.85rem', borderRadius: '12px',
                           border: '1px solid rgba(124, 58, 237, 0.3)',
-                          background: 'rgba(124, 58, 237, 0.1)', color: '#a78bfa',
+                          background: 'rgba(124, 58, 237, 0.1)', color: '#7c3aed',
                           fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'inherit',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
                         }}
@@ -1573,7 +1572,7 @@ export function SimpleIntakePage() {
         {/* ========== SAVE & RESULTS (after company selected) ========== */}
         {currentStep === 'save' && results && (
           <div style={{
-            background: 'rgba(255,255,255,0.05)', borderRadius: '16px',
+            background: 'var(--surface-glass)', borderRadius: '16px',
             padding: '2rem', border: '1px solid rgba(34, 197, 94, 0.3)',
           }}>
             {/* Selected company indicator */}
@@ -1585,8 +1584,8 @@ export function SimpleIntakePage() {
                 border: '1px solid rgba(0, 180, 216, 0.2)',
               }}>
                 <Building2 size={18} style={{ color: '#00d4ff' }} />
-                <span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>חברה נבחרת:</span>
-                <span style={{ color: '#fff', fontWeight: 600 }}>{selectedOrgName}</span>
+                <span style={{ color: 'var(--gray-500)', fontSize: '0.9rem' }}>חברה נבחרת:</span>
+                <span style={{ color: 'var(--gray-800)', fontWeight: 600 }}>{selectedOrgName}</span>
               </div>
             )}
 
@@ -1613,7 +1612,7 @@ export function SimpleIntakePage() {
         {/* ========== DONE STEP ========== */}
         {currentStep === 'done' && savedTenderId && results && (
           <div style={{
-            background: 'rgba(255,255,255,0.05)', borderRadius: '16px',
+            background: 'var(--surface-glass)', borderRadius: '16px',
             padding: '2rem', border: '1px solid rgba(34, 197, 94, 0.3)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
@@ -1625,22 +1624,22 @@ export function SimpleIntakePage() {
             <div style={{
               display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
               gap: '1rem', marginBottom: '1.5rem',
-              padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px',
+              padding: '1rem', background: 'var(--surface-glass)', borderRadius: '8px',
             }}>
               <div style={{ textAlign: 'center' }}>
                 <FileCheck size={20} style={{ color: '#22c55e', marginBottom: '0.25rem' }} />
-                <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>מסמך</div>
-                <div style={{ color: '#fff', fontSize: '0.85rem' }}>{currentFile?.name?.substring(0, 15) || 'טקסט'}...</div>
+                <div style={{ color: 'var(--gray-500)', fontSize: '0.75rem' }}>מסמך</div>
+                <div style={{ color: 'var(--gray-800)', fontSize: '0.85rem' }}>{currentFile?.name?.substring(0, 15) || 'טקסט'}...</div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <Database size={20} style={{ color: '#7c3aed', marginBottom: '0.25rem' }} />
-                <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>תנאי סף</div>
-                <div style={{ color: '#fff', fontSize: '0.85rem' }}>{results.conditions.length} נשמרו</div>
+                <div style={{ color: 'var(--gray-500)', fontSize: '0.75rem' }}>תנאי סף</div>
+                <div style={{ color: 'var(--gray-800)', fontSize: '0.85rem' }}>{results.conditions.length} נשמרו</div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <Building2 size={20} style={{ color: '#00d4ff', marginBottom: '0.25rem' }} />
-                <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>חברה</div>
-                <div style={{ color: '#fff', fontSize: '0.85rem' }}>{selectedOrgName || 'ברירת מחדל'}</div>
+                <div style={{ color: 'var(--gray-500)', fontSize: '0.75rem' }}>חברה</div>
+                <div style={{ color: 'var(--gray-800)', fontSize: '0.85rem' }}>{selectedOrgName || 'ברירת מחדל'}</div>
               </div>
             </div>
 
@@ -1662,8 +1661,8 @@ export function SimpleIntakePage() {
                 onClick={() => navigate('/')}
                 style={{
                   flex: 1, padding: '1rem', borderRadius: '12px',
-                  border: '1px solid rgba(255,255,255,0.2)', background: 'transparent',
-                  color: '#94a3b8', fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'inherit',
+                  border: '1px solid var(--gray-200)', background: 'transparent',
+                  color: 'var(--gray-500)', fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >
                 לדשבורד

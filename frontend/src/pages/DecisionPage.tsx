@@ -152,7 +152,7 @@ export function DecisionPage() {
 
       {!decision && (
         <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-          <Target size={64} style={{ color: 'var(--gray-300)', marginBottom: '1rem' }} />
+          <Target size={64} style={{ color: 'var(--gray-400)', marginBottom: '1rem' }} />
           <h3 style={{ marginBottom: '0.5rem' }}>הפק דוח החלטה</h3>
           <p style={{ color: 'var(--gray-500)', marginBottom: '1.5rem' }}>
             המערכת תנתח את כל הנתונים ותייצר דוח GO/NO-GO מקיף

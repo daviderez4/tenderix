@@ -94,7 +94,7 @@ export interface CompetitorMappingData {
 }
 
 export interface GateConditionItem {
-  condition_number: number;
+  condition_number: string | number;
   condition_text: string;
   status: 'MEETS' | 'PARTIALLY_MEETS' | 'DOES_NOT_MEET' | 'UNKNOWN';
   is_mandatory: boolean;
