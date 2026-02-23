@@ -8,7 +8,7 @@ import { saveAnalysis, getAnalysis } from '../api/analysisCache';
 import { StatusBadge } from '../components/StatusBadge';
 import { Loading } from '../components/Loading';
 import { TenderReportPDF } from '../pdf/TenderReportPDF';
-import type { TenderReportData, BOQAnalysisData, SOWAnalysisData, ClarificationData, StrategicQuestionsData, RequiredDocsData, PricingIntelData, CompetitiveIntelData, CompetitorMappingData, DecisionData } from '../pdf/types';
+import type { TenderReportData, BOQAnalysisData, SOWAnalysisData, ClarificationData, StrategicQuestionsData, RequiredDocsData, PricingIntelData, CompetitiveIntelData, CompetitorMappingData, DecisionData, GateConditionsData } from '../pdf/types';
 
 export function DecisionPage() {
   const [tender, setTender] = useState<Tender | null>(null);
@@ -75,6 +75,8 @@ export function DecisionPage() {
         generatedAt: new Date().toLocaleDateString('he-IL'),
         // Decision (current or cached)
         decision: decision?.success ? decision as DecisionData : getAnalysis<DecisionData>(tenderId, 'decision') || undefined,
+        // Gate conditions (cached from GatesPage)
+        gateConditions: getAnalysis<GateConditionsData>(tenderId, 'gateConditions') || undefined,
         // Cached analysis sections
         boq: getAnalysis<BOQAnalysisData>(tenderId, 'boq') || undefined,
         sow: getAnalysis<SOWAnalysisData>(tenderId, 'sow') || undefined,

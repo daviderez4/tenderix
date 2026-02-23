@@ -93,6 +93,40 @@ export interface CompetitorMappingData {
   market_analysis: string;
 }
 
+export interface GateConditionItem {
+  condition_number: number;
+  condition_text: string;
+  status: 'MEETS' | 'PARTIALLY_MEETS' | 'DOES_NOT_MEET' | 'UNKNOWN';
+  is_mandatory: boolean;
+  requirement_type?: string;
+  evidence?: string;
+  gap_description?: string;
+  ai_summary?: string;
+  ai_confidence?: number;
+  legal_classification?: string;
+  legal_reasoning?: string;
+  technical_requirement?: string;
+  equivalent_options?: string[];
+  closure_options?: string[];
+  source_section?: string;
+  source_page?: number;
+  required_years?: number;
+  required_amount?: number;
+  required_count?: number;
+}
+
+export interface GateConditionsData {
+  conditions: GateConditionItem[];
+  summary: {
+    total: number;
+    meets: number;
+    partial: number;
+    fails: number;
+    unknown: number;
+    mandatory: number;
+  };
+}
+
 export interface DecisionData {
   decision: 'GO' | 'NO-GO' | 'CONDITIONAL';
   confidence: number;
@@ -117,6 +151,9 @@ export interface TenderReportData {
 
   // Decision (existing)
   decision?: DecisionData;
+
+  // Gate conditions analysis (detailed)
+  gateConditions?: GateConditionsData;
 
   // New sections (optional - only present if cached)
   boq?: BOQAnalysisData;
