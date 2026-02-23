@@ -445,17 +445,19 @@ export function GatesPage() {
         alignItems: 'center',
         justifyContent: 'space-between',
         marginBottom: '1rem',
-        padding: '0.75rem 1rem',
-        background: 'rgba(255,255,255,0.03)',
-        borderRadius: '8px',
+        padding: '0.65rem 1rem',
+        background: 'var(--surface)',
+        borderRadius: '10px',
+        border: '1px solid var(--gray-200)',
+        boxShadow: 'var(--shadow-xs)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <Link
             to="/"
             style={{
-              color: 'var(--gray-400)',
+              color: 'var(--gray-500)',
               textDecoration: 'none',
-              fontSize: '0.85rem',
+              fontSize: '0.82rem',
             }}
           >
             {selectedOrgName || 'בית'}
@@ -464,9 +466,9 @@ export function GatesPage() {
           <Link
             to="/simple"
             style={{
-              color: 'var(--gray-400)',
+              color: 'var(--gray-500)',
               textDecoration: 'none',
-              fontSize: '0.85rem',
+              fontSize: '0.82rem',
             }}
           >
             מכרז
@@ -483,9 +485,9 @@ export function GatesPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
-              color: 'var(--gray-400)',
+              color: 'var(--gray-500)',
               textDecoration: 'none',
-              fontSize: '0.85rem',
+              fontSize: '0.82rem',
               padding: '0.4rem 0.75rem',
               borderRadius: '6px',
               background: 'rgba(16, 185, 129, 0.1)',
@@ -501,9 +503,9 @@ export function GatesPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
-              color: 'var(--gray-400)',
+              color: 'var(--gray-500)',
               textDecoration: 'none',
-              fontSize: '0.85rem',
+              fontSize: '0.82rem',
               padding: '0.4rem 0.75rem',
               borderRadius: '6px',
               background: 'rgba(34, 197, 94, 0.1)',
@@ -519,9 +521,9 @@ export function GatesPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
-              color: 'var(--gray-400)',
+              color: 'var(--gray-500)',
               textDecoration: 'none',
-              fontSize: '0.85rem',
+              fontSize: '0.82rem',
               padding: '0.4rem 0.75rem',
               borderRadius: '6px',
               background: 'rgba(99, 102, 241, 0.1)',
@@ -550,16 +552,16 @@ export function GatesPage() {
         <div style={{
           marginBottom: '1.5rem',
           padding: '1rem 1.25rem',
-          background: 'linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(124, 58, 237, 0.1))',
-          borderRadius: '12px',
-          border: '1px solid rgba(0, 212, 255, 0.3)',
-          borderRight: '4px solid #00d4ff',
+          background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.08), rgba(99, 102, 241, 0.06))',
+          borderRadius: '14px',
+          border: '1px solid rgba(6, 182, 212, 0.15)',
+          borderRight: '4px solid var(--accent)',
         }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
-            <Lightbulb size={24} style={{ color: '#00d4ff', flexShrink: 0, marginTop: '0.1rem' }} />
+            <Lightbulb size={24} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: '0.1rem' }} />
             <div>
-              <h4 style={{ margin: '0 0 0.5rem', color: '#00d4ff' }}>מה עכשיו?</h4>
-              <div style={{ color: 'var(--gray-300)', fontSize: '0.9rem', lineHeight: 1.6 }}>
+              <h4 style={{ margin: '0 0 0.5rem', color: 'var(--accent-dark)' }}>מה עכשיו?</h4>
+              <div style={{ color: 'var(--gray-600)', fontSize: '0.9rem', lineHeight: 1.6 }}>
                 <p style={{ margin: '0 0 0.5rem' }}>
                   <strong>{gates.length} תנאי סף</strong> חולצו מהמסמך. עכשיו אפשר:
                 </p>
@@ -918,16 +920,16 @@ export function GatesPage() {
                     {hasAnalysis && !isExpanded && gate.ai_summary && (
                       <div style={{
                         marginTop: '0.5rem',
-                        padding: '0.4rem 0.6rem',
+                        padding: '0.45rem 0.7rem',
                         background: gate.status === 'MEETS'
-                          ? 'rgba(16, 185, 129, 0.06)'
+                          ? 'rgba(34, 197, 94, 0.06)'
                           : gate.status === 'DOES_NOT_MEET'
                             ? 'rgba(239, 68, 68, 0.06)'
                             : 'rgba(245, 158, 11, 0.06)',
-                        borderRadius: '6px',
+                        borderRadius: '8px',
                         fontSize: '0.82rem',
-                        color: 'var(--gray-500)',
-                        lineHeight: 1.4,
+                        color: 'var(--gray-600)',
+                        lineHeight: 1.45,
                       }}>
                         {gate.ai_summary.length > 120 ? gate.ai_summary.substring(0, 120) + '...' : gate.ai_summary}
                       </div>
@@ -943,23 +945,24 @@ export function GatesPage() {
                         height: '44px',
                         borderRadius: '50%',
                         background: `conic-gradient(${
-                          confidencePct > 70 ? '#10b981' : confidencePct > 40 ? '#f59e0b' : '#ef4444'
-                        } ${confidencePct * 3.6}deg, rgba(255,255,255,0.08) 0deg)`,
+                          confidencePct > 70 ? '#22c55e' : confidencePct > 40 ? '#f59e0b' : '#ef4444'
+                        } ${confidencePct * 3.6}deg, var(--gray-200) 0deg)`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
                       }}>
                         <div style={{
                           width: '34px',
                           height: '34px',
                           borderRadius: '50%',
-                          background: 'var(--gray-900, #1a1a2e)',
+                          background: 'white',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           fontSize: '0.7rem',
-                          fontWeight: 700,
-                          color: confidencePct > 70 ? '#10b981' : confidencePct > 40 ? '#f59e0b' : '#ef4444',
+                          fontWeight: 800,
+                          color: confidencePct > 70 ? '#16a34a' : confidencePct > 40 ? '#d97706' : '#dc2626',
                         }}>
                           {confidencePct}%
                         </div>
@@ -992,25 +995,25 @@ export function GatesPage() {
                 {isExpanded && (
                   <div style={{
                     padding: '0 1rem 1rem',
-                    borderTop: '1px solid rgba(255,255,255,0.06)',
+                    borderTop: '1px solid var(--gray-100)',
                   }}>
                     <div style={{
                       marginTop: '0.75rem',
                       display: 'grid',
-                      gap: '0.75rem',
+                      gap: '0.65rem',
                     }}>
                       {/* AI Summary */}
                       {gate.ai_summary && (
                         <div style={{
                           padding: '0.75rem 1rem',
-                          background: 'rgba(124, 58, 237, 0.06)',
-                          borderRadius: '8px',
-                          borderRight: '3px solid #7c3aed',
+                          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.06), rgba(139, 92, 246, 0.03))',
+                          borderRadius: '10px',
+                          borderRight: '3px solid var(--primary)',
                         }}>
-                          <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#a78bfa', marginBottom: '0.3rem' }}>
+                          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.3rem' }}>
                             סיכום ניתוח AI
                           </div>
-                          <div style={{ color: 'var(--gray-300)', lineHeight: 1.6, fontSize: '0.9rem' }}>
+                          <div style={{ color: 'var(--gray-700)', lineHeight: 1.6, fontSize: '0.9rem' }}>
                             {gate.ai_summary}
                           </div>
                         </div>
@@ -1020,14 +1023,14 @@ export function GatesPage() {
                       {gate.evidence && (
                         <div style={{
                           padding: '0.75rem 1rem',
-                          background: 'rgba(16, 185, 129, 0.06)',
-                          borderRadius: '8px',
-                          borderRight: '3px solid #10b981',
+                          background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.06), rgba(22, 163, 74, 0.03))',
+                          borderRadius: '10px',
+                          borderRight: '3px solid var(--success)',
                         }}>
-                          <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#34d399', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--success-dark)', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                             <CheckCircle size={14} /> ראיות להתאמה
                           </div>
-                          <div style={{ color: 'var(--gray-300)', lineHeight: 1.6, fontSize: '0.88rem' }}>
+                          <div style={{ color: 'var(--gray-700)', lineHeight: 1.6, fontSize: '0.88rem' }}>
                             {gate.evidence}
                           </div>
                         </div>
@@ -1037,14 +1040,14 @@ export function GatesPage() {
                       {gate.gap_description && (
                         <div style={{
                           padding: '0.75rem 1rem',
-                          background: 'rgba(239, 68, 68, 0.06)',
-                          borderRadius: '8px',
-                          borderRight: '3px solid #ef4444',
+                          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.06), rgba(220, 38, 38, 0.03))',
+                          borderRadius: '10px',
+                          borderRight: '3px solid var(--danger)',
                         }}>
-                          <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#f87171', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--danger-dark)', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                             <AlertTriangle size={14} /> פערים שזוהו
                           </div>
-                          <div style={{ color: 'var(--gray-300)', lineHeight: 1.6, fontSize: '0.88rem' }}>
+                          <div style={{ color: 'var(--gray-700)', lineHeight: 1.6, fontSize: '0.88rem' }}>
                             {gate.gap_description}
                           </div>
                         </div>
@@ -1054,14 +1057,14 @@ export function GatesPage() {
                       {(gate.status === 'DOES_NOT_MEET' || gate.status === 'PARTIALLY_MEETS') && (
                         <div style={{
                           padding: '0.75rem 1rem',
-                          background: 'linear-gradient(135deg, rgba(0, 180, 216, 0.06), rgba(124, 58, 237, 0.04))',
-                          borderRadius: '8px',
-                          borderRight: '3px solid #00b4d8',
+                          background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.06), rgba(99, 102, 241, 0.03))',
+                          borderRadius: '10px',
+                          borderRight: '3px solid var(--accent)',
                         }}>
-                          <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#22d3ee', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--accent-dark)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                             <Lightbulb size={14} /> המלצות לסגירת הפער
                           </div>
-                          <div style={{ color: 'var(--gray-300)', fontSize: '0.88rem', lineHeight: 1.7 }}>
+                          <div style={{ color: 'var(--gray-700)', fontSize: '0.88rem', lineHeight: 1.7 }}>
                             {gate.equivalent_options && gate.equivalent_options.length > 0 ? (
                               <ul style={{ margin: 0, paddingRight: '1.25rem' }}>
                                 {gate.equivalent_options.map((opt, i) => (
@@ -1099,32 +1102,33 @@ export function GatesPage() {
                       )}
 
                       {/* Legal & Technical details - side by side if both exist */}
-                      {(gate.legal_classification || gate.technical_requirement || gate.bearer_entity) && (
+                      {(gate.legal_classification || gate.technical_requirement) && (
                         <div style={{
                           display: 'grid',
                           gridTemplateColumns: gate.legal_classification && gate.technical_requirement ? '1fr 1fr' : '1fr',
-                          gap: '0.75rem',
+                          gap: '0.65rem',
                         }}>
                           {gate.legal_classification && (
                             <div style={{
-                              padding: '0.6rem 0.8rem',
-                              background: 'rgba(99, 102, 241, 0.06)',
-                              borderRadius: '8px',
+                              padding: '0.65rem 0.85rem',
+                              background: 'rgba(99, 102, 241, 0.05)',
+                              borderRadius: '10px',
+                              border: '1px solid rgba(99, 102, 241, 0.1)',
                             }}>
-                              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#818cf8', marginBottom: '0.25rem' }}>
+                              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.3rem' }}>
                                 סיווג משפטי
                               </div>
                               <span className="badge" style={{
-                                background: gate.legal_classification === 'strict' ? '#ef4444' :
-                                  gate.legal_classification === 'open' ? '#10b981' : '#f59e0b',
+                                background: gate.legal_classification === 'strict' ? 'var(--danger)' :
+                                  gate.legal_classification === 'open' ? 'var(--success)' : 'var(--warning)',
                                 color: 'white',
-                                fontSize: '0.75rem',
+                                fontSize: '0.73rem',
                               }}>
                                 {gate.legal_classification === 'strict' ? 'קשיח - פסילה' :
                                  gate.legal_classification === 'open' ? 'פתוח לפרשנות' : 'תלוי הוכחות'}
                               </span>
                               {gate.legal_reasoning && (
-                                <div style={{ marginTop: '0.3rem', fontSize: '0.8rem', color: 'var(--gray-500)', lineHeight: 1.4 }}>
+                                <div style={{ marginTop: '0.3rem', fontSize: '0.8rem', color: 'var(--gray-500)', lineHeight: 1.5 }}>
                                   {gate.legal_reasoning}
                                 </div>
                               )}
@@ -1132,14 +1136,15 @@ export function GatesPage() {
                           )}
                           {gate.technical_requirement && (
                             <div style={{
-                              padding: '0.6rem 0.8rem',
-                              background: 'rgba(6, 182, 212, 0.06)',
-                              borderRadius: '8px',
+                              padding: '0.65rem 0.85rem',
+                              background: 'rgba(6, 182, 212, 0.05)',
+                              borderRadius: '10px',
+                              border: '1px solid rgba(6, 182, 212, 0.1)',
                             }}>
-                              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#22d3ee', marginBottom: '0.25rem' }}>
+                              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-dark)', marginBottom: '0.3rem' }}>
                                 דרישה טכנית
                               </div>
-                              <div style={{ fontSize: '0.85rem', color: 'var(--gray-300)', lineHeight: 1.5 }}>
+                              <div style={{ fontSize: '0.85rem', color: 'var(--gray-600)', lineHeight: 1.5 }}>
                                 {gate.technical_requirement}
                               </div>
                             </div>
@@ -1149,17 +1154,17 @@ export function GatesPage() {
 
                       {gate.bearer_entity && (
                         <div style={{
-                          padding: '0.4rem 0.8rem',
-                          background: 'rgba(255,255,255,0.03)',
-                          borderRadius: '6px',
+                          padding: '0.45rem 0.85rem',
+                          background: 'var(--gray-50)',
+                          borderRadius: '8px',
                           fontSize: '0.82rem',
-                          color: 'var(--gray-400)',
+                          color: 'var(--gray-600)',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '0.5rem',
                         }}>
                           <strong>נושא הדרישה:</strong>
-                          <span className="badge" style={{ background: 'var(--gray-700)', color: 'white', fontSize: '0.75rem' }}>
+                          <span className="badge" style={{ fontSize: '0.73rem' }}>
                             {gate.bearer_entity === 'bidder_only' ? 'המציע בלבד' :
                              gate.bearer_entity === 'consortium_member' ? 'שותף במיזם' : 'קבלן משנה מותר'}
                           </span>
@@ -1172,16 +1177,16 @@ export function GatesPage() {
                           display: 'flex',
                           alignItems: 'center',
                           gap: '0.75rem',
-                          padding: '0.5rem 0',
-                          borderTop: '1px solid rgba(255,255,255,0.05)',
+                          padding: '0.6rem 0',
+                          borderTop: '1px solid var(--gray-100)',
                           fontSize: '0.8rem',
                           color: 'var(--gray-500)',
                         }}>
-                          <span>רמת ביטחון בניתוח:</span>
+                          <span>רמת ביטחון:</span>
                           <div style={{
                             flex: 1,
                             height: '8px',
-                            background: 'rgba(255,255,255,0.06)',
+                            background: 'var(--gray-200)',
                             borderRadius: '4px',
                             overflow: 'hidden',
                           }}>
@@ -1189,7 +1194,7 @@ export function GatesPage() {
                               width: `${confidencePct}%`,
                               height: '100%',
                               background: `linear-gradient(90deg, ${
-                                confidencePct > 70 ? '#10b981, #34d399' :
+                                confidencePct > 70 ? '#22c55e, #4ade80' :
                                 confidencePct > 40 ? '#f59e0b, #fbbf24' :
                                 '#ef4444, #f87171'
                               })`,
@@ -1198,8 +1203,8 @@ export function GatesPage() {
                             }} />
                           </div>
                           <span style={{
-                            fontWeight: 700,
-                            color: confidencePct > 70 ? '#34d399' : confidencePct > 40 ? '#fbbf24' : '#f87171',
+                            fontWeight: 800,
+                            color: confidencePct > 70 ? '#16a34a' : confidencePct > 40 ? '#d97706' : '#dc2626',
                           }}>
                             {confidencePct}%
                           </span>
@@ -1352,14 +1357,15 @@ export function GatesPage() {
               display: 'flex',
               alignItems: 'flex-start',
               gap: '0.75rem',
-              padding: '1rem',
-              borderRadius: '8px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              padding: '0.85rem 1rem',
+              borderRadius: '12px',
+              boxShadow: '0 8px 30px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)',
               animation: 'slideIn 0.3s ease-out',
-              background: toast.type === 'success' ? 'linear-gradient(135deg, #059669, #047857)' :
-                          toast.type === 'error' ? 'linear-gradient(135deg, #dc2626, #b91c1c)' :
-                          toast.type === 'warning' ? 'linear-gradient(135deg, #d97706, #b45309)' :
-                          'linear-gradient(135deg, #7c3aed, #6d28d9)',
+              backdropFilter: 'blur(20px)',
+              background: toast.type === 'success' ? 'linear-gradient(135deg, #22c55e, #16a34a)' :
+                          toast.type === 'error' ? 'linear-gradient(135deg, #ef4444, #dc2626)' :
+                          toast.type === 'warning' ? 'linear-gradient(135deg, #f59e0b, #d97706)' :
+                          'linear-gradient(135deg, var(--primary), var(--primary-dark))',
               color: 'white'
             }}
           >
