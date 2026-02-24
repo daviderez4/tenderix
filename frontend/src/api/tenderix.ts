@@ -502,38 +502,62 @@ export const api = {
     getSummary: (tenderId: string) =>
       supabaseFetch<GateSummary[]>(`gate_conditions_summary?tender_id=eq.${tenderId}`).then(r => r[0]),
 
-    update: (id: string, data: Partial<GateCondition>) =>
-      supabaseFetch<GateCondition[]>(`gate_conditions?id=eq.${id}`, {
+    update: (id: string, data: Partial<GateCondition>) => {
+      // Filter to only include columns that exist in the database table
+      const dbData: Record<string, unknown> = {};
+      const knownColumns = [
+        'condition_number', 'condition_text', 'condition_type', 'is_mandatory',
+        'requirement_type', 'required_amount', 'required_count', 'required_years',
+        'status', 'company_evidence', 'gap_description', 'confidence_score',
+        'source_page', 'source_section', 'source_quote', 'source_file',
+        'ai_confidence', 'bearer_entity', 'subcontractor_allowed', 'subcontractor_limit',
+        'group_companies_allowed', 'scope_type', 'cumulative',
+        'legal_classification', 'legal_reasoning', 'technical_requirement',
+        'equivalent_options', 'extraction_method', 'definitions_applied',
+      ];
+      // Map frontend field names to DB column names
+      for (const [key, value] of Object.entries(data)) {
+        if (value === undefined) continue;
+        if (key === 'evidence') {
+          dbData.company_evidence = value; // frontend uses "evidence", DB uses "company_evidence"
+        } else if (knownColumns.includes(key)) {
+          dbData[key] = value;
+        }
+      }
+      return supabaseFetch<GateCondition[]>(`gate_conditions?id=eq.${id}`, {
         method: 'PATCH',
-        body: JSON.stringify(data),
-      }).then(r => r[0]),
+        body: JSON.stringify(dbData),
+      }).then(r => r[0]);
+    },
 
     create: (data: Partial<GateCondition>) => {
       // Filter to only include columns that exist in the database table
-      const dbData = {
+      const dbData: Record<string, unknown> = {
         id: data.id,
         tender_id: data.tender_id,
         condition_number: data.condition_number,
         condition_text: data.condition_text,
-        condition_type: data.condition_type,
+        condition_type: data.condition_type || 'GATE',
         is_mandatory: data.is_mandatory,
         requirement_type: data.requirement_type,
         required_amount: data.required_amount,
         required_count: data.required_count,
         required_years: data.required_years,
         status: data.status,
-        evidence: data.evidence,
+        company_evidence: data.evidence, // map frontend "evidence" → DB "company_evidence"
         gap_description: data.gap_description,
-        closure_options: data.closure_options,
         source_page: data.source_page,
         source_section: data.source_section,
         source_quote: data.source_quote,
         source_file: data.source_file,
-        ai_summary: data.ai_summary,
         ai_confidence: data.ai_confidence,
-        ai_analyzed_at: data.ai_analyzed_at,
-        // Note: bearer_entity and other professional extraction fields
-        // are NOT in the database schema yet
+        // Professional extraction columns (exist in DB from migration 008)
+        bearer_entity: data.bearer_entity,
+        subcontractor_allowed: data.subcontractor_allowed,
+        legal_classification: data.legal_classification,
+        legal_reasoning: data.legal_reasoning,
+        technical_requirement: data.technical_requirement,
+        equivalent_options: data.equivalent_options,
       };
       // Remove undefined values
       const cleanData = Object.fromEntries(
@@ -2026,8 +2050,16 @@ export const api = {
           ? `❌ לא עומד. ${gapDescription}`
           : `❓ נדרש בירור נוסף`;
 
-        // Save to database - only fields that exist in the table
+        // Save to database - only fields that actually exist in the DB schema
         try {
+          const updateData: Record<string, unknown> = {
+            status,
+            gap_description: gapDescription || null,
+            ai_confidence: aiConfidence,
+          };
+          // company_evidence is the actual DB column name (not "evidence")
+          if (evidence) updateData.company_evidence = evidence;
+
           await fetch(`${API_CONFIG.SUPABASE_URL}/rest/v1/gate_conditions?id=eq.${conditionId}`, {
             method: 'PATCH',
             headers: {
@@ -2036,14 +2068,7 @@ export const api = {
               'Authorization': `Bearer ${API_CONFIG.SUPABASE_KEY}`,
               'Prefer': 'return=minimal'
             },
-            body: JSON.stringify({
-              status,
-              evidence,
-              gap_description: gapDescription,
-              ai_confidence: aiConfidence,
-              ai_summary: aiSummary,
-              ai_analyzed_at: new Date().toISOString()
-            })
+            body: JSON.stringify(updateData)
           });
         } catch (saveError) {
           console.warn('Failed to save analysis to DB:', saveError);
