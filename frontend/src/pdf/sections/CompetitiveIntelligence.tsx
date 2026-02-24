@@ -1,6 +1,7 @@
 import { View, Text } from '@react-pdf/renderer';
 import type { CompetitiveIntelData } from '../types';
 import { pdfStyles, colors } from '../styles';
+import { GaugeChart } from '../charts/PDFCharts';
 
 export function CompetitiveIntelligence({ data }: { data: CompetitiveIntelData }) {
   if (!data?.our_position) return null;
@@ -13,17 +14,22 @@ export function CompetitiveIntelligence({ data }: { data: CompetitiveIntelData }
     <View>
       <Text style={pdfStyles.sectionTitle}>מודיעין תחרותי</Text>
 
-      {/* Win probability banner */}
+      {/* Win probability gauge */}
       <View style={{
-        backgroundColor: probColor,
+        backgroundColor: colors.gray50,
         borderRadius: 8,
         padding: 12,
         marginBottom: 12,
         alignItems: 'center',
+        borderWidth: 1,
+        borderColor: colors.gray200,
       }}>
-        <Text style={{ color: colors.white, fontSize: 14, fontWeight: 700 }}>
-          סיכויי זכייה: {data.win_probability}%
-        </Text>
+        <GaugeChart
+          value={data.win_probability}
+          label="סיכויי זכייה"
+          size={130}
+          color={probColor}
+        />
       </View>
 
       {/* 3-column position analysis */}

@@ -1,6 +1,7 @@
 import { View, Text } from '@react-pdf/renderer';
 import type { BOQAnalysisData } from '../types';
 import { pdfStyles, colors } from '../styles';
+import { HorizontalBarChart } from '../charts/PDFCharts';
 
 export function BOQAnalysis({ data }: { data: BOQAnalysisData }) {
   if (!data?.items?.length) return null;
@@ -24,6 +25,27 @@ export function BOQAnalysis({ data }: { data: BOQAnalysisData }) {
           <Text style={pdfStyles.statLabel}>סיכונים</Text>
         </View>
       </View>
+
+      {/* Category breakdown chart */}
+      {data.summary?.categories?.length > 0 && (() => {
+        // Count items per category
+        const catCounts: Record<string, number> = {};
+        data.items.forEach(item => {
+          const cat = item.category || 'אחר';
+          catCounts[cat] = (catCounts[cat] || 0) + 1;
+        });
+        const bars = Object.entries(catCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 8)
+          .map(([label, value]) => ({ label, value }));
+
+        return bars.length > 1 ? (
+          <View style={{ marginBottom: 12 }}>
+            <Text style={[pdfStyles.subTitle, { fontSize: 11 }]}>פריטים לפי קטגוריה</Text>
+            <HorizontalBarChart bars={bars} width={340} />
+          </View>
+        ) : null;
+      })()}
 
       {/* Items table */}
       <View style={pdfStyles.table}>

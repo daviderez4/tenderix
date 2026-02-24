@@ -1,6 +1,7 @@
 import { View, Text } from '@react-pdf/renderer';
 import type { PricingIntelData } from '../types';
 import { pdfStyles, colors } from '../styles';
+import { PriceRangeChart } from '../charts/PDFCharts';
 
 function formatCurrency(n: number): string {
   return n?.toLocaleString('he-IL') || '0';
@@ -36,6 +37,18 @@ export function PricingIntelligence({ data }: { data: PricingIntelData }) {
           </Text>
         </View>
       </View>
+
+      {/* Visual price range chart */}
+      {pricing_analysis.estimated_range && (
+        <View style={{ marginBottom: 8 }}>
+          <PriceRangeChart
+            min={pricing_analysis.estimated_range.min}
+            max={pricing_analysis.estimated_range.max}
+            recommended={pricing_analysis.recommended_price}
+            width={340}
+          />
+        </View>
+      )}
 
       {/* Strategy box */}
       {pricing_analysis.strategy && (

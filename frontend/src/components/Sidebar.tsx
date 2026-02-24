@@ -9,6 +9,7 @@ import {
   Building2,
   Sparkles,
   CheckCircle,
+  FlaskConical,
 } from 'lucide-react';
 
 const pillarColors: Record<string, string> = {
@@ -27,6 +28,7 @@ const navItems = [
   { path: '/competitors', icon: Users, label: 'מתחרים', pillar: 'P4', step: 4 },
   { path: '/decision', icon: Target, label: 'החלטה', pillar: 'OUT', step: 5 },
   { path: '/company', icon: Building2, label: 'פרופיל חברה', pillar: null, step: -1 },
+  { path: '/profile-test', icon: FlaskConical, label: 'בדיקת פרופילים', pillar: null, step: -1 },
 ];
 
 function getActiveStep(pathname: string): number {

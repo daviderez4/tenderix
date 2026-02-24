@@ -1,6 +1,7 @@
 import { Document, Page, View, Text } from '@react-pdf/renderer';
 import type { TenderReportData } from './types';
 import { pdfStyles, colors } from './styles';
+import { DonutChart, GaugeChart } from './charts/PDFCharts';
 import { GateConditionsAnalysis } from './sections/GateConditionsAnalysis';
 import { BOQAnalysis } from './sections/BOQAnalysis';
 import { SOWAnalysis } from './sections/SOWAnalysis';
@@ -67,19 +68,24 @@ function CoverPage({ data }: { data: TenderReportData }) {
         )}
 
         {data.decision && (
-          <View style={{
-            backgroundColor: decisionColor,
-            borderRadius: 12,
-            paddingVertical: 14,
-            paddingHorizontal: 40,
-            marginBottom: 30,
-          }}>
-            <Text style={{ fontSize: 28, fontWeight: 700, color: colors.white, textAlign: 'center' }}>
-              {data.decision.decision}
-            </Text>
-            <Text style={{ fontSize: 11, color: colors.white, textAlign: 'center', marginTop: 4 }}>
-              רמת ביטחון: {data.decision.confidence}%
-            </Text>
+          <View style={{ alignItems: 'center', marginBottom: 30 }}>
+            <View style={{
+              backgroundColor: decisionColor,
+              borderRadius: 12,
+              paddingVertical: 14,
+              paddingHorizontal: 40,
+              marginBottom: 12,
+            }}>
+              <Text style={{ fontSize: 28, fontWeight: 700, color: colors.white, textAlign: 'center' }}>
+                {data.decision.decision}
+              </Text>
+            </View>
+            <GaugeChart
+              value={data.decision.confidence}
+              label="רמת ביטחון"
+              size={120}
+              color={decisionColor}
+            />
           </View>
         )}
 
@@ -117,25 +123,19 @@ function ExecutiveSummaryPage({ data }: { data: TenderReportData }) {
         {d.executive_summary}
       </Text>
 
-      {/* Gate stats */}
+      {/* Gate stats with donut chart */}
       {d.gate_analysis && (
-        <View style={{ flexDirection: 'row-reverse', marginBottom: 16 }}>
-          <View style={pdfStyles.statCard}>
-            <Text style={[pdfStyles.statValue, { color: colors.primary }]}>{d.gate_analysis.total}</Text>
-            <Text style={pdfStyles.statLabel}>תנאי סף</Text>
-          </View>
-          <View style={pdfStyles.statCard}>
-            <Text style={[pdfStyles.statValue, { color: colors.success }]}>{d.gate_analysis.meets}</Text>
-            <Text style={pdfStyles.statLabel}>עומדים</Text>
-          </View>
-          <View style={pdfStyles.statCard}>
-            <Text style={[pdfStyles.statValue, { color: colors.warning }]}>{d.gate_analysis.partial}</Text>
-            <Text style={pdfStyles.statLabel}>חלקי</Text>
-          </View>
-          <View style={pdfStyles.statCard}>
-            <Text style={[pdfStyles.statValue, { color: colors.danger }]}>{d.gate_analysis.fails}</Text>
-            <Text style={pdfStyles.statLabel}>לא עומדים</Text>
-          </View>
+        <View style={{ marginBottom: 16 }}>
+          <DonutChart
+            size={85}
+            centerLabel={String(d.gate_analysis.total)}
+            centerSub="תנאי סף"
+            segments={[
+              { value: d.gate_analysis.meets, color: colors.success, label: 'עומדים' },
+              { value: d.gate_analysis.partial, color: colors.warning, label: 'חלקי' },
+              { value: d.gate_analysis.fails, color: colors.danger, label: 'לא עומדים' },
+            ]}
+          />
         </View>
       )}
 

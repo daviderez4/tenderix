@@ -30,7 +30,7 @@ interface GeneratedProfile {
   generated_financials: Array<Record<string, unknown>>;
   generated_certifications: Array<Record<string, unknown>>;
   generated_personnel: Array<Record<string, unknown>>;
-  expected_results: {
+  expected_result: {
     overall_eligibility: string;
     per_condition: Array<{
       condition_text: string;
@@ -71,7 +71,8 @@ const profileTypeConfig: Record<string, { label: string; icon: React.ReactNode; 
 };
 
 export default function ProfileTestPage() {
-  const { tenderId } = useParams<{ tenderId: string }>();
+  const { tenderId: paramTenderId } = useParams<{ tenderId: string }>();
+  const tenderId = paramTenderId || localStorage.getItem('currentTenderId') || '';
   const [tender, setTender] = useState<Tender | null>(null);
   const [gates, setGates] = useState<GateCondition[]>([]);
   const [profiles, setProfiles] = useState<GeneratedProfile[]>([]);
@@ -298,7 +299,7 @@ export default function ProfileTestPage() {
                     </div>
                     <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
                       {profile.generated_projects?.length || 0} פרויקטים |
-                      צפי: {profile.expected_results?.overall_eligibility || '?'}
+                      צפי: {profile.expected_result?.overall_eligibility || '?'}
                       {profile.adversarial_tricks?.length ? ` | ${profile.adversarial_tricks.length} טריקים` : ''}
                     </div>
                   </div>
@@ -397,12 +398,12 @@ export default function ProfileTestPage() {
                     }}>
                       <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
                         כשירות צפויה: <span style={{
-                          color: profile.expected_results?.overall_eligibility === 'ELIGIBLE' ? '#16a34a' : '#dc2626'
+                          color: profile.expected_result?.overall_eligibility === 'ELIGIBLE' ? '#16a34a' : '#dc2626'
                         }}>
-                          {profile.expected_results?.overall_eligibility || '?'}
+                          {profile.expected_result?.overall_eligibility || '?'}
                         </span>
                       </div>
-                      {profile.expected_results?.per_condition?.map((cond, ci) => (
+                      {profile.expected_result?.per_condition?.map((cond, ci) => (
                         <div key={ci} style={{ fontSize: '12px', color: '#4b5563', marginTop: '4px' }}>
                           <span style={{
                             color: cond.expected_status === 'MEETS' ? '#16a34a' : '#dc2626',

@@ -1,0 +1,163 @@
+{
+  "name": "TDX-Generate-Profile",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tdx-generate-profile",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-gen",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400],
+      "webhookId": "tdx-generate-profile-001"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/gate_conditions?select=*&tender_id=eq.' + $json.body.tender_id + '&order=condition_number.asc' }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-conditions-gen",
+      "name": "Get Conditions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/tender_definitions?select=*&tender_id=eq.' + $('Webhook').first().json.body.tender_id }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-definitions-gen",
+      "name": "Get Definitions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Generate Profile prompt for Claude\nconst webhookData = $('Webhook').first().json.body;\nconst conditionsRaw = $('Get Conditions').first().json;\nconst definitionsRaw = $('Get Definitions').first().json;\nconst profileType = webhookData.profile_type;\n\nconst conditions = (Array.isArray(conditionsRaw) ? conditionsRaw : []).map(g => ({\n  number: g.condition_number,\n  text: g.condition_text,\n  type: g.condition_type,\n  is_mandatory: g.is_mandatory,\n  required_amount: g.required_amount,\n  required_count: g.required_count,\n  required_years: g.required_years,\n  resolved: g.resolved_requirement\n}));\n\nconst definitions = Array.isArray(definitionsRaw) ? definitionsRaw : [];\n\n// System prompt - Definition extraction expert\nconst systemPrompt = `אתה מומחה משפטי-טכני בפרשנות מכרזים ישראליים.\n\nתפקידך המרכזי: לזהות ולחלץ את כל ההגדרות (Definitions) שבמסמכי המכרז שמשפיעות על פרשנות תנאי הסף.\n\n## למה זה קריטי?\nכל מכרז מגדיר מושגים בצורה ייחודית. למשל:\n- \"פרויקט דומה\" יכול להיות \"פרויקט בתחום אבטחה אלקטרונית בהיקף 5 מיליון ₪+\"\n- \"פרויקט תחבורתי\" יכול להיות \"פרויקט בתחום תחבורה ציבורית בלבד (לא כולל כבישים)\"\n- \"ניסיון\" יכול להיות \"ביצוע בפועל ב-5 השנים האחרונות\"\n\n## כללים:\n- חלץ את ההגדרה המדויקת, לא פרשנות שלך\n- ציין במדויק מאיפה ההגדרה (עמוד, סעיף, ציטוט)\n- סמן האם ההגדרה מצמצמת או מרחיבה\n- אם אין הגדרה מפורשת למונח - ציין \"אין הגדרה מפורשת\" + הצע מה ההגדרה הסבירה\n\nענה תמיד ב-JSON מובנה.`;\n\n// User prompt - Generate test profile\nconst userPrompt = `צור פרופיל חברה לדוגמה עבור מכרז, לצורך בדיקת איכות מנוע ההתאמה.\n\n## תנאי הסף של המכרז:\n${JSON.stringify(conditions, null, 2)}\n\n## הגדרות המכרז:\n${JSON.stringify(definitions, null, 2)}\n\n## סוג הפרופיל הנדרש: ${profileType}\n\n### אם PASSING (פרופיל עובר):\n- צור פרויקטים שעומדים **בדיוק** בהגדרות\n- כל תנאי סף חייב להיות מכוסה\n- השתמש בשמות ריאליסטיים\n- הערכים צריכים לעמוד בדרישות\n\n### אם FAILING (פרופיל נכשל):\n- צור פרויקטים שלא עומדים בהגדרות\n- אך נראים קרובים/דומים\n- ודא שכל תנאי סף נכשל מסיבה אחרת\n\n### אם ADVERSARIAL (פרופיל מטעה):\n- צור פרויקטים שנראים כאילו עומדים אבל לא באמת\n- שמות מטעים (מילות מפתח מהתחום הנכון, תוכן מתחום אחר)\n- ערכים על הגבול (9.9M כש-10M נדרש)\n- תאריכים כמעט בטווח\n- תחומים דומים אך שונים\n- תערובת: כמה פרויקטים אמיתיים + כמה מטעים\n- **פרט את כל הטריקים שהשתמשת בהם** כדי שנוכל לבדוק אם המערכת תופסת\n\n## פלט נדרש (JSON):\n{\n  \"profile_name\": \"string - שם החברה הבדיונית\",\n  \"profile_type\": \"PASSING | FAILING | ADVERSARIAL\",\n  \"company_data\": {\n    \"name\": \"string\",\n    \"company_number\": \"string\",\n    \"founding_year\": 2000,\n    \"address\": \"string\",\n    \"employee_count\": 100\n  },\n  \"projects\": [\n    {\n      \"project_name\": \"string\",\n      \"client_name\": \"string\",\n      \"client_type\": \"GOVERNMENT | MUNICIPAL | PRIVATE | DEFENSE\",\n      \"start_date\": \"2020-01-01\",\n      \"end_date\": \"2023-01-01\",\n      \"total_value\": 0,\n      \"project_type\": \"ESTABLISHMENT | MAINTENANCE | COMBINED\",\n      \"category\": \"string\",\n      \"domain_classification\": \"string - התחום האמיתי של הפרויקט\",\n      \"description\": \"string - תיאור מפורט\",\n      \"technologies\": {},\n      \"role_type\": \"PRIMARY | SUBCONTRACTOR | PARTNERSHIP\",\n      \"matches_condition\": \"string - לאיזה תנאי סף מיועד\",\n      \"expected_match\": true,\n      \"why_matches_or_not\": \"string - הסבר\"\n    }\n  ],\n  \"financials\": [\n    {\n      \"fiscal_year\": 2024,\n      \"annual_revenue\": 0,\n      \"net_profit\": 0,\n      \"employee_count\": 0,\n      \"audited\": true\n    }\n  ],\n  \"certifications\": [\n    {\n      \"cert_type\": \"ISO | LICENSE | SECURITY_CLEARANCE\",\n      \"cert_name\": \"string\",\n      \"issuing_body\": \"string\",\n      \"valid_from\": \"2020-01-01\",\n      \"valid_until\": \"2027-01-01\"\n    }\n  ],\n  \"personnel\": [\n    {\n      \"full_name\": \"string\",\n      \"role\": \"string\",\n      \"education\": \"string\",\n      \"years_experience\": 0,\n      \"professional_certifications\": [\"string\"]\n    }\n  ],\n  \"expected_results\": {\n    \"overall_eligibility\": \"ELIGIBLE | NOT_ELIGIBLE | CONDITIONAL\",\n    \"per_condition\": [\n      {\n        \"condition_text\": \"string\",\n        \"expected_status\": \"MEETS | DOES_NOT_MEET | PARTIALLY_MEETS\",\n        \"expected_reasoning\": \"string\"\n      }\n    ]\n  },\n  \"adversarial_tricks\": [\n    {\n      \"trick_type\": \"MISLEADING_NAME | BOUNDARY_VALUE | WRONG_DOMAIN | OUT_OF_TIMEFRAME | MIXED_REAL_FAKE\",\n      \"description\": \"string - מה הטריק\",\n      \"target_condition\": \"string - איזה תנאי סף אמור להטעות\",\n      \"expected_detection\": \"string - איך המערכת אמורה לתפוס את זה\"\n    }\n  ]\n}`;\n\nreturn [{ json: { systemPrompt, userMessage: userPrompt } }];"
+      },
+      "id": "build-prompt-gen",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "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" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-opus-4-5-20251101', max_tokens: 12000, system: $json.systemPrompt, messages: [{ role: 'user', content: $json.userMessage }] }) }}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "call-claude-gen",
+      "name": "Call Claude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Claude response and map to DB schema\nconst claudeResponse = $('Call Claude').first().json;\nconst text = claudeResponse.content[0].text;\nconst webhookData = $('Webhook').first().json.body;\n\n// Extract JSON from response\nlet profile;\nconst codeBlockMatch = text.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\nif (codeBlockMatch) {\n  try { profile = JSON.parse(codeBlockMatch[1].trim()); } catch(e) { /* continue */ }\n}\nif (!profile) {\n  const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    try { profile = JSON.parse(jsonMatch[0]); } catch(e) { /* continue */ }\n  }\n}\nif (!profile) {\n  throw new Error('No valid JSON found in Claude response');\n}\n\n// Map Claude output fields to DB column names\nconst record = {\n  tender_id: webhookData.tender_id,\n  profile_type: webhookData.profile_type,\n  profile_name: profile.profile_name || ('פרופיל ' + webhookData.profile_type),\n  company_data: profile.company_data || {},\n  generated_projects: profile.projects || [],\n  generated_financials: profile.financials || [],\n  generated_certifications: profile.certifications || [],\n  generated_personnel: profile.personnel || [],\n  expected_result: profile.expected_results || {},\n  adversarial_tricks: profile.adversarial_tricks || []\n};\n\nreturn [{ json: record }];"
+      },
+      "id": "parse-response-gen",
+      "name": "Parse Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rerfjgjwjqodevkvhkxu.supabase.co/rest/v1/generated_profiles",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=representation" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "save-db-gen",
+      "name": "Save to DB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1520, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format the Supabase response for the frontend\nconst saved = $('Save to DB').first().json;\nconst record = Array.isArray(saved) ? saved[0] : saved;\nreturn [{ json: record }];"
+      },
+      "id": "format-response-gen",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1740, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-gen",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1960, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Get Conditions", "type": "main", "index": 0 }]] },
+    "Get Conditions": { "main": [[{ "node": "Get Definitions", "type": "main", "index": 0 }]] },
+    "Get Definitions": { "main": [[{ "node": "Build Prompt", "type": "main", "index": 0 }]] },
+    "Build Prompt": { "main": [[{ "node": "Call Claude", "type": "main", "index": 0 }]] },
+    "Call Claude": { "main": [[{ "node": "Parse Response", "type": "main", "index": 0 }]] },
+    "Parse Response": { "main": [[{ "node": "Save to DB", "type": "main", "index": 0 }]] },
+    "Save to DB": { "main": [[{ "node": "Format Response", "type": "main", "index": 0 }]] },
+    "Format Response": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}
