@@ -93,7 +93,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "x-api-key", "value": "REPLACE_WITH_YOUR_ANTHROPIC_API_KEY" },
+            { "name": "x-api-key", "value": "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" },
             { "name": "anthropic-version", "value": "2023-06-01" },
             { "name": "Content-Type", "value": "application/json" }
           ]
