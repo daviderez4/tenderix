@@ -71,7 +71,8 @@ const profileTypeConfig: Record<string, { label: string; icon: React.ReactNode; 
 };
 
 export default function ProfileTestPage() {
-  const { tenderId } = useParams<{ tenderId: string }>();
+  const { tenderId: paramTenderId } = useParams<{ tenderId: string }>();
+  const tenderId = paramTenderId || localStorage.getItem('currentTenderId') || '';
   const [tender, setTender] = useState<Tender | null>(null);
   const [gates, setGates] = useState<GateCondition[]>([]);
   const [profiles, setProfiles] = useState<GeneratedProfile[]>([]);
