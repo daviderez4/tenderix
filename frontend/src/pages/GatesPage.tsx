@@ -332,7 +332,7 @@ export function GatesPage() {
 
     setRunningWorkflow(type);
     try {
-      let result;
+      let result: unknown;
       switch (type) {
         case 'match':
           result = await api.workflows.matchGates(tenderId, orgId);
