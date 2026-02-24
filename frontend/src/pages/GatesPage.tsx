@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { CheckSquare, RefreshCw, FileQuestion, Lightbulb, FileCheck, AlertCircle, FileText, Zap, RotateCcw, ListOrdered, DollarSign, Sparkles, ChevronDown, ChevronUp, X, CheckCircle, AlertTriangle, Info, Upload, BarChart3, Target } from 'lucide-react';
+import { CheckSquare, RefreshCw, FileQuestion, Lightbulb, FileCheck, AlertCircle, FileText, Zap, RotateCcw, DollarSign, Sparkles, ChevronDown, ChevronUp, X, CheckCircle, AlertTriangle, Info, Upload, BarChart3, Target } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/tenderix';
 import type { GateCondition, Tender } from '../api/tenderix';
@@ -9,7 +9,7 @@ import type { GateConditionsData } from '../pdf/types';
 import { Loading } from '../components/Loading';
 import { StatusBadge } from '../components/StatusBadge';
 
-type TabType = 'conditions' | 'clarifications' | 'strategic' | 'documents' | 'reanalysis' | 'priorities' | 'pricing';
+type TabType = 'conditions' | 'summary' | 'clarifications' | 'strategic' | 'documents' | 'reanalysis' | 'pricing';
 
 // Toast notification type
 type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -214,6 +214,7 @@ export function GatesPage() {
       setGates(current => { cacheGateConditions(current); return current; });
     } catch (error) {
       console.error('Error analyzing gate:', error);
+      addToast('error', `שגיאה בניתוח תנאי #${gate.condition_number}`, 'נסה שוב');
     } finally {
       setAnalyzingGateId(null);
     }
@@ -308,10 +309,13 @@ export function GatesPage() {
       const failsCount = updatedGates.filter(g => g.status === 'DOES_NOT_MEET').length;
 
       addToast('success', `הניתוח הושלם! נותחו ${unanalyzedGates.length} תנאים`,
-        `✅ עומד: ${meetsCount} | ⚠️ חלקי: ${partialCount} | ❌ לא עומד: ${failsCount}`);
+        `עומד: ${meetsCount} | חלקי: ${partialCount} | לא עומד: ${failsCount}`);
 
       // Cache for PDF export
       setGates(current => { cacheGateConditions(current); return current; });
+
+      // Switch to summary tab to show combined results
+      setActiveTab('summary');
 
     } catch (error) {
       console.error('Error in analyzeAllGates:', error);
@@ -344,12 +348,19 @@ export function GatesPage() {
               addToast('success', 'הגדרות חולצו בהצלחה', '');
             }
           } catch (defError) {
-            console.warn('Definition extraction failed (may already exist):', defError);
+            console.warn('Definition extraction failed:', defError);
+            addToast('warning', 'חילוץ הגדרות נכשל', 'שגיאת רשת - ודא ש-n8n webhooks פעילים');
+            break;
           }
           // Step 2: Run semantic matching
-          result = await api.semanticMatching.run(tenderId, orgId);
-          await loadData();
-          addToast('success', 'התאמה סמנטית הושלמה', 'הגדרות המכרז שימשו לסיווג הפרויקטים');
+          try {
+            result = await api.semanticMatching.run(tenderId, orgId);
+            await loadData();
+            addToast('success', 'התאמה סמנטית הושלמה', 'הגדרות המכרז שימשו לסיווג הפרויקטים');
+          } catch (matchError) {
+            console.warn('Semantic matching failed:', matchError);
+            addToast('error', 'התאמה סמנטית נכשלה', 'שגיאת רשת - השתמש ב"התאמה מהירה" או "נתח עם AI" במקום');
+          }
           break;
         case 'clarifications':
           result = await api.workflows.getClarifications(tenderId, orgId);
@@ -383,6 +394,12 @@ export function GatesPage() {
       }
     } catch (error) {
       console.error('Workflow error:', error);
+      const errMsg = error instanceof Error ? error.message : 'שגיאה לא ידועה';
+      if (errMsg.includes('Failed to fetch') || errMsg.includes('CORS') || errMsg.includes('NetworkError')) {
+        addToast('error', 'שגיאת רשת', 'לא ניתן להתחבר לשרת AI. נסה "נתח את כל התנאים עם AI" במקום');
+      } else {
+        addToast('error', 'שגיאה בהרצת התהליך', errMsg.substring(0, 100));
+      }
     } finally {
       setRunningWorkflow(null);
     }
@@ -653,12 +670,12 @@ export function GatesPage() {
         </div>
       )}
 
-      {/* Actions */}
+      {/* Actions - Primary */}
       <div className="card">
-        <h3 className="card-title" style={{ marginBottom: '1rem' }}>פעולות AI</h3>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <h3 className="card-title" style={{ marginBottom: '0.75rem' }}>ניתוח תנאי סף</h3>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
           {/* Extract gates button - always show if text is available */}
-          {hasExtractedText && (
+          {hasExtractedText && gates.length === 0 && (
             <button
               className="btn btn-secondary"
               onClick={extractGatesFromText}
@@ -690,70 +707,60 @@ export function GatesPage() {
           <button
             className="btn btn-secondary"
             onClick={() => runWorkflow('match')}
-            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates}
+            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates || gates.length === 0}
           >
             {runningWorkflow === 'match' ? <div className="spinner" /> : <RefreshCw size={18} />}
             התאמה מהירה לפרופיל
           </button>
-          <button
-            className="btn btn-primary"
-            onClick={() => runWorkflow('semantic-match')}
-            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates}
-            style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none' }}
-          >
-            {runningWorkflow === 'semantic-match' ? <div className="spinner" /> : <Zap size={18} />}
-            התאמה סמנטית (v4.0)
-          </button>
+        </div>
+
+        {/* Secondary actions row */}
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', paddingTop: '0.75rem', borderTop: '1px solid var(--gray-200)' }}>
+          <span style={{ color: 'var(--gray-500)', fontSize: '0.82rem', alignSelf: 'center', marginLeft: '0.5rem' }}>כלי עזר:</span>
           <button
             className="btn btn-secondary"
             onClick={() => { runWorkflow('clarifications'); setActiveTab('clarifications'); }}
-            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates}
+            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates || gates.length === 0}
+            style={{ fontSize: '0.82rem', padding: '0.4rem 0.75rem' }}
           >
-            {runningWorkflow === 'clarifications' ? <div className="spinner" /> : <FileQuestion size={18} />}
+            {runningWorkflow === 'clarifications' ? <div className="spinner" /> : <FileQuestion size={15} />}
             שאלות הבהרה
           </button>
           <button
             className="btn btn-secondary"
             onClick={() => { runWorkflow('strategic'); setActiveTab('strategic'); }}
-            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates}
+            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates || gates.length === 0}
+            style={{ fontSize: '0.82rem', padding: '0.4rem 0.75rem' }}
           >
-            {runningWorkflow === 'strategic' ? <div className="spinner" /> : <Lightbulb size={18} />}
+            {runningWorkflow === 'strategic' ? <div className="spinner" /> : <Lightbulb size={15} />}
             שאלות אסטרטגיות
           </button>
           <button
             className="btn btn-secondary"
             onClick={() => { runWorkflow('documents'); setActiveTab('documents'); }}
-            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates}
+            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates || gates.length === 0}
+            style={{ fontSize: '0.82rem', padding: '0.4rem 0.75rem' }}
           >
-            {runningWorkflow === 'documents' ? <div className="spinner" /> : <FileCheck size={18} />}
+            {runningWorkflow === 'documents' ? <div className="spinner" /> : <FileCheck size={15} />}
             מסמכים נדרשים
           </button>
           <button
             className="btn btn-secondary"
             onClick={() => setActiveTab('reanalysis')}
-            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates}
-            style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: 'white', border: 'none' }}
+            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates || gates.length === 0}
+            style={{ fontSize: '0.82rem', padding: '0.4rem 0.75rem' }}
           >
-            <RotateCcw size={18} />
-            ניתוח מחדש (הבהרות)
-          </button>
-          <button
-            className="btn btn-secondary"
-            onClick={() => { runWorkflow('priorities'); setActiveTab('priorities'); }}
-            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates}
-            style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white', border: 'none' }}
-          >
-            {runningWorkflow === 'priorities' ? <div className="spinner" /> : <ListOrdered size={18} />}
-            שאלות עם עדיפויות
+            <RotateCcw size={15} />
+            ניתוח מחדש
           </button>
           <button
             className="btn btn-secondary"
             onClick={() => { runWorkflow('pricing'); setActiveTab('pricing'); }}
-            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates}
-            style={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', color: 'white', border: 'none' }}
+            disabled={runningWorkflow !== null || extractingGates || analyzingAllGates || gates.length === 0}
+            style={{ fontSize: '0.82rem', padding: '0.4rem 0.75rem' }}
           >
-            {runningWorkflow === 'pricing' ? <div className="spinner" /> : <DollarSign size={18} />}
-            ניתוח סיכוני תמחור
+            {runningWorkflow === 'pricing' ? <div className="spinner" /> : <DollarSign size={15} />}
+            סיכוני תמחור
           </button>
         </div>
       </div>
@@ -763,6 +770,12 @@ export function GatesPage() {
         <button className={`tab ${activeTab === 'conditions' ? 'active' : ''}`} onClick={() => setActiveTab('conditions')}>
           תנאי סף ({gates.length})
         </button>
+        {gateStats.aiAnalyzed > 0 && (
+          <button className={`tab ${activeTab === 'summary' ? 'active' : ''}`} onClick={() => setActiveTab('summary')}
+            style={activeTab === 'summary' ? {} : { background: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
+            סיכום ניתוח
+          </button>
+        )}
         <button className={`tab ${activeTab === 'clarifications' ? 'active' : ''}`} onClick={() => setActiveTab('clarifications')}>
           שאלות הבהרה
         </button>
@@ -774,9 +787,6 @@ export function GatesPage() {
         </button>
         <button className={`tab ${activeTab === 'reanalysis' ? 'active' : ''}`} onClick={() => setActiveTab('reanalysis')}>
           ניתוח מחדש
-        </button>
-        <button className={`tab ${activeTab === 'priorities' ? 'active' : ''}`} onClick={() => setActiveTab('priorities')}>
-          שאלות P1/P2/P3
         </button>
         <button className={`tab ${activeTab === 'pricing' ? 'active' : ''}`} onClick={() => setActiveTab('pricing')}>
           סיכוני תמחור
@@ -1219,6 +1229,165 @@ export function GatesPage() {
         </div>
       )}
 
+      {/* Summary Tab - Overall analysis view */}
+      {activeTab === 'summary' && gateStats.aiAnalyzed > 0 && (
+        <div>
+          {/* Overall eligibility assessment */}
+          {(() => {
+            const mandatoryFails = gates.filter(g => g.is_mandatory && g.status === 'DOES_NOT_MEET');
+            const isEligible = mandatoryFails.length === 0 && gateStats.meets > 0;
+            const isConditional = mandatoryFails.length === 0 && gateStats.partial > 0;
+            return (
+              <div className="card" style={{
+                marginBottom: '1rem',
+                padding: '1.25rem',
+                background: isEligible
+                  ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.08), rgba(22, 163, 74, 0.04))'
+                  : mandatoryFails.length > 0
+                    ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(220, 38, 38, 0.04))'
+                    : 'linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(217, 119, 6, 0.04))',
+                borderRight: `4px solid ${isEligible ? '#22c55e' : mandatoryFails.length > 0 ? '#ef4444' : '#f59e0b'}`,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
+                  {isEligible ? <CheckCircle size={28} style={{ color: '#22c55e' }} /> :
+                   mandatoryFails.length > 0 ? <AlertTriangle size={28} style={{ color: '#ef4444' }} /> :
+                   <Info size={28} style={{ color: '#f59e0b' }} />}
+                  <div>
+                    <h3 style={{ margin: 0, color: isEligible ? '#16a34a' : mandatoryFails.length > 0 ? '#dc2626' : '#d97706' }}>
+                      {isEligible ? 'עומדים בתנאי הסף' :
+                       mandatoryFails.length > 0 ? `לא עומדים - ${mandatoryFails.length} תנאי חובה נכשלים` :
+                       isConditional ? 'עמידה חלקית - נדרשת השלמה' : 'נדרש בירור נוסף'}
+                    </h3>
+                    <p style={{ margin: '0.25rem 0 0', color: 'var(--gray-500)', fontSize: '0.9rem' }}>
+                      נותחו {gateStats.aiAnalyzed} מתוך {gateStats.total} תנאים
+                    </p>
+                  </div>
+                </div>
+
+                {/* Stats bar */}
+                <div style={{ display: 'flex', gap: '0.25rem', height: '12px', borderRadius: '6px', overflow: 'hidden', marginBottom: '0.75rem' }}>
+                  {gateStats.meets > 0 && (
+                    <div style={{ flex: gateStats.meets, background: '#22c55e', borderRadius: gateStats.partial === 0 && gateStats.fails === 0 ? '6px' : '6px 0 0 6px' }} />
+                  )}
+                  {gateStats.partial > 0 && (
+                    <div style={{ flex: gateStats.partial, background: '#f59e0b' }} />
+                  )}
+                  {gateStats.fails > 0 && (
+                    <div style={{ flex: gateStats.fails, background: '#ef4444', borderRadius: gateStats.meets === 0 && gateStats.partial === 0 ? '6px' : '0 6px 6px 0' }} />
+                  )}
+                  {(gateStats.total - gateStats.aiAnalyzed) > 0 && (
+                    <div style={{ flex: gateStats.total - gateStats.aiAnalyzed, background: 'var(--gray-300)' }} />
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.85rem' }}>
+                  <span style={{ color: '#22c55e' }}>{gateStats.meets} עומדים</span>
+                  <span style={{ color: '#f59e0b' }}>{gateStats.partial} חלקי</span>
+                  <span style={{ color: '#ef4444' }}>{gateStats.fails} לא עומדים</span>
+                  {(gateStats.total - gateStats.aiAnalyzed) > 0 && (
+                    <span style={{ color: 'var(--gray-500)' }}>{gateStats.total - gateStats.aiAnalyzed} לא נותחו</span>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Failing mandatory conditions - most critical */}
+          {gates.filter(g => g.is_mandatory && g.status === 'DOES_NOT_MEET').length > 0 && (
+            <div className="card" style={{ marginBottom: '1rem', borderRight: '4px solid #ef4444' }}>
+              <h4 style={{ color: '#ef4444', margin: '0 0 0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <AlertTriangle size={18} />
+                תנאי חובה שלא עומדים ({gates.filter(g => g.is_mandatory && g.status === 'DOES_NOT_MEET').length})
+              </h4>
+              {gates.filter(g => g.is_mandatory && g.status === 'DOES_NOT_MEET').map(gate => (
+                <div key={gate.id} style={{
+                  padding: '0.65rem 0.85rem',
+                  marginBottom: '0.5rem',
+                  background: 'rgba(239, 68, 68, 0.04)',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(239, 68, 68, 0.1)',
+                }}>
+                  <div style={{ fontWeight: 500, marginBottom: '0.3rem' }}>
+                    #{gate.condition_number}: {gate.condition_text}
+                  </div>
+                  {gate.gap_description && (
+                    <div style={{ color: '#dc2626', fontSize: '0.85rem' }}>
+                      {gate.gap_description}
+                    </div>
+                  )}
+                  {gate.ai_summary && (
+                    <div style={{ color: 'var(--gray-600)', fontSize: '0.82rem', marginTop: '0.25rem' }}>
+                      {gate.ai_summary}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Partial conditions - need attention */}
+          {gates.filter(g => g.status === 'PARTIALLY_MEETS').length > 0 && (
+            <div className="card" style={{ marginBottom: '1rem', borderRight: '4px solid #f59e0b' }}>
+              <h4 style={{ color: '#d97706', margin: '0 0 0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Info size={18} />
+                עמידה חלקית - ניתן לסגור פערים ({gates.filter(g => g.status === 'PARTIALLY_MEETS').length})
+              </h4>
+              {gates.filter(g => g.status === 'PARTIALLY_MEETS').map(gate => (
+                <div key={gate.id} style={{
+                  padding: '0.65rem 0.85rem',
+                  marginBottom: '0.5rem',
+                  background: 'rgba(245, 158, 11, 0.04)',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(245, 158, 11, 0.1)',
+                }}>
+                  <div style={{ fontWeight: 500, marginBottom: '0.3rem' }}>
+                    #{gate.condition_number}: {gate.condition_text}
+                  </div>
+                  {gate.evidence && <div style={{ color: '#16a34a', fontSize: '0.85rem' }}>{gate.evidence}</div>}
+                  {gate.gap_description && <div style={{ color: '#d97706', fontSize: '0.85rem' }}>{gate.gap_description}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Meeting conditions - good news */}
+          {gates.filter(g => g.status === 'MEETS').length > 0 && (
+            <div className="card" style={{ marginBottom: '1rem', borderRight: '4px solid #22c55e' }}>
+              <h4 style={{ color: '#16a34a', margin: '0 0 0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <CheckCircle size={18} />
+                עומדים ({gates.filter(g => g.status === 'MEETS').length})
+              </h4>
+              {gates.filter(g => g.status === 'MEETS').map(gate => (
+                <div key={gate.id} style={{
+                  padding: '0.5rem 0.85rem',
+                  marginBottom: '0.35rem',
+                  background: 'rgba(34, 197, 94, 0.04)',
+                  borderRadius: '8px',
+                  fontSize: '0.9rem',
+                }}>
+                  <span style={{ fontWeight: 500 }}>#{gate.condition_number}</span>: {gate.condition_text}
+                  {gate.evidence && (
+                    <span style={{ color: '#16a34a', fontSize: '0.82rem', marginRight: '0.5rem' }}> - {gate.evidence}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Unknown/unanalyzed */}
+          {gates.filter(g => !g.status || g.status === 'UNKNOWN').length > 0 && (
+            <div className="card" style={{ borderRight: '4px solid var(--gray-400)' }}>
+              <h4 style={{ color: 'var(--gray-500)', margin: '0 0 0.5rem' }}>
+                טרם נותחו ({gates.filter(g => !g.status || g.status === 'UNKNOWN').length})
+              </h4>
+              <div style={{ color: 'var(--gray-500)', fontSize: '0.85rem' }}>
+                {gates.filter(g => !g.status || g.status === 'UNKNOWN').map(g => `#${g.condition_number}`).join(', ')}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {activeTab === 'clarifications' && (
         <div className="card">
           {workflowResults.clarifications ? (
@@ -1301,23 +1470,6 @@ export function GatesPage() {
             <div style={{ marginTop: '1.5rem' }}>
               <WorkflowResult data={workflowResults.reanalysis} type="reanalysis" />
             </div>
-          )}
-        </div>
-      )}
-
-      {/* Module 2.7: שאלות עם עדיפויות P1/P2/P3 */}
-      {activeTab === 'priorities' && (
-        <div className="card">
-          <h3 style={{ marginBottom: '1rem', color: '#10b981' }}>
-            <ListOrdered size={20} style={{ marginLeft: '0.5rem', verticalAlign: 'middle' }} />
-            שאלות עם עדיפויות
-          </h3>
-          {workflowResults.priorities ? (
-            <WorkflowResult data={workflowResults.priorities} type="priorities" />
-          ) : (
-            <p style={{ color: 'var(--gray-500)', textAlign: 'center', padding: '2rem' }}>
-              לחץ על "שאלות עם עדיפויות" כדי לייצר שאלות ממוינות לפי חשיבות
-            </p>
           )}
         </div>
       )}
