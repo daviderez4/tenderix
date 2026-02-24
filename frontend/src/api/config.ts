@@ -1,6 +1,8 @@
 // API Configuration
+// In production (Vercel), use proxy rewrite to avoid CORS. In dev, use direct URL.
+const isProduction = typeof window !== 'undefined' && !window.location.hostname.includes('localhost');
 export const API_CONFIG = {
-  WEBHOOK_BASE: 'https://daviderez.app.n8n.cloud/webhook',
+  WEBHOOK_BASE: isProduction ? '/api/webhook' : 'https://daviderez.app.n8n.cloud/webhook',
   SUPABASE_URL: 'https://rerfjgjwjqodevkvhkxu.supabase.co',
   // Using service_role key for full access (same as n8n workflows)
   SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcmZqZ2p3anFvZGV2a3Zoa3h1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTQ5NDMwNywiZXhwIjoyMDgxMDcwMzA3fQ.HzsbNbVxrLXxRMNvlVuKaqduQ-PgcD3IrseKm_LcN34',

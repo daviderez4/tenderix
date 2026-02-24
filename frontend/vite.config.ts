@@ -8,6 +8,13 @@ export default defineConfig({
   server: {
     port: 5174,
     allowedHosts: ['localhost', '.trycloudflare.com'],
+    proxy: {
+      '/api/webhook': {
+        target: 'https://daviderez.app.n8n.cloud/webhook',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/webhook/, ''),
+      },
+    },
   },
   optimizeDeps: {
     include: ['pdfjs-dist'],

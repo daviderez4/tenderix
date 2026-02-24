@@ -94,7 +94,7 @@ export default function ProfileTestPage() {
       const [tenderData, gatesData, profilesData] = await Promise.all([
         api.tenders.get(tenderId!),
         api.getGateConditions(tenderId!),
-        api.profileTest.getProfiles(tenderId!)
+        api.profileTest.getProfiles(tenderId!).catch(() => []),
       ]);
       setTender(tenderData);
       setGates(gatesData || []);
