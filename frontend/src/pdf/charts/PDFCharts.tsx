@@ -3,7 +3,7 @@
  * All charts use native SVG primitives (Path, Rect, Circle) so they render
  * directly inside PDF documents without any external chart library.
  */
-import { Svg, G, Path, Rect, Circle } from '@react-pdf/renderer';
+import { Svg, Path, Rect, Circle } from '@react-pdf/renderer';
 import { View, Text } from '@react-pdf/renderer';
 import { colors } from '../styles';
 
@@ -232,7 +232,7 @@ export function HorizontalBarChart({
               color: colors.gray700,
               textAlign: 'right',
               paddingLeft: 4,
-            }} numberOfLines={1}>
+            }}>
               {bar.label}
             </Text>
             <View style={{ width: barAreaW, height: barH }}>
@@ -283,9 +283,6 @@ export function PriceRangeChart({ min, max, recommended, width = 320 }: PriceRan
 
   const range = max - min || 1;
   const recX = padL + ((recommended - min) / range) * barW;
-
-  // Gradient approximation: left green, middle blue, right orange
-  const midX = padL + barW / 2;
 
   return (
     <View style={{ width, marginVertical: 8 }}>
