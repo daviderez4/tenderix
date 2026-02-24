@@ -1,6 +1,7 @@
 import { View, Text } from '@react-pdf/renderer';
 import type { GateConditionsData } from '../types';
 import { pdfStyles, colors } from '../styles';
+import { DonutChart, StackedStatusBar } from '../charts/PDFCharts';
 
 const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
   MEETS: { label: 'עומד', color: colors.success, bg: '#ecfdf5' },
@@ -32,27 +33,50 @@ export function GateConditionsAnalysis({ data }: { data: GateConditionsData }) {
     <View>
       <Text style={pdfStyles.sectionTitle}>ניתוח תנאי סף</Text>
 
-      {/* Summary Stats Row */}
-      <View style={{ flexDirection: 'row-reverse', marginBottom: 14 }}>
-        <View style={pdfStyles.statCard}>
-          <Text style={[pdfStyles.statValue, { color: colors.primary }]}>{summary.total}</Text>
-          <Text style={pdfStyles.statLabel}>סה"כ תנאים</Text>
-        </View>
-        <View style={pdfStyles.statCard}>
-          <Text style={[pdfStyles.statValue, { color: colors.success }]}>{summary.meets}</Text>
-          <Text style={pdfStyles.statLabel}>עומדים</Text>
-        </View>
-        <View style={pdfStyles.statCard}>
-          <Text style={[pdfStyles.statValue, { color: colors.warning }]}>{summary.partial}</Text>
-          <Text style={pdfStyles.statLabel}>חלקי</Text>
-        </View>
-        <View style={pdfStyles.statCard}>
-          <Text style={[pdfStyles.statValue, { color: colors.danger }]}>{summary.fails}</Text>
-          <Text style={pdfStyles.statLabel}>לא עומדים</Text>
-        </View>
-        <View style={pdfStyles.statCard}>
-          <Text style={[pdfStyles.statValue, { color: colors.gray500 }]}>{summary.mandatory}</Text>
-          <Text style={pdfStyles.statLabel}>חובה</Text>
+      {/* Visual summary: Donut + Stacked Bar + Stats */}
+      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 14, gap: 12 }}>
+        {/* Donut chart */}
+        <DonutChart
+          size={90}
+          centerLabel={String(summary.total)}
+          centerSub="תנאים"
+          segments={[
+            { value: summary.meets, color: colors.success, label: 'עומדים' },
+            { value: summary.partial, color: colors.warning, label: 'חלקי' },
+            { value: summary.fails, color: colors.danger, label: 'לא עומדים' },
+            { value: summary.unknown || 0, color: colors.gray300, label: 'לא נבדק' },
+          ]}
+        />
+
+        {/* Stat cards */}
+        <View style={{ flex: 1, gap: 4 }}>
+          <View style={{ flexDirection: 'row-reverse' }}>
+            <View style={pdfStyles.statCard}>
+              <Text style={[pdfStyles.statValue, { color: colors.primary, fontSize: 16 }]}>{summary.total}</Text>
+              <Text style={pdfStyles.statLabel}>סה"כ</Text>
+            </View>
+            <View style={pdfStyles.statCard}>
+              <Text style={[pdfStyles.statValue, { color: colors.success, fontSize: 16 }]}>{summary.meets}</Text>
+              <Text style={pdfStyles.statLabel}>עומדים</Text>
+            </View>
+            <View style={pdfStyles.statCard}>
+              <Text style={[pdfStyles.statValue, { color: colors.warning, fontSize: 16 }]}>{summary.partial}</Text>
+              <Text style={pdfStyles.statLabel}>חלקי</Text>
+            </View>
+            <View style={pdfStyles.statCard}>
+              <Text style={[pdfStyles.statValue, { color: colors.danger, fontSize: 16 }]}>{summary.fails}</Text>
+              <Text style={pdfStyles.statLabel}>נכשלים</Text>
+            </View>
+          </View>
+          {/* Stacked bar */}
+          <StackedStatusBar
+            width={260}
+            segments={[
+              { value: summary.meets, color: colors.success, label: 'עומדים' },
+              { value: summary.partial, color: colors.warning, label: 'חלקי' },
+              { value: summary.fails, color: colors.danger, label: 'נכשלים' },
+            ]}
+          />
         </View>
       </View>
 
