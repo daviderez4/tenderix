@@ -502,7 +502,7 @@ export const api = {
     getSummary: (tenderId: string) =>
       supabaseFetch<GateSummary[]>(`gate_conditions_summary?tender_id=eq.${tenderId}`).then(r => r[0]),
 
-    update: (id: string, data: Partial<GateCondition>) => {
+    update: async (id: string, data: Partial<GateCondition>) => {
       // Filter to only include columns that exist in the database table
       const dbData: Record<string, unknown> = {};
       const knownColumns = [
@@ -524,13 +524,41 @@ export const api = {
           dbData[key] = value;
         }
       }
-      return supabaseFetch<GateCondition[]>(`gate_conditions?id=eq.${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(dbData),
-      }).then(r => r[0]);
+      if (Object.keys(dbData).length === 0) return undefined;
+      try {
+        const result = await supabaseFetch<GateCondition[]>(`gate_conditions?id=eq.${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(dbData),
+        });
+        return result[0];
+      } catch (error) {
+        // If PATCH fails (e.g. column doesn't exist), try to identify and remove bad column
+        const errMsg = error instanceof Error ? error.message : String(error);
+        console.warn(`Gate update failed for ${id}:`, errMsg);
+        const colMatch = errMsg.match(/column ["']?(\w+)["']?.*does not exist/i);
+        if (colMatch) {
+          const badCol = colMatch[1];
+          console.warn(`Removing non-existent column "${badCol}" and retrying`);
+          delete dbData[badCol];
+          if (Object.keys(dbData).length === 0) return undefined;
+          return supabaseFetch<GateCondition[]>(`gate_conditions?id=eq.${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(dbData),
+          }).then(r => r[0]);
+        }
+        // For other errors, try with just status (most critical field)
+        if (dbData.status) {
+          console.warn('Retrying gate update with status only');
+          return supabaseFetch<GateCondition[]>(`gate_conditions?id=eq.${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: dbData.status }),
+          }).then(r => r[0]);
+        }
+        throw error;
+      }
     },
 
-    create: (data: Partial<GateCondition>) => {
+    create: async (data: Partial<GateCondition>) => {
       // Filter to only include columns that exist in the database table
       const dbData: Record<string, unknown> = {
         id: data.id,
@@ -563,10 +591,31 @@ export const api = {
       const cleanData = Object.fromEntries(
         Object.entries(dbData).filter(([_, v]) => v !== undefined)
       );
-      return supabaseFetch<GateCondition[]>('gate_conditions', {
-        method: 'POST',
-        body: JSON.stringify(cleanData),
-      }).then(r => r[0]);
+      try {
+        return await supabaseFetch<GateCondition[]>('gate_conditions', {
+          method: 'POST',
+          body: JSON.stringify(cleanData),
+        }).then(r => r[0]);
+      } catch (error) {
+        // If POST fails due to unknown column, remove it and retry with essential fields only
+        const errMsg = error instanceof Error ? error.message : String(error);
+        console.warn('Gate create failed, retrying with essential columns:', errMsg);
+        const essentialData: Record<string, unknown> = {
+          id: data.id,
+          tender_id: data.tender_id,
+          condition_number: data.condition_number,
+          condition_text: data.condition_text,
+          condition_type: data.condition_type || 'GATE',
+        };
+        // Try adding optional base columns
+        if (data.requirement_type) essentialData.requirement_type = data.requirement_type;
+        if (data.source_page) essentialData.source_page = data.source_page;
+        if (data.source_section) essentialData.source_section = data.source_section;
+        return supabaseFetch<GateCondition[]>('gate_conditions', {
+          method: 'POST',
+          body: JSON.stringify(essentialData),
+        }).then(r => r[0]);
+      }
     },
   },
 
@@ -2050,28 +2099,35 @@ export const api = {
           ? `❌ לא עומד. ${gapDescription}`
           : `❓ נדרש בירור נוסף`;
 
-        // Save to database - only fields that actually exist in the DB schema
+        // Save to database via gates.update() which filters to known DB columns
         try {
-          const updateData: Record<string, unknown> = {
+          await api.gates.update(conditionId, {
             status,
-            gap_description: gapDescription || null,
+            evidence: evidence || undefined,
+            gap_description: gapDescription || undefined,
             ai_confidence: aiConfidence,
-          };
-          // company_evidence is the actual DB column name (not "evidence")
-          if (evidence) updateData.company_evidence = evidence;
-
-          await fetch(`${API_CONFIG.SUPABASE_URL}/rest/v1/gate_conditions?id=eq.${conditionId}`, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': API_CONFIG.SUPABASE_KEY,
-              'Authorization': `Bearer ${API_CONFIG.SUPABASE_KEY}`,
-              'Prefer': 'return=minimal'
-            },
-            body: JSON.stringify(updateData)
           });
         } catch (saveError) {
-          console.warn('Failed to save analysis to DB:', saveError);
+          // First attempt failed - retry with minimal columns (status only)
+          console.warn('Gate save failed, retrying with minimal columns:', saveError);
+          try {
+            const minimalData: Record<string, unknown> = { status };
+            const res = await fetch(`${API_CONFIG.SUPABASE_URL}/rest/v1/gate_conditions?id=eq.${conditionId}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': API_CONFIG.SUPABASE_KEY,
+                'Authorization': `Bearer ${API_CONFIG.SUPABASE_KEY}`,
+                'Prefer': 'return=minimal'
+              },
+              body: JSON.stringify(minimalData)
+            });
+            if (!res.ok) {
+              console.error('Minimal gate save also failed:', res.status, await res.text());
+            }
+          } catch (retryError) {
+            console.warn('Minimal gate save error:', retryError);
+          }
         }
 
         const result = {

@@ -7,11 +7,15 @@
   "installCommand": "cd frontend && npm install",
   "rewrites": [
     {
+      "source": "/api/webhook/:path*",
+      "destination": "https://daviderez.app.n8n.cloud/webhook/:path*"
+    },
+    {
       "source": "/docs/:path*",
       "destination": "/docs/:path*"
     },
     {
-      "source": "/((?!docs/).*)",
+      "source": "/((?!docs/|api/).*)",
       "destination": "/index.html"
     }
   ]
