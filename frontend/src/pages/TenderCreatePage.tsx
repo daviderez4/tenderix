@@ -82,21 +82,62 @@ export function TenderCreatePage() {
     setConditions(prev => prev.map((c, i) => i === index ? { ...c, [key]: value } : c));
   }
 
+  const [fileLoading, setFileLoading] = useState(false);
+
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Read file as text
-    const text = await file.text();
-    if (text.trim()) {
-      setPastedText(text);
+    const ext = file.name.split('.').pop()?.toLowerCase();
+
+    // Reject non-text files
+    if (ext === 'pdf' || ext === 'doc' || ext === 'docx') {
+      setError('קובצי PDF/Word לא נתמכים כרגע. נא להעתיק את הטקסט מהמסמך ולהדביק אותו בשדה למטה.');
+      // Reset file input
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
     }
+
+    setFileLoading(true);
+    setError('');
+
+    try {
+      const text = await file.text();
+      // Check for binary/garbled content
+      const binaryChars = text.slice(0, 500).split('').filter(c => {
+        const code = c.charCodeAt(0);
+        return code < 9 || (code > 13 && code < 32 && code !== 27);
+      }).length;
+
+      if (binaryChars > 10) {
+        setError('הקובץ מכיל תוכן בינארי שלא ניתן לקרוא. נא להדביק את הטקסט ישירות.');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        setFileLoading(false);
+        return;
+      }
+
+      if (text.trim()) {
+        setPastedText(text.trim());
+      }
+    } catch {
+      setError('שגיאה בקריאת הקובץ. נא לנסות שוב או להדביק את הטקסט ישירות.');
+    }
+
+    setFileLoading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
   async function handleExtract() {
     if (!pastedText.trim()) {
       setError('נא להדביק טקסט של מכרז או להעלות קובץ');
       return;
+    }
+
+    // Limit text size to avoid rate limits
+    const MAX_CHARS = 50000;
+    let textToSend = pastedText.trim();
+    if (textToSend.length > MAX_CHARS) {
+      textToSend = textToSend.slice(0, MAX_CHARS);
     }
 
     setExtracting(true);
@@ -109,13 +150,20 @@ export function TenderCreatePage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${API_CONFIG.SUPABASE_ANON_KEY}`,
         },
-        body: JSON.stringify({ text: pastedText }),
+        body: JSON.stringify({ text: textToSend }),
       });
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          throw new Error('שרת ה-AI עמוס כרגע. נא לנסות שוב בעוד דקה.');
+        }
+        throw new Error(`שגיאה בשרת (${response.status}). נא לנסות שוב.`);
+      }
 
       const result = await response.json();
 
       if (!result.success) {
-        throw new Error(result.error || 'Failed to extract');
+        throw new Error(result.error || 'שגיאה בחילוץ הנתונים');
       }
 
       const { tender, conditions: extractedConditions } = result.extracted;
@@ -275,17 +323,28 @@ export function TenderCreatePage() {
             }}
             onClick={() => fileInputRef.current?.click()}
           >
-            <Upload size={40} style={{ color: 'var(--primary)', marginBottom: '0.75rem' }} />
-            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--dark-800)', marginBottom: '0.25rem' }}>
-              העלה קובץ מכרז
-            </div>
-            <div style={{ fontSize: '0.85rem', color: 'var(--dark-500)' }}>
-              PDF, TXT, DOCX - או גרור לכאן
-            </div>
+            {fileLoading ? (
+              <>
+                <Loader size={40} style={{ color: 'var(--primary)', marginBottom: '0.75rem', animation: 'spin 1s linear infinite' }} />
+                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--dark-800)', marginBottom: '0.25rem' }}>
+                  קורא את הקובץ...
+                </div>
+              </>
+            ) : (
+              <>
+                <Upload size={40} style={{ color: 'var(--primary)', marginBottom: '0.75rem' }} />
+                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--dark-800)', marginBottom: '0.25rem' }}>
+                  העלה קובץ טקסט (.txt)
+                </div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--dark-500)' }}>
+                  לקובצי PDF/Word - העתק את הטקסט והדבק בשדה למטה
+                </div>
+              </>
+            )}
             <input
               ref={fileInputRef}
               type="file"
-              accept=".txt,.pdf,.docx,.doc"
+              accept=".txt"
               onChange={handleFileUpload}
               style={{ display: 'none' }}
             />
@@ -321,15 +380,36 @@ export function TenderCreatePage() {
         </div>
 
         {/* Action buttons */}
+        {extracting && (
+          <div className="card" style={{ background: 'var(--blue-50)', borderColor: 'var(--blue-200)', marginTop: '1rem', textAlign: 'center', padding: '1.5rem' }}>
+            <Loader size={28} style={{ color: 'var(--primary)', animation: 'spin 1s linear infinite', marginBottom: '0.5rem' }} />
+            <div style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '1rem', marginBottom: '0.25rem' }}>
+              AI מנתח את המכרז...
+            </div>
+            <div style={{ color: 'var(--dark-500)', fontSize: '0.85rem' }}>
+              מחלץ פרטי מכרז ותנאי סף - עשוי לקחת עד 30 שניות
+            </div>
+          </div>
+        )}
+
+        {pastedText.trim() && (
+          <div style={{ textAlign: 'left', marginTop: '0.5rem' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--dark-400)' }}>
+              {pastedText.length.toLocaleString()} תווים
+              {pastedText.length > 50000 && ' (יחתך ל-50,000)'}
+            </span>
+          </div>
+        )}
+
         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '1rem' }}>
           <button className="btn btn-primary btn-lg" onClick={handleExtract} disabled={extracting || !pastedText.trim()}>
             {extracting ? (
-              <><Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> AI מנתח את המכרז...</>
+              <><Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> מנתח...</>
             ) : (
               <><Sparkles size={16} /> חלץ פרטים ותנאי סף עם AI</>
             )}
           </button>
-          <button className="btn btn-secondary btn-lg" onClick={handleManualEntry}>
+          <button className="btn btn-secondary btn-lg" onClick={handleManualEntry} disabled={extracting}>
             <FileText size={16} /> הזנה ידנית
           </button>
         </div>
