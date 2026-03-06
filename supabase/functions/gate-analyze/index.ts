@@ -64,28 +64,26 @@ Deno.serve(async (req: Request) => {
     // 4. Build company profile summary for AI
     const companyProfile = buildCompanyProfile(org, financials || [], certifications || [], projects || [], personnel || []);
 
-    // 5. Analyze each gate condition
-    const results = [];
-    for (const condition of conditions) {
-      const analysis = await analyzeGateCondition(condition, companyProfile, tender);
-      results.push(analysis);
+    // 5. Analyze ALL conditions in one call for better cross-condition optimization
+    const results = await analyzeAllConditions(conditions, companyProfile, tender);
 
-      // Save result to DB
+    // 6. Save results to DB
+    for (const result of results) {
       await supabase
         .from("gate_conditions")
         .update({
-          status: analysis.status,
-          company_evidence: analysis.evidence,
-          gap_description: analysis.gap_description,
-          closure_options: analysis.closure_options,
-          ai_summary: analysis.ai_summary,
-          ai_confidence: analysis.ai_confidence,
+          status: result.status,
+          company_evidence: result.evidence,
+          gap_description: result.gap_description,
+          closure_options: result.closure_options,
+          ai_summary: result.ai_summary,
+          ai_confidence: result.ai_confidence,
           ai_analyzed_at: new Date().toISOString(),
         })
-        .eq("id", condition.id);
+        .eq("id", result.condition_id);
     }
 
-    // 6. Generate summary
+    // 7. Generate summary
     const summary = generateSummary(tender_id, org_id, conditions, results);
 
     // Upsert summary
@@ -191,27 +189,43 @@ function buildCompanyProfile(
     summary_text: "",
   };
 
-  // Build text summary
+  // Build detailed text summary
   const avgRevenue = profile.financials.length > 0
     ? profile.financials.reduce((sum, f) => sum + f.revenue, 0) / profile.financials.length
     : 0;
 
   profile.summary_text = `
+=== COMPANY PROFILE ===
 Company: ${profile.name}
 Founded: ${profile.founding_year}
 Average Annual Revenue (last ${profile.financials.length} years): ${(avgRevenue / 1000000).toFixed(1)}M ILS
-Employees: ${profile.financials[0]?.employees || "N/A"}
-Active Certifications: ${profile.certifications.map((c) => c.name).join(", ")}
-Project Portfolio (${profile.projects.length} projects):
-${profile.projects.map((p) => `  - ${p.name} | Client: ${p.client} (${p.client_type}) | Value: ${(p.value / 1000000).toFixed(1)}M | Category: ${p.category} | Type: ${p.project_type}`).join("\n")}
-Key Personnel (${profile.personnel.length}):
-${profile.personnel.slice(0, 5).map((p) => `  - ${p.name} | ${p.role} | ${p.experience_years}y exp | ${p.certifications.join(", ")}`).join("\n")}
+Revenue by Year: ${profile.financials.map((f) => `${f.year}: ${(f.revenue / 1000000).toFixed(1)}M`).join(", ")}
+Employees (latest): ${profile.financials[0]?.employees || "N/A"}
+
+=== CERTIFICATIONS (${profile.certifications.length}) ===
+${profile.certifications.map((c) => `- ${c.name} | ${c.type} | Valid until: ${c.valid_until} | Issued by: ${c.issuing_body}`).join("\n")}
+
+=== PROJECT PORTFOLIO (${profile.projects.length} projects) ===
+${profile.projects.map((p, i) => `
+Project ${i + 1}: ${p.name}
+  Client: ${p.client} (${p.client_type})
+  Value: ${(p.value / 1000000).toFixed(1)}M ILS
+  Category: ${p.category} | Type: ${p.project_type}
+  Period: ${p.start_date} to ${p.end_date}
+  Role: ${p.role_type} (${p.role_type === "SUBCONTRACTOR" ? "subcontractor" : "primary"})
+  Location: ${p.location} | Sites: ${p.site_count}
+  Technologies: ${JSON.stringify(p.technologies)}
+  Quantities: ${JSON.stringify(p.quantities)}
+`).join("")}
+
+=== KEY PERSONNEL (${profile.personnel.length}) ===
+${profile.personnel.map((p) => `- ${p.name} | ${p.role} | ${p.experience_years}y exp | ${p.education} | Certs: ${p.certifications.join(", ")}`).join("\n")}
   `.trim();
 
   return profile;
 }
 
-// ─── Gate Condition Analyzer ─────────────────────────────
+// ─── Analyze ALL Conditions at Once ─────────────────────────────
 
 interface AnalysisResult {
   condition_id: string;
@@ -225,87 +239,141 @@ interface AnalysisResult {
   ai_confidence: number;
 }
 
-async function analyzeGateCondition(
-  condition: Record<string, unknown>,
+async function analyzeAllConditions(
+  conditions: Record<string, unknown>[],
   profile: CompanyProfile,
   tender: Record<string, unknown> | null
-): Promise<AnalysisResult> {
-  const systemPrompt = `You are an expert Israeli public tender eligibility analyst (מומחה זכאות במכרזים ציבוריים).
-Your job is to determine if a company meets a specific gate condition (תנאי סף) based on the company's profile data.
+): Promise<AnalysisResult[]> {
+  const systemPrompt = `אתה מומחה בכיר לניתוח מכרזים ציבוריים בישראל. תפקידך לנתח האם חברה עומדת בתנאי סף של מכרז.
 
-CRITICAL RULES:
-1. Be STRICT and PRECISE. A gate condition must be met EXACTLY as specified.
-2. If a tender requires "municipal camera system projects" - construction or transportation projects do NOT count.
-3. If a tender requires specific certifications - similar but different certifications do NOT count.
-4. Match the EXACT requirement: project type, scope, client type, financial thresholds, time periods.
-5. When comparing project types to requirements, analyze the SUBSTANCE of what was done, not just the name.
-6. A transportation project is NOT a camera/security project even if it might have had some cameras.
-7. A construction project is NOT a technology/systems project.
+## עקרונות ליבה (חובה לעקוב!)
 
-You MUST respond in valid JSON with this exact structure:
-{
-  "status": "MEETS" | "PARTIALLY_MEETS" | "DOES_NOT_MEET",
-  "evidence": "Hebrew text explaining what evidence from the company profile supports or contradicts meeting this condition",
-  "gap_description": "Hebrew text explaining the gap if status is not MEETS, or null if MEETS",
-  "closure_options": ["Hebrew suggestions for how to close the gap"],
-  "ai_summary": "Hebrew one-line summary of the analysis",
-  "confidence": 0.0 to 1.0
-}
+### עקרון 1: עקיבות מלאה (Traceability)
+כל קביעה שלך חייבת להתבסס על נתוני פרופיל ספציפיים. ציין בדיוק:
+- שם הפרויקט/הסמכה/אדם שעליו אתה מסתמך
+- המספרים המדויקים (היקף, כמויות, שנות ניסיון)
+- למה זה תואם או לא תואם את הדרישה
 
-Respond ONLY with valid JSON. No markdown, no explanation outside the JSON.`;
+### עקרון 2: מילון טכני - פרשנות לפי יכולות
+- מצלמת תנועה ≠ מצלמת אבטחה עירונית
+- פרויקט בנייה ≠ פרויקט טכנולוגיה/מערכות
+- פרויקט כבישים ≠ פרויקט מצלמות גם אם יש רמזורים
+- פרש לפי מהות העבודה, לא לפי שם הפרויקט
 
-  const userMessage = `
-## Tender Information
-Tender: ${tender?.tender_name || "Unknown"}
-Issuing Body: ${tender?.issuing_body || "Unknown"}
-Category: ${tender?.category || "General"}
+### עקרון 3: לוגיקת הצטברות נכונה
+- פרויקט לא נספר פעמיים לאותה דרישה
+- סכומים לא מצטרפים אם מאותו פרויקט
+- תאריכים נבדקים לפי הגדרת המכרז
 
-## Gate Condition to Analyze
-Condition #${condition.condition_number}: ${condition.condition_text}
-Type: ${condition.condition_type} | Mandatory: ${condition.is_mandatory}
-Requirement Type: ${condition.requirement_type || "Not specified"}
-Required Amount: ${condition.required_amount || "N/A"} ${condition.amount_currency || ""}
-Required Count: ${condition.required_count || "N/A"}
-Required Years: ${condition.required_years || "N/A"}
+### עקרון 4: מסלולי סגירת פערים
+כשיש פער (PARTIALLY_MEETS או DOES_NOT_MEET), הצע פתרונות מעשיים:
+- 🤝 קבלן משנה - אם המכרז מתיר הסתמכות
+- 👥 שותפות/קונסורציום
+- 📄 מסמך חלופי/משלים
+- 🛠️ פיתוח/התאמה (אם המכרז מאפשר)
+- 📝 שאלת הבהרה למזמין
+- ⛔ חוסם - אין פתרון ריאלי
 
-## Company Profile
+## חשוב מאוד:
+- היה מדויק וקפדני. תנאי סף חייב להתקיים בדיוק כפי שנדרש
+- אם חברת בנייה/תשתיות מגישה למכרז מצלמות - היא כנראה לא עומדת בתנאים הטכניים
+- פרויקט כבישים/רכבת קלה הוא לא פרויקט מצלמות אבטחה!
+- הסמכת PMP בבנייה ≠ ניסיון בניהול פרויקטי אבטחה
+
+ענה ב-JSON בלבד, בפורמט הבא (מערך של אובייקטים, אחד לכל תנאי):
+[
+  {
+    "condition_number": "1",
+    "status": "MEETS" | "PARTIALLY_MEETS" | "DOES_NOT_MEET",
+    "evidence": "טקסט בעברית - ראיות ספציפיות מהפרופיל. ציין שמות פרויקטים, מספרים מדויקים",
+    "gap_description": "טקסט בעברית - תיאור הפער אם לא עומד, או null אם עומד",
+    "closure_options": ["אפשרות סגירה 1", "אפשרות סגירה 2"],
+    "ai_summary": "משפט אחד בעברית - סיכום הניתוח",
+    "confidence": 0.0-1.0
+  }
+]
+
+ענה אך ורק ב-JSON תקין. ללא markdown, ללא הסברים מחוץ ל-JSON.`;
+
+  const conditionsList = conditions.map((c) =>
+    `תנאי #${c.condition_number}: ${c.condition_text}
+    סוג: ${c.condition_type} | חובה: ${c.is_mandatory ? "כן" : "לא (יתרון)"}
+    סוג דרישה: ${c.requirement_type || "לא צוין"}
+    סכום נדרש: ${c.required_amount ? `${(c.required_amount as number / 1000000).toFixed(1)}M ₪` : "N/A"}
+    כמות נדרשת: ${c.required_count || "N/A"}
+    שנים נדרשות: ${c.required_years || "N/A"}
+    מקור: סעיף ${c.source_section || "N/A"}`
+  ).join("\n\n");
+
+  const userMessage = `## מכרז
+שם: ${tender?.tender_name || "Unknown"}
+גוף מזמין: ${tender?.issuing_body || "Unknown"}
+קטגוריה: ${tender?.category || "General"}
+היקף משוער: ${tender?.estimated_value ? `${((tender.estimated_value as number) / 1000000).toFixed(0)}M ₪` : "N/A"}
+
+## רשימת תנאי סף לניתוח (${conditions.length} תנאים)
+${conditionsList}
+
+## פרופיל חברה
 ${profile.summary_text}
 
-Analyze if this company meets this specific gate condition. Be precise and strict.`;
+נתח כל תנאי סף בנפרד. היה מדויק, קפדני, והצע פתרונות מעשיים לסגירת פערים.`;
 
   try {
-    const response = await callClaude(systemPrompt, [{ role: "user", content: userMessage }]);
+    const response = await callClaude(systemPrompt, [{ role: "user", content: userMessage }], { maxTokens: 8192 });
 
-    // Parse JSON from response
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("No JSON in AI response");
+    // Parse JSON array from response
+    const jsonMatch = response.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) throw new Error("No JSON array in AI response");
 
     const parsed = JSON.parse(jsonMatch[0]);
 
-    return {
-      condition_id: condition.id as string,
-      condition_number: condition.condition_number as string,
-      condition_text: condition.condition_text as string,
-      status: parsed.status || "DOES_NOT_MEET",
-      evidence: parsed.evidence || "",
-      gap_description: parsed.gap_description || null,
-      closure_options: parsed.closure_options || [],
-      ai_summary: parsed.ai_summary || "",
-      ai_confidence: parsed.confidence || 0.5,
-    };
+    return conditions.map((condition) => {
+      const condNum = condition.condition_number as string;
+      const analysis = parsed.find((a: Record<string, unknown>) =>
+        String(a.condition_number) === condNum
+      );
+
+      if (!analysis) {
+        return {
+          condition_id: condition.id as string,
+          condition_number: condNum,
+          condition_text: condition.condition_text as string,
+          status: "DOES_NOT_MEET" as const,
+          evidence: "לא נותח - שגיאה בניתוח",
+          gap_description: "נדרשת בדיקה ידנית",
+          closure_options: ["בדיקה ידנית"],
+          ai_summary: "שגיאה בניתוח",
+          ai_confidence: 0,
+        };
+      }
+
+      return {
+        condition_id: condition.id as string,
+        condition_number: condNum,
+        condition_text: condition.condition_text as string,
+        status: analysis.status || "DOES_NOT_MEET",
+        evidence: analysis.evidence || "",
+        gap_description: analysis.gap_description || null,
+        closure_options: analysis.closure_options || [],
+        ai_summary: analysis.ai_summary || "",
+        ai_confidence: analysis.confidence || 0.5,
+      };
+    });
   } catch (err) {
-    console.error(`AI analysis failed for condition ${condition.condition_number}:`, err);
-    return {
+    console.error("AI analysis failed:", err);
+    // Fallback: return error results for all conditions
+    return conditions.map((condition) => ({
       condition_id: condition.id as string,
       condition_number: condition.condition_number as string,
       condition_text: condition.condition_text as string,
-      status: "DOES_NOT_MEET",
+      status: "DOES_NOT_MEET" as const,
       evidence: `שגיאה בניתוח: ${err.message}`,
-      gap_description: "לא ניתן היה לנתח את התנאי. נדרשת בדיקה ידנית.",
+      gap_description: "לא ניתן היה לנתח. נדרשת בדיקה ידנית.",
       closure_options: ["בדיקה ידנית של התנאי"],
       ai_summary: "שגיאה בניתוח AI",
       ai_confidence: 0,
-    };
+    }));
   }
 }
 
@@ -327,34 +395,58 @@ function generateSummary(
     const cond = conditions.find((c) => (c.id as string) === r.condition_id);
     return cond?.is_mandatory;
   });
-  const mandatoryMet = mandatoryResults.filter((r) => r.status === "MEETS").length;
+  const mandatoryFails = mandatoryResults.filter((r) => r.status === "DOES_NOT_MEET");
   const mandatoryTotal = mandatoryConditions.length;
 
-  const blockingConditions = results
-    .filter((r) => {
-      const cond = conditions.find((c) => (c.id as string) === r.condition_id);
-      return cond?.is_mandatory && r.status === "DOES_NOT_MEET";
-    })
-    .map((r) => `תנאי ${r.condition_number}: ${r.condition_text.substring(0, 80)}...`);
+  const blockingConditions = mandatoryFails.map((r) =>
+    `תנאי ${r.condition_number}: ${r.condition_text.substring(0, 80)}...`
+  );
 
   let eligibility: string;
-  if (mandatoryMet === mandatoryTotal && doesNot === 0) {
+  if (mandatoryFails.length === 0 && doesNot === 0) {
     eligibility = "ELIGIBLE";
-  } else if (blockingConditions.length === 0 && partial > 0) {
+  } else if (mandatoryFails.length === 0 && partial > 0) {
     eligibility = "PARTIALLY_ELIGIBLE";
   } else {
     eligibility = "NOT_ELIGIBLE";
   }
 
   const recommendations: string[] = [];
+
+  // Closure-focused recommendations
+  const closableGaps = results.filter(
+    (r) => r.status !== "MEETS" && r.closure_options.length > 0 && !r.closure_options.includes("בדיקה ידנית")
+  );
+
   if (eligibility === "ELIGIBLE") {
     recommendations.push("החברה עומדת בכל תנאי הסף - מומלץ להגיש הצעה");
+    if (partial > 0) {
+      recommendations.push(`${partial} תנאים עומדים חלקית - מומלץ לחזק את הראיות`);
+    }
   } else if (eligibility === "PARTIALLY_ELIGIBLE") {
-    recommendations.push("יש תנאים שנדרשת השלמה - יש לבדוק אפשרות לשותף או קבלן משנה");
+    recommendations.push("יש תנאים שנדרשת השלמה - אך אין תנאי חובה חוסם");
+    if (closableGaps.length > 0) {
+      recommendations.push(`${closableGaps.length} פערים ניתנים לסגירה - ראה פתרונות מוצעים`);
+    }
   } else {
-    recommendations.push("החברה לא עומדת בתנאי סף מהותיים - מומלץ לבדוק אפשרות שותפות או לוותר על המכרז");
-    if (blockingConditions.length > 0) {
-      recommendations.push(`תנאים חוסמים: ${blockingConditions.length} מתוך ${mandatoryTotal}`);
+    recommendations.push(`${mandatoryFails.length} תנאי חובה חוסמים מתוך ${mandatoryTotal}`);
+
+    const hasClosable = mandatoryFails.some(
+      (r) => r.closure_options.length > 0 && !r.closure_options.some((o) => o.includes("חוסם"))
+    );
+
+    if (hasClosable) {
+      recommendations.push("חלק מהפערים ניתנים לסגירה דרך שותפות או קבלן משנה");
+    }
+
+    const totalBlockers = mandatoryFails.filter(
+      (r) => r.closure_options.some((o) => o.includes("חוסם") || o.includes("אין פתרון"))
+    ).length;
+
+    if (totalBlockers > 0) {
+      recommendations.push(`${totalBlockers} תנאים חוסמים ללא פתרון - מומלץ לשקול ויתור על המכרז`);
+    } else {
+      recommendations.push("כל הפערים ניתנים פוטנציאלית לסגירה - מומלץ לבחון שותפות");
     }
   }
 

@@ -11,6 +11,14 @@ import {
   RefreshCw,
   Building2,
   Loader,
+  Lightbulb,
+  FileText,
+  Users,
+  Wrench,
+  MessageSquare,
+  Ban,
+  Handshake,
+  Target,
 } from 'lucide-react';
 import { supabase } from '../api/supabaseClient';
 import { getCurrentTenderId, getCurrentOrgId, getEdgeFunctionUrl, API_CONFIG } from '../api/config';
@@ -132,6 +140,8 @@ export function GatesPage() {
     setAnalyzing(true);
     setAnalysisResult(null);
     setErrorMsg('');
+    // Expand all on analysis
+    setExpandedIds(new Set());
 
     try {
       const response = await fetch(getEdgeFunctionUrl('gate-analyze'), {
@@ -151,6 +161,10 @@ export function GatesPage() {
       if (result.success) {
         setAnalysisResult(result);
         await loadConditions();
+        // Expand all conditions after analysis
+        if (result.conditions) {
+          setExpandedIds(new Set(result.conditions.map((c: { condition_id: string }) => c.condition_id)));
+        }
       } else {
         setErrorMsg(result.error || 'שגיאה בניתוח');
       }
@@ -171,12 +185,12 @@ export function GatesPage() {
     });
   }
 
-  function getStatusIcon(status: string) {
+  function getStatusIcon(status: string, size = 16) {
     switch (status) {
-      case 'MEETS': return <CheckCircle size={16} style={{ color: 'var(--success)' }} />;
-      case 'PARTIALLY_MEETS': return <AlertTriangle size={16} style={{ color: 'var(--warning)' }} />;
-      case 'DOES_NOT_MEET': return <XCircle size={16} style={{ color: 'var(--danger)' }} />;
-      default: return <HelpCircle size={16} style={{ color: 'var(--dark-400)' }} />;
+      case 'MEETS': return <CheckCircle size={size} style={{ color: 'var(--success)' }} />;
+      case 'PARTIALLY_MEETS': return <AlertTriangle size={size} style={{ color: 'var(--warning)' }} />;
+      case 'DOES_NOT_MEET': return <XCircle size={size} style={{ color: 'var(--danger)' }} />;
+      default: return <HelpCircle size={size} style={{ color: 'var(--dark-400)' }} />;
     }
   }
 
@@ -198,6 +212,16 @@ export function GatesPage() {
     }
   }
 
+  function getClosureIcon(option: string) {
+    if (option.includes('קבלן משנה')) return <Handshake size={14} />;
+    if (option.includes('שותפות') || option.includes('קונסורציום') || option.includes('שותף')) return <Users size={14} />;
+    if (option.includes('מסמך') || option.includes('אישור')) return <FileText size={14} />;
+    if (option.includes('פיתוח') || option.includes('התאמה') || option.includes('הכשרה') || option.includes('הסמכה')) return <Wrench size={14} />;
+    if (option.includes('שאלת') || option.includes('הבהרה') || option.includes('בירור')) return <MessageSquare size={14} />;
+    if (option.includes('חוסם') || option.includes('אין פתרון')) return <Ban size={14} />;
+    return <Lightbulb size={14} />;
+  }
+
   const meetsCount = conditions.filter(c => c.status === 'MEETS').length;
   const partialCount = conditions.filter(c => c.status === 'PARTIALLY_MEETS').length;
   const failsCount = conditions.filter(c => c.status === 'DOES_NOT_MEET').length;
@@ -213,7 +237,7 @@ export function GatesPage() {
       <div className="animate-fadeIn">
         <div className="page-header">
           <div className="page-header-right">
-            <h1 className="page-title"><Shield size={24} style={{ color: 'var(--primary)' }} /> תנאי סף - Gatekeeping</h1>
+            <h1 className="page-title"><Shield size={24} style={{ color: 'var(--primary)' }} /> Gatekeeping</h1>
             <p className="page-subtitle">ניתוח זכאות ועמידה בתנאי סף</p>
           </div>
         </div>
@@ -244,14 +268,14 @@ export function GatesPage() {
         <div className="page-header-right">
           <h1 className="page-title">
             <Shield size={24} style={{ color: 'var(--primary)' }} />
-            תנאי סף - Gatekeeping
+            Gatekeeping
           </h1>
           <p className="page-subtitle">{tenderName}</p>
         </div>
         <div className="page-header-actions">
           <select
             className="btn btn-secondary"
-            style={{ minWidth: '200px', appearance: 'auto' }}
+            style={{ minWidth: '220px', appearance: 'auto' }}
             value={selectedOrgId}
             onChange={(e) => setSelectedOrgId(e.target.value)}
           >
@@ -267,7 +291,7 @@ export function GatesPage() {
             {analyzing ? (
               <>
                 <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} />
-                מנתח...
+                מנתח {totalCount} תנאים...
               </>
             ) : (
               <>
@@ -334,14 +358,14 @@ export function GatesPage() {
 
       {/* Recommendations */}
       {analysisResult?.summary?.recommendations && analysisResult.summary.recommendations.length > 0 && (
-        <div className="card" style={{ marginBottom: '1rem', background: 'var(--blue-50)', borderColor: 'var(--blue-200)' }}>
-          <div className="card-title" style={{ marginBottom: '0.5rem', color: 'var(--blue-800)' }}>
-            <Building2 size={16} /> המלצות
+        <div className="card" style={{ marginBottom: '1rem', background: recommendation === 'GO' ? 'var(--success-bg)' : recommendation === 'CONDITIONAL' ? 'var(--warning-bg)' : 'var(--danger-bg)', borderColor: recommendation === 'GO' ? 'var(--success-border)' : recommendation === 'CONDITIONAL' ? 'var(--warning-border)' : 'var(--danger-border)' }}>
+          <div className="card-title" style={{ marginBottom: '0.5rem', color: recommendation === 'GO' ? 'var(--success)' : recommendation === 'CONDITIONAL' ? '#92400e' : 'var(--danger)' }}>
+            <Target size={16} /> המלצות אסטרטגיות
           </div>
           <ul style={{ listStyle: 'none', fontSize: '0.87rem', color: 'var(--dark-700)' }}>
             {analysisResult.summary.recommendations.map((rec, i) => (
-              <li key={i} style={{ padding: '0.2rem 0', display: 'flex', gap: '0.4rem', alignItems: 'flex-start' }}>
-                <span style={{ color: 'var(--primary)', fontWeight: 700 }}>&#8226;</span>
+              <li key={i} style={{ padding: '0.25rem 0', display: 'flex', gap: '0.4rem', alignItems: 'flex-start' }}>
+                <span style={{ color: 'var(--primary)', fontWeight: 700, flexShrink: 0 }}>&#8226;</span>
                 {rec}
               </li>
             ))}
@@ -356,11 +380,24 @@ export function GatesPage() {
             <Shield size={18} />
             רשימת תנאי סף ({totalCount})
           </div>
-          {analyzed && (
-            <button className="btn btn-ghost btn-sm" onClick={runAnalysis} disabled={analyzing}>
-              <RefreshCw size={14} /> נתח מחדש
-            </button>
-          )}
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            {analyzed && (
+              <button className="btn btn-ghost btn-sm" onClick={() => {
+                if (expandedIds.size === conditions.length) {
+                  setExpandedIds(new Set());
+                } else {
+                  setExpandedIds(new Set(conditions.map(c => c.id)));
+                }
+              }}>
+                {expandedIds.size === conditions.length ? 'סגור הכל' : 'פתח הכל'}
+              </button>
+            )}
+            {analyzed && (
+              <button className="btn btn-ghost btn-sm" onClick={runAnalysis} disabled={analyzing}>
+                <RefreshCw size={14} /> נתח מחדש
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="gate-list">
@@ -390,7 +427,7 @@ export function GatesPage() {
                     )}
                     {hasAnalysis && (
                       <span className={`badge ${cond.status === 'MEETS' ? 'badge-success' : cond.status === 'PARTIALLY_MEETS' ? 'badge-warning' : 'badge-danger'}`}>
-                        {getStatusIcon(cond.status)} {getStatusText(cond.status)}
+                        {getStatusIcon(cond.status, 12)} {getStatusText(cond.status)}
                       </span>
                     )}
                     {cond.ai_confidence != null && cond.ai_confidence > 0 && (
@@ -408,7 +445,9 @@ export function GatesPage() {
                       </div>
                     )}
                     {cond.source_section && (
-                      <span style={{ fontSize: '0.72rem', color: 'var(--dark-400)' }}>סעיף {cond.source_section}</span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--dark-400)' }}>
+                        <FileText size={10} style={{ display: 'inline', verticalAlign: 'middle' }} /> סעיף {cond.source_section}
+                      </span>
                     )}
                     <span style={{ marginRight: 'auto' }}>
                       {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -417,32 +456,58 @@ export function GatesPage() {
 
                   {isExpanded && hasAnalysis && (
                     <div className="gate-expanded">
+                      {/* AI Summary - always on top */}
                       {cond.ai_summary && (
-                        <div style={{ marginBottom: '0.5rem' }}>
-                          <div className="gate-evidence-label">סיכום</div>
-                          <div style={{ fontSize: '0.87rem', color: 'var(--dark-700)' }}>{cond.ai_summary}</div>
+                        <div style={{ marginBottom: '0.75rem', padding: '0.6rem 0.8rem', borderRadius: '8px', background: cond.status === 'MEETS' ? 'var(--success-bg)' : cond.status === 'PARTIALLY_MEETS' ? 'var(--warning-bg)' : 'var(--danger-bg)', border: `1px solid ${cond.status === 'MEETS' ? 'var(--success-border)' : cond.status === 'PARTIALLY_MEETS' ? 'var(--warning-border)' : 'var(--danger-border)'}` }}>
+                          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'flex-start' }}>
+                            {getStatusIcon(cond.status, 16)}
+                            <span style={{ fontSize: '0.87rem', fontWeight: 600, color: 'var(--dark-800)' }}>{cond.ai_summary}</span>
+                          </div>
                         </div>
                       )}
+
+                      {/* Evidence */}
                       {cond.company_evidence && (
-                        <div style={{ marginBottom: '0.5rem' }}>
-                          <div className="gate-evidence-label">ראיות</div>
-                          <div className="gate-evidence">{cond.company_evidence}</div>
+                        <div style={{ marginBottom: '0.6rem' }}>
+                          <div className="gate-evidence-label">
+                            <Building2 size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> ראיות מפרופיל החברה
+                          </div>
+                          <div className="gate-evidence" style={{ whiteSpace: 'pre-wrap' }}>{cond.company_evidence}</div>
                         </div>
                       )}
+
+                      {/* Gap */}
                       {cond.gap_description && (
-                        <div style={{ marginBottom: '0.5rem' }}>
-                          <div className="gate-evidence-label" style={{ color: 'var(--danger)' }}>פער</div>
-                          <div className="gate-evidence" style={{ borderRight: '3px solid var(--danger)' }}>
+                        <div style={{ marginBottom: '0.6rem' }}>
+                          <div className="gate-evidence-label" style={{ color: 'var(--danger)' }}>
+                            <AlertTriangle size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> פער שזוהה
+                          </div>
+                          <div className="gate-evidence" style={{ borderRight: '3px solid var(--danger)', background: 'var(--danger-bg)' }}>
                             {cond.gap_description}
                           </div>
                         </div>
                       )}
+
+                      {/* Closure Options - the magic! */}
                       {cond.closure_options && cond.closure_options.length > 0 && (
                         <div>
-                          <div className="gate-evidence-label" style={{ color: 'var(--primary)' }}>פתרונות מוצעים</div>
+                          <div className="gate-evidence-label" style={{ color: 'var(--primary)' }}>
+                            <Lightbulb size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> מסלולי סגירת פער
+                          </div>
                           <ul className="gate-closure-options">
                             {cond.closure_options.map((opt, i) => (
-                              <li key={i}>{opt}</li>
+                              <li key={i} style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: '0.5rem',
+                                background: opt.includes('חוסם') || opt.includes('אין פתרון') ? 'var(--danger-bg)' : 'var(--blue-50)',
+                                borderColor: opt.includes('חוסם') ? 'var(--danger-border)' : 'var(--blue-200)',
+                              }}>
+                                <span style={{ flexShrink: 0, marginTop: '1px', color: opt.includes('חוסם') ? 'var(--danger)' : 'var(--primary)' }}>
+                                  {getClosureIcon(opt)}
+                                </span>
+                                <span>{opt}</span>
+                              </li>
                             ))}
                           </ul>
                         </div>
