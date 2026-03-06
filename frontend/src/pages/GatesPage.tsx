@@ -20,6 +20,7 @@ import {
   Handshake,
   Target,
   GitCompareArrows,
+  Sparkles,
 } from 'lucide-react';
 import { supabase } from '../api/supabaseClient';
 import { getCurrentTenderId, getCurrentOrgId, getEdgeFunctionUrl, API_CONFIG } from '../api/config';
@@ -94,6 +95,10 @@ export function GatesPage() {
   const [compareOrgId, setCompareOrgId] = useState('');
   const [compareResult, setCompareResult] = useState<AnalysisResult | null>(null);
   const [analyzingCompare, setAnalyzingCompare] = useState(false);
+
+  // Company generation
+  const [generating, setGenerating] = useState('');
+  const [genMessage, setGenMessage] = useState('');
 
   const tenderId = getCurrentTenderId();
 
@@ -210,6 +215,41 @@ export function GatesPage() {
 
     setAnalyzing(false);
     setAnalyzingCompare(false);
+  }
+
+  async function generateCompany(profileType: 'passing' | 'failing' | 'partial') {
+    if (!tenderId) return;
+
+    const labels = { passing: 'עומדת', failing: 'לא עומדת', partial: 'חלקית' };
+    setGenerating(profileType);
+    setGenMessage('');
+
+    try {
+      const response = await fetch(getEdgeFunctionUrl('generate-company'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${API_CONFIG.SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ tender_id: tenderId, profile_type: profileType }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setGenMessage(`נוצרה חברה "${result.org_name}" (${labels[profileType]})`);
+        // Reload orgs to include new company
+        await loadOrgs();
+        // Auto-select new company
+        setSelectedOrgId(result.org_id);
+      } else {
+        setErrorMsg(result.error || 'Generation failed');
+      }
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Generation error');
+    }
+
+    setGenerating('');
   }
 
   function toggleExpand(id: string) {
@@ -509,6 +549,43 @@ export function GatesPage() {
               </button>
             </>
           )}
+        </div>
+      </div>
+
+      {/* Generate Company Bar */}
+      {genMessage && (
+        <div className="card" style={{ background: 'var(--success-bg)', borderColor: 'var(--success-border)', marginBottom: '1rem' }}>
+          <span style={{ color: '#065f46', fontWeight: 600 }}><CheckCircle size={14} style={{ display: 'inline', verticalAlign: 'middle' }} /> {genMessage}</span>
+        </div>
+      )}
+
+      <div className="card" style={{ marginBottom: '1rem', padding: '0.85rem 1.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <Sparkles size={16} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--dark-700)' }}>יצירת חברה פיקטיבית:</span>
+          <button
+            className="btn btn-success btn-sm"
+            onClick={() => generateCompany('passing')}
+            disabled={!!generating}
+          >
+            {generating === 'passing' ? <><Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> יוצר...</> : 'עומדת בתנאים'}
+          </button>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => generateCompany('partial')}
+            disabled={!!generating}
+            style={{ borderColor: 'var(--warning)', color: '#92400e' }}
+          >
+            {generating === 'partial' ? <><Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> יוצר...</> : 'עומדת חלקית'}
+          </button>
+          <button
+            className="btn btn-danger btn-sm"
+            onClick={() => generateCompany('failing')}
+            disabled={!!generating}
+          >
+            {generating === 'failing' ? <><Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> יוצר...</> : 'לא עומדת'}
+          </button>
+          <span style={{ fontSize: '0.78rem', color: 'var(--dark-400)' }}>AI ייצור חברה ויוסיף למאגר</span>
         </div>
       </div>
 
