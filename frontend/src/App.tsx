@@ -5,6 +5,8 @@ import { Login } from './components/Login';
 import { Dashboard } from './pages/Dashboard';
 import { GatesPage } from './pages/GatesPage';
 import { CompanyProfilePage } from './pages/CompanyProfilePage';
+import { TenderCreatePage } from './pages/TenderCreatePage';
+import { CompanyCreatePage } from './pages/CompanyCreatePage';
 import './index.css';
 
 function AppLayout() {
@@ -22,6 +24,8 @@ function AppLayout() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/gates" element={<GatesPage />} />
           <Route path="/company" element={<CompanyProfilePage />} />
+          <Route path="/tender/new" element={<TenderCreatePage />} />
+          <Route path="/company/new" element={<CompanyCreatePage />} />
           {/* Placeholder routes for future modules */}
           <Route path="/sow" element={<PlaceholderPage title="SOW & Hidden Work" subtitle="ניתוח תכולות ועבודות נסתרות - בפיתוח" />} />
           <Route path="/boq" element={<PlaceholderPage title="BOQ Pricing Heatmap" subtitle="מפת חום תמחור - בפיתוח" />} />

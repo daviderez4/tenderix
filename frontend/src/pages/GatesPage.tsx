@@ -19,6 +19,7 @@ import {
   Ban,
   Handshake,
   Target,
+  GitCompareArrows,
 } from 'lucide-react';
 import { supabase } from '../api/supabaseClient';
 import { getCurrentTenderId, getCurrentOrgId, getEdgeFunctionUrl, API_CONFIG } from '../api/config';
@@ -44,19 +45,21 @@ interface GateCondition {
   source_section: string | null;
 }
 
+interface ConditionResult {
+  condition_id: string;
+  condition_number: string;
+  status: string;
+  evidence: string;
+  gap_description: string | null;
+  closure_options: string[];
+  ai_summary: string;
+  ai_confidence: number;
+}
+
 interface AnalysisResult {
   success: boolean;
   org_name: string;
-  conditions: Array<{
-    condition_id: string;
-    condition_number: string;
-    status: string;
-    evidence: string;
-    gap_description: string | null;
-    closure_options: string[];
-    ai_summary: string;
-    ai_confidence: number;
-  }>;
+  conditions: ConditionResult[];
   summary: {
     total_conditions: number;
     meets_count: number;
@@ -85,6 +88,12 @@ export function GatesPage() {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [tenderName, setTenderName] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Comparison mode
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareOrgId, setCompareOrgId] = useState('');
+  const [compareResult, setCompareResult] = useState<AnalysisResult | null>(null);
+  const [analyzingCompare, setAnalyzingCompare] = useState(false);
 
   const tenderId = getCurrentTenderId();
 
@@ -134,46 +143,73 @@ export function GatesPage() {
     setLoading(false);
   }
 
+  async function callAnalysis(orgId: string): Promise<AnalysisResult | null> {
+    const response = await fetch(getEdgeFunctionUrl('gate-analyze'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_CONFIG.SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ tender_id: tenderId, org_id: orgId }),
+    });
+    const result = await response.json();
+    if (result.success) return result;
+    throw new Error(result.error || 'Analysis failed');
+  }
+
   async function runAnalysis() {
     if (!tenderId || !selectedOrgId) return;
 
     setAnalyzing(true);
     setAnalysisResult(null);
     setErrorMsg('');
-    // Expand all on analysis
     setExpandedIds(new Set());
 
     try {
-      const response = await fetch(getEdgeFunctionUrl('gate-analyze'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${API_CONFIG.SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          tender_id: tenderId,
-          org_id: selectedOrgId,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
+      const result = await callAnalysis(selectedOrgId);
+      if (result) {
         setAnalysisResult(result);
         await loadConditions();
-        // Expand all conditions after analysis
         if (result.conditions) {
-          setExpandedIds(new Set(result.conditions.map((c: { condition_id: string }) => c.condition_id)));
+          setExpandedIds(new Set(result.conditions.map(c => c.condition_id)));
         }
-      } else {
-        setErrorMsg(result.error || 'שגיאה בניתוח');
       }
     } catch (err) {
-      setErrorMsg('שגיאה בחיבור לשרת');
+      setErrorMsg(err instanceof Error ? err.message : 'Connection error');
       console.error('Analysis error:', err);
     }
 
     setAnalyzing(false);
+  }
+
+  async function runBothAnalyses() {
+    if (!tenderId || !selectedOrgId || !compareOrgId) return;
+
+    setAnalyzing(true);
+    setAnalyzingCompare(true);
+    setAnalysisResult(null);
+    setCompareResult(null);
+    setErrorMsg('');
+
+    try {
+      const [result1, result2] = await Promise.all([
+        callAnalysis(selectedOrgId),
+        callAnalysis(compareOrgId),
+      ]);
+      if (result1) {
+        setAnalysisResult(result1);
+        await loadConditions();
+        if (result1.conditions) {
+          setExpandedIds(new Set(result1.conditions.map(c => c.condition_id)));
+        }
+      }
+      if (result2) setCompareResult(result2);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Analysis error');
+    }
+
+    setAnalyzing(false);
+    setAnalyzingCompare(false);
   }
 
   function toggleExpand(id: string) {
@@ -222,15 +258,152 @@ export function GatesPage() {
     return <Lightbulb size={14} />;
   }
 
+  function renderDecisionBanner(result: AnalysisResult, orgName: string) {
+    const rec = result.summary.go_recommendation;
+    return (
+      <div className={`decision-banner decision-${rec === 'GO' ? 'go' : rec === 'CONDITIONAL' ? 'conditional' : 'nogo'}`}>
+        <div className="decision-label">
+          {rec === 'GO' ? 'GO' : rec === 'CONDITIONAL' ? 'CONDITIONAL' : 'NO GO'}
+        </div>
+        <div className="decision-subtitle">
+          {rec === 'GO' && `${orgName} עומדת בכל תנאי הסף - מומלץ להגיש הצעה`}
+          {rec === 'CONDITIONAL' && `${orgName} עומדת חלקית - נדרשת השלמה`}
+          {rec === 'NO_GO' && `${orgName} לא עומדת בתנאי סף מהותיים`}
+        </div>
+      </div>
+    );
+  }
+
+  function renderStatsGrid(result: AnalysisResult) {
+    const s = result.summary;
+    return (
+      <div className="stats-grid" style={{ marginBottom: '1rem' }}>
+        <div className="stat-card">
+          <div className="stat-value">{s.total_conditions}</div>
+          <div className="stat-label">תנאי סף</div>
+        </div>
+        <div className="stat-card" style={{ borderRight: '3px solid var(--success)' }}>
+          <div className="stat-value" style={{ color: 'var(--success)' }}>{s.meets_count}</div>
+          <div className="stat-label">עומד</div>
+        </div>
+        <div className="stat-card" style={{ borderRight: '3px solid var(--warning)' }}>
+          <div className="stat-value" style={{ color: 'var(--warning)' }}>{s.partially_meets_count}</div>
+          <div className="stat-label">חלקי</div>
+        </div>
+        <div className="stat-card" style={{ borderRight: '3px solid var(--danger)' }}>
+          <div className="stat-value" style={{ color: 'var(--danger)' }}>{s.does_not_meet_count}</div>
+          <div className="stat-label">לא עומד</div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderSummaryBar(result: AnalysisResult) {
+    const s = result.summary;
+    const total = s.total_conditions;
+    if (total === 0) return null;
+    return (
+      <div style={{ marginBottom: '1.25rem' }}>
+        <div className="summary-bar">
+          <div className="summary-segment" style={{ width: `${(s.meets_count / total) * 100}%`, background: 'var(--success)' }} />
+          <div className="summary-segment" style={{ width: `${(s.partially_meets_count / total) * 100}%`, background: 'var(--warning)' }} />
+          <div className="summary-segment" style={{ width: `${(s.does_not_meet_count / total) * 100}%`, background: 'var(--danger)' }} />
+        </div>
+      </div>
+    );
+  }
+
+  function renderRecommendations(result: AnalysisResult) {
+    const rec = result.summary.go_recommendation;
+    if (!result.summary.recommendations?.length) return null;
+    return (
+      <div className="card" style={{
+        marginBottom: '1rem',
+        background: rec === 'GO' ? 'var(--success-bg)' : rec === 'CONDITIONAL' ? 'var(--warning-bg)' : 'var(--danger-bg)',
+        borderColor: rec === 'GO' ? 'var(--success-border)' : rec === 'CONDITIONAL' ? 'var(--warning-border)' : 'var(--danger-border)',
+      }}>
+        <div className="card-title" style={{ marginBottom: '0.5rem', color: rec === 'GO' ? 'var(--success)' : rec === 'CONDITIONAL' ? '#92400e' : 'var(--danger)' }}>
+          <Target size={16} /> המלצות אסטרטגיות
+        </div>
+        <ul style={{ listStyle: 'none', fontSize: '0.87rem', color: 'var(--dark-700)' }}>
+          {result.summary.recommendations.map((r, i) => (
+            <li key={i} style={{ padding: '0.25rem 0', display: 'flex', gap: '0.4rem', alignItems: 'flex-start' }}>
+              <span style={{ color: 'var(--primary)', fontWeight: 700, flexShrink: 0 }}>&#8226;</span>
+              {r}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  function renderConditionResult(result: ConditionResult) {
+    return (
+      <div>
+        {result.ai_summary && (
+          <div style={{
+            marginBottom: '0.75rem', padding: '0.6rem 0.8rem', borderRadius: '8px',
+            background: result.status === 'MEETS' ? 'var(--success-bg)' : result.status === 'PARTIALLY_MEETS' ? 'var(--warning-bg)' : 'var(--danger-bg)',
+            border: `1px solid ${result.status === 'MEETS' ? 'var(--success-border)' : result.status === 'PARTIALLY_MEETS' ? 'var(--warning-border)' : 'var(--danger-border)'}`,
+          }}>
+            <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'flex-start' }}>
+              {getStatusIcon(result.status, 16)}
+              <span style={{ fontSize: '0.87rem', fontWeight: 600, color: 'var(--dark-800)' }}>{result.ai_summary}</span>
+            </div>
+          </div>
+        )}
+
+        {result.evidence && (
+          <div style={{ marginBottom: '0.6rem' }}>
+            <div className="gate-evidence-label">
+              <Building2 size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> ראיות מפרופיל החברה
+            </div>
+            <div className="gate-evidence" style={{ whiteSpace: 'pre-wrap' }}>{result.evidence}</div>
+          </div>
+        )}
+
+        {result.gap_description && (
+          <div style={{ marginBottom: '0.6rem' }}>
+            <div className="gate-evidence-label" style={{ color: 'var(--danger)' }}>
+              <AlertTriangle size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> פער שזוהה
+            </div>
+            <div className="gate-evidence" style={{ borderRight: '3px solid var(--danger)', background: 'var(--danger-bg)' }}>
+              {result.gap_description}
+            </div>
+          </div>
+        )}
+
+        {result.closure_options?.length > 0 && (
+          <div>
+            <div className="gate-evidence-label" style={{ color: 'var(--primary)' }}>
+              <Lightbulb size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> מסלולי סגירת פער
+            </div>
+            <ul className="gate-closure-options">
+              {result.closure_options.map((opt, i) => (
+                <li key={i} style={{
+                  display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
+                  background: opt.includes('חוסם') || opt.includes('אין פתרון') ? 'var(--danger-bg)' : 'var(--blue-50)',
+                  borderColor: opt.includes('חוסם') ? 'var(--danger-border)' : 'var(--blue-200)',
+                }}>
+                  <span style={{ flexShrink: 0, marginTop: '1px', color: opt.includes('חוסם') ? 'var(--danger)' : 'var(--primary)' }}>
+                    {getClosureIcon(opt)}
+                  </span>
+                  <span>{opt}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   const meetsCount = conditions.filter(c => c.status === 'MEETS').length;
   const partialCount = conditions.filter(c => c.status === 'PARTIALLY_MEETS').length;
   const failsCount = conditions.filter(c => c.status === 'DOES_NOT_MEET').length;
   const unknownCount = conditions.filter(c => !c.status || c.status === 'UNKNOWN').length;
   const totalCount = conditions.length;
   const analyzed = totalCount > 0 && unknownCount < totalCount;
-
-  const recommendation = analysisResult?.summary?.go_recommendation ||
-    (analyzed ? (failsCount > 0 ? 'NO_GO' : partialCount > 0 ? 'CONDITIONAL' : 'GO') : null);
 
   if (!tenderId) {
     return (
@@ -283,23 +456,59 @@ export function GatesPage() {
               <option key={org.id} value={org.id}>{org.name}</option>
             ))}
           </select>
-          <button
-            className="btn btn-primary btn-lg"
-            onClick={runAnalysis}
-            disabled={analyzing || !selectedOrgId}
-          >
-            {analyzing ? (
-              <>
-                <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} />
-                מנתח {totalCount} תנאים...
-              </>
-            ) : (
-              <>
-                <Play size={16} />
-                נתח תנאי סף
-              </>
-            )}
-          </button>
+
+          {!compareMode ? (
+            <>
+              <button
+                className="btn btn-primary btn-lg"
+                onClick={runAnalysis}
+                disabled={analyzing || !selectedOrgId}
+              >
+                {analyzing ? (
+                  <><Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> מנתח {totalCount} תנאים...</>
+                ) : (
+                  <><Play size={16} /> נתח תנאי סף</>
+                )}
+              </button>
+              {orgs.length > 1 && (
+                <button className="btn btn-secondary" onClick={() => {
+                  setCompareMode(true);
+                  const otherOrg = orgs.find(o => o.id !== selectedOrgId);
+                  if (otherOrg) setCompareOrgId(otherOrg.id);
+                }}>
+                  <GitCompareArrows size={14} /> השוואה
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <span style={{ color: 'var(--dark-500)', fontSize: '0.85rem', fontWeight: 600 }}>VS</span>
+              <select
+                className="btn btn-secondary"
+                style={{ minWidth: '220px', appearance: 'auto' }}
+                value={compareOrgId}
+                onChange={(e) => setCompareOrgId(e.target.value)}
+              >
+                {orgs.filter(o => o.id !== selectedOrgId).map(org => (
+                  <option key={org.id} value={org.id}>{org.name}</option>
+                ))}
+              </select>
+              <button
+                className="btn btn-primary btn-lg"
+                onClick={runBothAnalyses}
+                disabled={analyzing || analyzingCompare || !selectedOrgId || !compareOrgId}
+              >
+                {(analyzing || analyzingCompare) ? (
+                  <><Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> מנתח...</>
+                ) : (
+                  <><Play size={16} /> נתח והשווה</>
+                )}
+              </button>
+              <button className="btn btn-ghost" onClick={() => { setCompareMode(false); setCompareResult(null); }}>
+                ביטול
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -310,216 +519,303 @@ export function GatesPage() {
         </div>
       )}
 
-      {/* Decision Banner */}
-      {recommendation && analyzed && (
-        <div className={`decision-banner decision-${recommendation === 'GO' ? 'go' : recommendation === 'CONDITIONAL' ? 'conditional' : 'nogo'}`}>
-          <div className="decision-label">
-            {recommendation === 'GO' ? 'GO' : recommendation === 'CONDITIONAL' ? 'CONDITIONAL' : 'NO GO'}
+      {/* COMPARISON MODE */}
+      {compareMode && analysisResult && compareResult ? (
+        <div>
+          {/* Side-by-side banners */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+            <div>
+              <div style={{ textAlign: 'center', fontWeight: 700, fontSize: '1rem', marginBottom: '0.5rem', color: 'var(--dark-800)' }}>
+                <Building2 size={16} style={{ display: 'inline', verticalAlign: 'middle' }} /> {analysisResult.org_name}
+              </div>
+              {renderDecisionBanner(analysisResult, analysisResult.org_name)}
+              {renderStatsGrid(analysisResult)}
+              {renderSummaryBar(analysisResult)}
+            </div>
+            <div>
+              <div style={{ textAlign: 'center', fontWeight: 700, fontSize: '1rem', marginBottom: '0.5rem', color: 'var(--dark-800)' }}>
+                <Building2 size={16} style={{ display: 'inline', verticalAlign: 'middle' }} /> {compareResult.org_name}
+              </div>
+              {renderDecisionBanner(compareResult, compareResult.org_name)}
+              {renderStatsGrid(compareResult)}
+              {renderSummaryBar(compareResult)}
+            </div>
           </div>
-          <div className="decision-subtitle">
-            {recommendation === 'GO' && `${selectedOrgName} עומדת בכל תנאי הסף - מומלץ להגיש הצעה`}
-            {recommendation === 'CONDITIONAL' && `${selectedOrgName} עומדת חלקית - נדרשת השלמה`}
-            {recommendation === 'NO_GO' && `${selectedOrgName} לא עומדת בתנאי סף מהותיים`}
-          </div>
-        </div>
-      )}
 
-      {/* Stats */}
-      <div className="stats-grid" style={{ marginBottom: '1rem' }}>
-        <div className="stat-card">
-          <div className="stat-value">{totalCount}</div>
-          <div className="stat-label">תנאי סף</div>
-        </div>
-        <div className="stat-card" style={{ borderRight: '3px solid var(--success)' }}>
-          <div className="stat-value" style={{ color: 'var(--success)' }}>{meetsCount}</div>
-          <div className="stat-label">עומד</div>
-        </div>
-        <div className="stat-card" style={{ borderRight: '3px solid var(--warning)' }}>
-          <div className="stat-value" style={{ color: 'var(--warning)' }}>{partialCount}</div>
-          <div className="stat-label">חלקי</div>
-        </div>
-        <div className="stat-card" style={{ borderRight: '3px solid var(--danger)' }}>
-          <div className="stat-value" style={{ color: 'var(--danger)' }}>{failsCount}</div>
-          <div className="stat-label">לא עומד</div>
-        </div>
-      </div>
-
-      {/* Summary Bar */}
-      {analyzed && totalCount > 0 && (
-        <div style={{ marginBottom: '1.25rem' }}>
-          <div className="summary-bar">
-            <div className="summary-segment" style={{ width: `${(meetsCount / totalCount) * 100}%`, background: 'var(--success)' }} />
-            <div className="summary-segment" style={{ width: `${(partialCount / totalCount) * 100}%`, background: 'var(--warning)' }} />
-            <div className="summary-segment" style={{ width: `${(failsCount / totalCount) * 100}%`, background: 'var(--danger)' }} />
-            <div className="summary-segment" style={{ width: `${(unknownCount / totalCount) * 100}%`, background: 'var(--dark-200)' }} />
+          {/* Side-by-side recommendations */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+            <div>{renderRecommendations(analysisResult)}</div>
+            <div>{renderRecommendations(compareResult)}</div>
           </div>
-        </div>
-      )}
 
-      {/* Recommendations */}
-      {analysisResult?.summary?.recommendations && analysisResult.summary.recommendations.length > 0 && (
-        <div className="card" style={{ marginBottom: '1rem', background: recommendation === 'GO' ? 'var(--success-bg)' : recommendation === 'CONDITIONAL' ? 'var(--warning-bg)' : 'var(--danger-bg)', borderColor: recommendation === 'GO' ? 'var(--success-border)' : recommendation === 'CONDITIONAL' ? 'var(--warning-border)' : 'var(--danger-border)' }}>
-          <div className="card-title" style={{ marginBottom: '0.5rem', color: recommendation === 'GO' ? 'var(--success)' : recommendation === 'CONDITIONAL' ? '#92400e' : 'var(--danger)' }}>
-            <Target size={16} /> המלצות אסטרטגיות
-          </div>
-          <ul style={{ listStyle: 'none', fontSize: '0.87rem', color: 'var(--dark-700)' }}>
-            {analysisResult.summary.recommendations.map((rec, i) => (
-              <li key={i} style={{ padding: '0.25rem 0', display: 'flex', gap: '0.4rem', alignItems: 'flex-start' }}>
-                <span style={{ color: 'var(--primary)', fontWeight: 700, flexShrink: 0 }}>&#8226;</span>
-                {rec}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Conditions List */}
-      <div className="card">
-        <div className="card-header">
-          <div className="card-title">
-            <Shield size={18} />
-            רשימת תנאי סף ({totalCount})
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            {analyzed && (
+          {/* Side-by-side conditions */}
+          <div className="card">
+            <div className="card-header">
+              <div className="card-title"><Shield size={18} /> השוואת תנאי סף ({totalCount})</div>
               <button className="btn btn-ghost btn-sm" onClick={() => {
-                if (expandedIds.size === conditions.length) {
-                  setExpandedIds(new Set());
-                } else {
-                  setExpandedIds(new Set(conditions.map(c => c.id)));
-                }
+                if (expandedIds.size === conditions.length) setExpandedIds(new Set());
+                else setExpandedIds(new Set(conditions.map(c => c.id)));
               }}>
                 {expandedIds.size === conditions.length ? 'סגור הכל' : 'פתח הכל'}
               </button>
-            )}
-            {analyzed && (
-              <button className="btn btn-ghost btn-sm" onClick={runAnalysis} disabled={analyzing}>
-                <RefreshCw size={14} /> נתח מחדש
-              </button>
-            )}
-          </div>
-        </div>
+            </div>
 
-        <div className="gate-list">
-          {conditions.map((cond) => {
-            const isExpanded = expandedIds.has(cond.id);
-            const hasAnalysis = cond.status && cond.status !== 'UNKNOWN';
+            <div className="gate-list">
+              {conditions.map((cond) => {
+                const isExpanded = expandedIds.has(cond.id);
+                const r1 = analysisResult.conditions.find(c => c.condition_id === cond.id);
+                const r2 = compareResult.conditions.find(c => c.condition_id === cond.id);
 
-            return (
-              <div
-                key={cond.id}
-                className={`gate-item ${getStatusClass(cond.status)}`}
-                onClick={() => toggleExpand(cond.id)}
-              >
-                <div className="gate-number">{cond.condition_number}</div>
-                <div className="gate-content">
-                  <div className="gate-text">{cond.condition_text}</div>
-                  <div className="gate-meta">
-                    {cond.is_mandatory ? (
-                      <span className="badge badge-danger" style={{ fontSize: '0.65rem' }}>חובה</span>
-                    ) : (
-                      <span className="badge badge-gray" style={{ fontSize: '0.65rem' }}>יתרון</span>
-                    )}
-                    {cond.requirement_type && (
-                      <span className="badge badge-blue" style={{ fontSize: '0.65rem' }}>
-                        {cond.requirement_type === 'CAPABILITY' ? 'יכולת' : 'ביצוע'}
-                      </span>
-                    )}
-                    {hasAnalysis && (
-                      <span className={`badge ${cond.status === 'MEETS' ? 'badge-success' : cond.status === 'PARTIALLY_MEETS' ? 'badge-warning' : 'badge-danger'}`}>
-                        {getStatusIcon(cond.status, 12)} {getStatusText(cond.status)}
-                      </span>
-                    )}
-                    {cond.ai_confidence != null && cond.ai_confidence > 0 && (
-                      <div className="confidence-meter">
-                        <div className="confidence-bar">
-                          <div
-                            className="confidence-fill"
-                            style={{
-                              width: `${cond.ai_confidence * 100}%`,
-                              background: cond.ai_confidence > 0.8 ? 'var(--success)' : cond.ai_confidence > 0.5 ? 'var(--warning)' : 'var(--danger)',
-                            }}
-                          />
-                        </div>
-                        <span className="confidence-value">{Math.round(cond.ai_confidence * 100)}%</span>
+                return (
+                  <div key={cond.id} className="gate-item" style={{ cursor: 'pointer', borderRight: '3px solid var(--primary)' }}
+                    onClick={() => toggleExpand(cond.id)}>
+                    <div className="gate-number">{cond.condition_number}</div>
+                    <div className="gate-content">
+                      <div className="gate-text">{cond.condition_text}</div>
+                      <div className="gate-meta">
+                        {cond.is_mandatory ? (
+                          <span className="badge badge-danger" style={{ fontSize: '0.65rem' }}>חובה</span>
+                        ) : (
+                          <span className="badge badge-gray" style={{ fontSize: '0.65rem' }}>יתרון</span>
+                        )}
+
+                        {/* Status badges for both companies */}
+                        {r1 && (
+                          <span className={`badge ${r1.status === 'MEETS' ? 'badge-success' : r1.status === 'PARTIALLY_MEETS' ? 'badge-warning' : 'badge-danger'}`} style={{ fontSize: '0.65rem' }}>
+                            {getStatusIcon(r1.status, 10)} {analysisResult.org_name?.split(' ')[0]}: {getStatusText(r1.status)}
+                          </span>
+                        )}
+                        {r2 && (
+                          <span className={`badge ${r2.status === 'MEETS' ? 'badge-success' : r2.status === 'PARTIALLY_MEETS' ? 'badge-warning' : 'badge-danger'}`} style={{ fontSize: '0.65rem' }}>
+                            {getStatusIcon(r2.status, 10)} {compareResult.org_name?.split(' ')[0]}: {getStatusText(r2.status)}
+                          </span>
+                        )}
+
+                        <span style={{ marginRight: 'auto' }}>
+                          {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        </span>
                       </div>
-                    )}
-                    {cond.source_section && (
-                      <span style={{ fontSize: '0.72rem', color: 'var(--dark-400)' }}>
-                        <FileText size={10} style={{ display: 'inline', verticalAlign: 'middle' }} /> סעיף {cond.source_section}
-                      </span>
-                    )}
-                    <span style={{ marginRight: 'auto' }}>
-                      {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    </span>
-                  </div>
 
-                  {isExpanded && hasAnalysis && (
-                    <div className="gate-expanded">
-                      {/* AI Summary - always on top */}
-                      {cond.ai_summary && (
-                        <div style={{ marginBottom: '0.75rem', padding: '0.6rem 0.8rem', borderRadius: '8px', background: cond.status === 'MEETS' ? 'var(--success-bg)' : cond.status === 'PARTIALLY_MEETS' ? 'var(--warning-bg)' : 'var(--danger-bg)', border: `1px solid ${cond.status === 'MEETS' ? 'var(--success-border)' : cond.status === 'PARTIALLY_MEETS' ? 'var(--warning-border)' : 'var(--danger-border)'}` }}>
-                          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'flex-start' }}>
-                            {getStatusIcon(cond.status, 16)}
-                            <span style={{ fontSize: '0.87rem', fontWeight: 600, color: 'var(--dark-800)' }}>{cond.ai_summary}</span>
+                      {isExpanded && (r1 || r2) && (
+                        <div className="gate-expanded">
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--primary)', marginBottom: '0.5rem' }}>
+                                <Building2 size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> {analysisResult.org_name}
+                              </div>
+                              {r1 && renderConditionResult(r1)}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--primary)', marginBottom: '0.5rem' }}>
+                                <Building2 size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> {compareResult.org_name}
+                              </div>
+                              {r2 && renderConditionResult(r2)}
+                            </div>
                           </div>
-                        </div>
-                      )}
-
-                      {/* Evidence */}
-                      {cond.company_evidence && (
-                        <div style={{ marginBottom: '0.6rem' }}>
-                          <div className="gate-evidence-label">
-                            <Building2 size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> ראיות מפרופיל החברה
-                          </div>
-                          <div className="gate-evidence" style={{ whiteSpace: 'pre-wrap' }}>{cond.company_evidence}</div>
-                        </div>
-                      )}
-
-                      {/* Gap */}
-                      {cond.gap_description && (
-                        <div style={{ marginBottom: '0.6rem' }}>
-                          <div className="gate-evidence-label" style={{ color: 'var(--danger)' }}>
-                            <AlertTriangle size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> פער שזוהה
-                          </div>
-                          <div className="gate-evidence" style={{ borderRight: '3px solid var(--danger)', background: 'var(--danger-bg)' }}>
-                            {cond.gap_description}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Closure Options - the magic! */}
-                      {cond.closure_options && cond.closure_options.length > 0 && (
-                        <div>
-                          <div className="gate-evidence-label" style={{ color: 'var(--primary)' }}>
-                            <Lightbulb size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> מסלולי סגירת פער
-                          </div>
-                          <ul className="gate-closure-options">
-                            {cond.closure_options.map((opt, i) => (
-                              <li key={i} style={{
-                                display: 'flex',
-                                alignItems: 'flex-start',
-                                gap: '0.5rem',
-                                background: opt.includes('חוסם') || opt.includes('אין פתרון') ? 'var(--danger-bg)' : 'var(--blue-50)',
-                                borderColor: opt.includes('חוסם') ? 'var(--danger-border)' : 'var(--blue-200)',
-                              }}>
-                                <span style={{ flexShrink: 0, marginTop: '1px', color: opt.includes('חוסם') ? 'var(--danger)' : 'var(--primary)' }}>
-                                  {getClosureIcon(opt)}
-                                </span>
-                                <span>{opt}</span>
-                              </li>
-                            ))}
-                          </ul>
                         </div>
                       )}
                     </div>
-                  )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* SINGLE ANALYSIS MODE */
+        <div>
+          {/* Decision Banner */}
+          {analysisResult && renderDecisionBanner(analysisResult, selectedOrgName)}
+
+          {/* Stats */}
+          {analyzed ? (
+            <>
+              <div className="stats-grid" style={{ marginBottom: '1rem' }}>
+                <div className="stat-card">
+                  <div className="stat-value">{totalCount}</div>
+                  <div className="stat-label">תנאי סף</div>
+                </div>
+                <div className="stat-card" style={{ borderRight: '3px solid var(--success)' }}>
+                  <div className="stat-value" style={{ color: 'var(--success)' }}>{meetsCount}</div>
+                  <div className="stat-label">עומד</div>
+                </div>
+                <div className="stat-card" style={{ borderRight: '3px solid var(--warning)' }}>
+                  <div className="stat-value" style={{ color: 'var(--warning)' }}>{partialCount}</div>
+                  <div className="stat-label">חלקי</div>
+                </div>
+                <div className="stat-card" style={{ borderRight: '3px solid var(--danger)' }}>
+                  <div className="stat-value" style={{ color: 'var(--danger)' }}>{failsCount}</div>
+                  <div className="stat-label">לא עומד</div>
                 </div>
               </div>
-            );
-          })}
+
+              {/* Summary Bar */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <div className="summary-bar">
+                  <div className="summary-segment" style={{ width: `${(meetsCount / totalCount) * 100}%`, background: 'var(--success)' }} />
+                  <div className="summary-segment" style={{ width: `${(partialCount / totalCount) * 100}%`, background: 'var(--warning)' }} />
+                  <div className="summary-segment" style={{ width: `${(failsCount / totalCount) * 100}%`, background: 'var(--danger)' }} />
+                  <div className="summary-segment" style={{ width: `${(unknownCount / totalCount) * 100}%`, background: 'var(--dark-200)' }} />
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="stats-grid" style={{ marginBottom: '1rem' }}>
+              <div className="stat-card"><div className="stat-value">{totalCount}</div><div className="stat-label">תנאי סף</div></div>
+            </div>
+          )}
+
+          {/* Recommendations */}
+          {analysisResult && renderRecommendations(analysisResult)}
+
+          {/* Conditions List */}
+          <div className="card">
+            <div className="card-header">
+              <div className="card-title">
+                <Shield size={18} />
+                רשימת תנאי סף ({totalCount})
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {analyzed && (
+                  <button className="btn btn-ghost btn-sm" onClick={() => {
+                    if (expandedIds.size === conditions.length) setExpandedIds(new Set());
+                    else setExpandedIds(new Set(conditions.map(c => c.id)));
+                  }}>
+                    {expandedIds.size === conditions.length ? 'סגור הכל' : 'פתח הכל'}
+                  </button>
+                )}
+                {analyzed && (
+                  <button className="btn btn-ghost btn-sm" onClick={runAnalysis} disabled={analyzing}>
+                    <RefreshCw size={14} /> נתח מחדש
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="gate-list">
+              {conditions.map((cond) => {
+                const isExpanded = expandedIds.has(cond.id);
+                const hasAnalysis = cond.status && cond.status !== 'UNKNOWN';
+
+                return (
+                  <div
+                    key={cond.id}
+                    className={`gate-item ${getStatusClass(cond.status)}`}
+                    onClick={() => toggleExpand(cond.id)}
+                  >
+                    <div className="gate-number">{cond.condition_number}</div>
+                    <div className="gate-content">
+                      <div className="gate-text">{cond.condition_text}</div>
+                      <div className="gate-meta">
+                        {cond.is_mandatory ? (
+                          <span className="badge badge-danger" style={{ fontSize: '0.65rem' }}>חובה</span>
+                        ) : (
+                          <span className="badge badge-gray" style={{ fontSize: '0.65rem' }}>יתרון</span>
+                        )}
+                        {cond.requirement_type && (
+                          <span className="badge badge-blue" style={{ fontSize: '0.65rem' }}>
+                            {cond.requirement_type === 'CAPABILITY' ? 'יכולת' : 'ביצוע'}
+                          </span>
+                        )}
+                        {hasAnalysis && (
+                          <span className={`badge ${cond.status === 'MEETS' ? 'badge-success' : cond.status === 'PARTIALLY_MEETS' ? 'badge-warning' : 'badge-danger'}`}>
+                            {getStatusIcon(cond.status, 12)} {getStatusText(cond.status)}
+                          </span>
+                        )}
+                        {cond.ai_confidence != null && cond.ai_confidence > 0 && (
+                          <div className="confidence-meter">
+                            <div className="confidence-bar">
+                              <div
+                                className="confidence-fill"
+                                style={{
+                                  width: `${cond.ai_confidence * 100}%`,
+                                  background: cond.ai_confidence > 0.8 ? 'var(--success)' : cond.ai_confidence > 0.5 ? 'var(--warning)' : 'var(--danger)',
+                                }}
+                              />
+                            </div>
+                            <span className="confidence-value">{Math.round(cond.ai_confidence * 100)}%</span>
+                          </div>
+                        )}
+                        {cond.source_section && (
+                          <span style={{ fontSize: '0.72rem', color: 'var(--dark-400)' }}>
+                            <FileText size={10} style={{ display: 'inline', verticalAlign: 'middle' }} /> סעיף {cond.source_section}
+                          </span>
+                        )}
+                        <span style={{ marginRight: 'auto' }}>
+                          {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        </span>
+                      </div>
+
+                      {isExpanded && hasAnalysis && (
+                        <div className="gate-expanded">
+                          {/* AI Summary */}
+                          {cond.ai_summary && (
+                            <div style={{
+                              marginBottom: '0.75rem', padding: '0.6rem 0.8rem', borderRadius: '8px',
+                              background: cond.status === 'MEETS' ? 'var(--success-bg)' : cond.status === 'PARTIALLY_MEETS' ? 'var(--warning-bg)' : 'var(--danger-bg)',
+                              border: `1px solid ${cond.status === 'MEETS' ? 'var(--success-border)' : cond.status === 'PARTIALLY_MEETS' ? 'var(--warning-border)' : 'var(--danger-border)'}`,
+                            }}>
+                              <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'flex-start' }}>
+                                {getStatusIcon(cond.status, 16)}
+                                <span style={{ fontSize: '0.87rem', fontWeight: 600, color: 'var(--dark-800)' }}>{cond.ai_summary}</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Evidence */}
+                          {cond.company_evidence && (
+                            <div style={{ marginBottom: '0.6rem' }}>
+                              <div className="gate-evidence-label">
+                                <Building2 size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> ראיות מפרופיל החברה
+                              </div>
+                              <div className="gate-evidence" style={{ whiteSpace: 'pre-wrap' }}>{cond.company_evidence}</div>
+                            </div>
+                          )}
+
+                          {/* Gap */}
+                          {cond.gap_description && (
+                            <div style={{ marginBottom: '0.6rem' }}>
+                              <div className="gate-evidence-label" style={{ color: 'var(--danger)' }}>
+                                <AlertTriangle size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> פער שזוהה
+                              </div>
+                              <div className="gate-evidence" style={{ borderRight: '3px solid var(--danger)', background: 'var(--danger-bg)' }}>
+                                {cond.gap_description}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Closure Options */}
+                          {cond.closure_options && cond.closure_options.length > 0 && (
+                            <div>
+                              <div className="gate-evidence-label" style={{ color: 'var(--primary)' }}>
+                                <Lightbulb size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> מסלולי סגירת פער
+                              </div>
+                              <ul className="gate-closure-options">
+                                {cond.closure_options.map((opt, i) => (
+                                  <li key={i} style={{
+                                    display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
+                                    background: opt.includes('חוסם') || opt.includes('אין פתרון') ? 'var(--danger-bg)' : 'var(--blue-50)',
+                                    borderColor: opt.includes('חוסם') ? 'var(--danger-border)' : 'var(--blue-200)',
+                                  }}>
+                                    <span style={{ flexShrink: 0, marginTop: '1px', color: opt.includes('חוסם') ? 'var(--danger)' : 'var(--primary)' }}>
+                                      {getClosureIcon(opt)}
+                                    </span>
+                                    <span>{opt}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

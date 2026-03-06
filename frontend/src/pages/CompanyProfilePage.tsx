@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Building2,
   DollarSign,
@@ -6,6 +7,7 @@ import {
   Users,
   FolderOpen,
   RefreshCw,
+  Plus,
 } from 'lucide-react';
 import { supabase } from '../api/supabaseClient';
 import { getCurrentOrgId } from '../api/config';
@@ -68,6 +70,7 @@ interface Project {
 }
 
 export function CompanyProfilePage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('general');
   const [org, setOrg] = useState<Organization | null>(null);
   const [financials, setFinancials] = useState<Financial[]>([]);
@@ -166,6 +169,9 @@ export function CompanyProfilePage() {
         <div className="page-header-actions">
           <button className="btn btn-secondary" onClick={loadAll}>
             <RefreshCw size={14} /> רענן
+          </button>
+          <button className="btn btn-primary" onClick={() => navigate('/company/new')}>
+            <Plus size={14} /> חברה חדשה
           </button>
         </div>
       </div>

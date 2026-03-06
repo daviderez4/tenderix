@@ -10,6 +10,7 @@ import {
   Clock,
   ChevronLeft,
   Zap,
+  Plus,
 } from 'lucide-react';
 import { supabase } from '../api/supabaseClient';
 import { setCurrentTender } from '../api/config';
@@ -119,6 +120,11 @@ export function Dashboard() {
             Winning Decision Center
           </h1>
           <p className="page-subtitle">מרכז קבלת החלטות - סקירת מכרזים פעילים</p>
+        </div>
+        <div className="page-header-actions">
+          <button className="btn btn-primary btn-lg" onClick={() => navigate('/tender/new')}>
+            <Plus size={16} /> מכרז חדש
+          </button>
         </div>
       </div>
 
