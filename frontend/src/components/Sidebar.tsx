@@ -11,6 +11,7 @@ import {
   LogOut,
   Zap,
   ChevronDown,
+  Plus,
 } from 'lucide-react';
 import { supabase } from '../api/supabaseClient';
 
@@ -40,6 +41,7 @@ const navSections = [
     title: 'הגדרות',
     items: [
       { path: '/company', icon: Building2, label: 'פרופיל חברה' },
+      { path: '/company/new', icon: Plus, label: 'חברה חדשה' },
     ],
   },
 ];
