@@ -1,79 +1,60 @@
 # Tenderix
 
-מערכת אוטומציה לניתוח ועיבוד מכרזים
+AI Tender Intelligence - מערכת AI לניתוח מכרזים וקבלת החלטות
 
-## סקירה
-
-Tenderix היא מערכת המשלבת AI ואוטומציה לעיבוד מכרזים, כולל:
-- קליטה וניתוח מסמכי מכרז
-- זיהוי תנאי סף ודרישות
-- הפקת מפרטים טכניים
-- ניתוח מתחרים
-
-## מבנה הפרויקט
+## ארכיטקטורה
 
 ```
-tenderix-dev/
-├── config/              # קבצי קונפיגורציה
-├── database/
-│   ├── schema/          # סכמת DB
-│   └── migrations/      # מיגרציות
-├── docs/                # תיעוד
-├── mcp-server/
-│   └── src/             # MCP Server לאינטגרציה עם Claude
-├── n8n/
-│   ├── workflows/       # תהליכי n8n
-│   └── backup/          # גיבויים
-├── prompts/
-│   ├── core/            # פרומפטים בסיסיים
-│   ├── p1-intake/       # שלב 1: קליטת מכרז
-│   ├── p2-gates/        # שלב 2: תנאי סף
-│   ├── p3-specs/        # שלב 3: מפרטים
-│   └── p4-competitors/  # שלב 4: מתחרים
-└── scripts/             # סקריפטים
+frontend/               React 19 + Vite + TypeScript
+  src/
+    api/                Supabase client + Edge Function calls
+    components/         Sidebar, Login
+    pages/              Dashboard, GatesPage, CompanyProfilePage
+    index.css           Design system (Electric Blue + Dark Gray)
+
+supabase/
+  functions/
+    _shared/            Supabase admin client, Claude AI client
+    gate-analyze/       Gate conditions AI analysis
+
+database/
+  schema/               Database schema definitions
+  migrations/           SQL migrations
+  seeds/                Test data (passing + failing company profiles)
 ```
 
-## שלבי העיבוד
+## מודולים
 
-| שלב | תיאור | תיקייה |
-|-----|-------|--------|
-| P1 | קליטת מכרז וחילוץ מידע בסיסי | `prompts/p1-intake` |
-| P2 | ניתוח תנאי סף (Go/No-Go) | `prompts/p2-gates` |
-| P3 | הפקת מפרטים טכניים | `prompts/p3-specs` |
-| P4 | ניתוח מתחרים והערכת סיכויים | `prompts/p4-competitors` |
+| מודול | סטטוס | תיאור |
+|-------|--------|-------|
+| Dashboard | פעיל | Winning Decision Center - סקירת מכרזים |
+| Gatekeeping | פעיל | ניתוח תנאי סף + AI matching |
+| Company Profile | פעיל | ניהול פרופיל חברה |
+| SOW Analyzer | בפיתוח | ניתוח תכולות ועבודות נסתרות |
+| BOQ Heatmap | בפיתוח | מפת חום תמחור |
+| Contract Advantage | בפיתוח | ניתוח חוזה |
+| Competitive Intel | בפיתוח | מודיעין תחרותי |
 
 ## טכנולוגיות
 
-- **Automation:** n8n
-- **AI:** Claude API / OpenAI
-- **Database:** Supabase (PostgreSQL)
-- **Integration:** MCP Server
+- **Frontend:** React 19 + Vite + TypeScript
+- **Backend:** Supabase Edge Functions (Deno/TypeScript)
+- **Database:** Supabase PostgreSQL
+- **AI:** Claude API (Anthropic)
+- **Deploy:** Vercel (frontend) + Supabase (backend)
 
 ## התקנה
 
 ```bash
-# Clone
-git clone <repo-url>
-cd tenderix-dev
+# Frontend
+cd frontend && npm install && npm run dev
 
-# Install MCP server dependencies
-cd mcp-server && npm install
-
-# Configure
-cp config/.env.example config/.env
-# Edit .env with your credentials
+# Edge Functions deploy
+npx supabase functions deploy gate-analyze --project-ref rerfjgjwjqodevkvhkxu
 ```
 
-## הרצה
+## Supabase Secrets
 
 ```bash
-# Start n8n workflows
-# Import workflows from n8n/workflows/
-
-# Start MCP server
-cd mcp-server && npm start
+npx supabase secrets set ANTHROPIC_API_KEY=sk-ant-... --project-ref rerfjgjwjqodevkvhkxu
 ```
-
-## רישיון
-
-פרויקט פרטי - כל הזכויות שמורות

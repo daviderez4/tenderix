@@ -1,375 +1,229 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FileText, Zap, MessageSquare } from 'lucide-react';
-import { api, toggleTenderFavorite, deleteTender } from '../api/tenderix';
-import type { Tender } from '../api/tenderix';
-import { Loading } from '../components/Loading';
-import { TenderCard } from '../components/TenderCard';
-import type { TenderData } from '../components/TenderCard';
-import { TenderDetailModal } from '../components/TenderDetailModal';
-import { TenderFilters } from '../components/TenderFilters';
-import type { FilterType } from '../components/TenderFilters';
-import { ConfirmDialog } from '../components/ConfirmDialog';
+import {
+  FileText,
+  Shield,
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Clock,
+  ChevronLeft,
+  Zap,
+} from 'lucide-react';
+import { supabase } from '../api/supabaseClient';
+import { setCurrentTender } from '../api/config';
 
-// Light theme colors
-const THEME = {
-  pageBg: '#f0f9fb',
-  headerText: '#1e3a4c',
-  subtitleText: '#5a7d8a',
-  accentPrimary: '#00b4d8',
-  accentGradient: 'linear-gradient(135deg, #00b4d8, #0096c7)',
-  cardBg: '#ffffff',
-  cardBorder: '#c8e4eb',
-  emptyIcon: '#00b4d8',
-};
+interface Tender {
+  id: string;
+  tender_name: string;
+  tender_number: string;
+  issuing_body: string;
+  submission_deadline: string;
+  estimated_value: number;
+  status: string;
+  go_nogo_decision: string;
+  current_step: string;
+  category: string;
+  created_at: string;
+}
+
+interface GateSummary {
+  tender_id: string;
+  total_conditions: number;
+  meets_count: number;
+  partially_meets_count: number;
+  does_not_meet_count: number;
+  overall_eligibility: string;
+  go_recommendation: string;
+}
 
 export function Dashboard() {
-  const navigate = useNavigate();
   const [tenders, setTenders] = useState<Tender[]>([]);
+  const [summaries, setSummaries] = useState<Record<string, GateSummary>>({});
   const [loading, setLoading] = useState(true);
-  const [selectedTender, setSelectedTender] = useState<TenderData | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<TenderData | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  // Filters
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadData();
   }, []);
 
   async function loadData() {
-    try {
-      const tendersData = await api.tenders.list();
-      setTenders(tendersData || []);
-    } catch (error) {
-      console.error('Error loading tenders:', error);
-    } finally {
-      setLoading(false);
+    setLoading(true);
+
+    const { data: tendersData } = await supabase
+      .from('tenders')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (tendersData) {
+      setTenders(tendersData);
+
+      const { data: summaryData } = await supabase
+        .from('gate_conditions_summary')
+        .select('*');
+
+      if (summaryData) {
+        const map: Record<string, GateSummary> = {};
+        for (const s of summaryData) {
+          map[s.tender_id] = s;
+        }
+        setSummaries(map);
+      }
     }
+
+    setLoading(false);
   }
 
-  // Convert Tender to TenderData format
-  const convertToTenderData = (tender: Tender): TenderData => ({
-    id: tender.id,
-    title: tender.tender_name,
-    issuing_body: tender.issuing_body,
-    deadline: tender.submission_deadline,
-    status: tender.status,
-    current_step: tender.current_step || 'p1',
-    is_favorite: tender.is_favorite,
-    created_at: tender.created_at,
-    updated_at: tender.updated_at,
-  });
+  function openTender(tender: Tender) {
+    setCurrentTender(tender.id, tender.tender_name);
+    navigate('/gates');
+  }
 
-  // Filter counts
-  const filterCounts = useMemo(() => {
-    return {
-      all: tenders.length,
-      favorites: tenders.filter(t => t.is_favorite).length,
-      active: tenders.filter(t => t.status !== 'COMPLETED' && t.status !== 'CANCELLED').length,
-      completed: tenders.filter(t => t.status === 'COMPLETED' || t.go_nogo_decision).length,
-    };
-  }, [tenders]);
+  const activeTenders = tenders.filter(t => t.status === 'ACTIVE');
+  const analyzedCount = Object.keys(summaries).length;
+  const goCount = Object.values(summaries).filter(s => s.go_recommendation === 'GO').length;
 
-  // Filtered tenders
-  const filteredTenders = useMemo(() => {
-    let result = tenders;
+  function formatCurrency(val: number) {
+    if (!val) return '-';
+    return new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 0 }).format(val);
+  }
 
-    // Apply filter
-    switch (activeFilter) {
-      case 'favorites':
-        result = result.filter(t => t.is_favorite);
-        break;
-      case 'active':
-        result = result.filter(t => t.status !== 'COMPLETED' && t.status !== 'CANCELLED');
-        break;
-      case 'completed':
-        result = result.filter(t => t.status === 'COMPLETED' || t.go_nogo_decision);
-        break;
-    }
+  function formatDate(dateStr: string) {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('he-IL');
+  }
 
-    // Apply search
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(t =>
-        t.tender_name?.toLowerCase().includes(query) ||
-        t.issuing_body?.toLowerCase().includes(query) ||
-        t.tender_number?.toLowerCase().includes(query)
-      );
-    }
+  function getStatusBadge(summary: GateSummary | undefined) {
+    if (!summary) return <span className="badge badge-gray">ממתין לניתוח</span>;
+    if (summary.overall_eligibility === 'ELIGIBLE') return <span className="badge badge-success">עומד בתנאים</span>;
+    if (summary.overall_eligibility === 'PARTIALLY_ELIGIBLE') return <span className="badge badge-warning">עומד חלקית</span>;
+    return <span className="badge badge-danger">לא עומד</span>;
+  }
 
-    return result;
-  }, [tenders, activeFilter, searchQuery]);
-
-  const handleOpenTender = (tenderData: TenderData) => {
-    setSelectedTender(tenderData);
-    setIsModalOpen(true);
-  };
-
-  const handleFavorite = async (tenderData: TenderData) => {
-    try {
-      // Optimistic update
-      setTenders(prev => prev.map(t =>
-        t.id === tenderData.id
-          ? { ...t, is_favorite: !t.is_favorite }
-          : t
-      ));
-
-      // Update selected tender if it's the same
-      if (selectedTender?.id === tenderData.id) {
-        setSelectedTender({ ...selectedTender, is_favorite: !selectedTender.is_favorite });
-      }
-
-      // API call
-      await toggleTenderFavorite(tenderData.id, tenderData.is_favorite || false);
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
-      // Revert on error
-      loadData();
-    }
-  };
-
-  const handleDeleteClick = (tenderData: TenderData) => {
-    setDeleteTarget(tenderData);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!deleteTarget) return;
-
-    setIsDeleting(true);
-    try {
-      await deleteTender(deleteTarget.id);
-
-      // Remove from local state
-      setTenders(prev => prev.filter(t => t.id !== deleteTarget.id));
-
-      // Close modal if deleting selected tender
-      if (selectedTender?.id === deleteTarget.id) {
-        setIsModalOpen(false);
-        setSelectedTender(null);
-      }
-
-      // Clear from localStorage if it was the current tender
-      const currentId = localStorage.getItem('currentTenderId');
-      if (currentId === deleteTarget.id) {
-        localStorage.removeItem('currentTenderId');
-        localStorage.removeItem('currentTenderTitle');
-      }
-    } catch (error) {
-      console.error('Error deleting tender:', error);
-      alert('שגיאה במחיקת המכרז');
-    } finally {
-      setIsDeleting(false);
-      setDeleteTarget(null);
-    }
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-  };
-
-  if (loading) return <Loading />;
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="spinner spinner-lg" />
+        <span>טוען נתונים...</span>
+      </div>
+    );
+  }
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: THEME.pageBg,
-        padding: '2rem',
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: '2rem',
-          flexWrap: 'wrap',
-          gap: '1rem',
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              margin: 0,
-              color: THEME.headerText,
-              fontSize: '1.75rem',
-              fontWeight: 700,
-            }}
-          >
-            <Zap size={28} color={THEME.accentPrimary} />
-            מרכז הפיקוד
+    <div className="animate-fadeIn">
+      <div className="page-header">
+        <div className="page-header-right">
+          <h1 className="page-title">
+            <Zap size={24} style={{ color: 'var(--primary)' }} />
+            Winning Decision Center
           </h1>
-          <p style={{ margin: '0.5rem 0 0', color: THEME.subtitleText, fontSize: '0.95rem' }}>
-            ניהול מכרזים ומעקב התקדמות
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button
-            onClick={() => navigate('/feedback-admin')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.75rem 1.25rem',
-              borderRadius: '8px',
-              border: `2px solid ${THEME.cardBorder}`,
-              background: THEME.cardBg,
-              color: THEME.headerText,
-              fontSize: '0.95rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-            onMouseOver={e => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.borderColor = THEME.accentPrimary;
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 180, 216, 0.2)';
-            }}
-            onMouseOut={e => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.borderColor = THEME.cardBorder;
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-            title="הודעות וצ'אט"
-          >
-            <MessageSquare size={18} />
-            הודעות
-          </button>
-          <button
-            onClick={() => navigate('/new')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.75rem 1.5rem',
-              borderRadius: '8px',
-              border: 'none',
-              background: THEME.accentGradient,
-              color: 'white',
-              fontSize: '0.95rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-            onMouseOver={e => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 180, 216, 0.3)';
-            }}
-            onMouseOut={e => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-          >
-            <Plus size={18} />
-            מכרז חדש
-          </button>
+          <p className="page-subtitle">מרכז קבלת החלטות - סקירת מכרזים פעילים</p>
         </div>
       </div>
 
-      {/* Filters */}
-      <TenderFilters
-        activeFilter={activeFilter}
-        onFilterChange={setActiveFilter}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        counts={filterCounts}
-      />
-
-      {/* Tender Grid */}
-      {filteredTenders.length === 0 ? (
-        <div
-          style={{
-            textAlign: 'center',
-            padding: '4rem 2rem',
-            background: THEME.cardBg,
-            borderRadius: '12px',
-            border: `2px solid ${THEME.cardBorder}`,
-          }}
-        >
-          <FileText size={64} style={{ opacity: 0.3, marginBottom: '1.5rem', color: THEME.emptyIcon }} />
-          {tenders.length === 0 ? (
-            <>
-              <h3 style={{ margin: '0 0 0.5rem', color: THEME.headerText }}>אין מכרזים במערכת</h3>
-              <p style={{ color: THEME.subtitleText, marginBottom: '1.5rem' }}>
-                התחל על ידי הוספת המכרז הראשון שלך
-              </p>
-              <button
-                onClick={() => navigate('/new')}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: THEME.accentGradient,
-                  color: 'white',
-                  fontSize: '0.95rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                <Plus size={18} />
-                הוסף מכרז ראשון
-              </button>
-            </>
-          ) : (
-            <>
-              <h3 style={{ margin: '0 0 0.5rem', color: THEME.headerText }}>לא נמצאו מכרזים</h3>
-              <p style={{ color: THEME.subtitleText }}>
-                נסה לשנות את הפילטרים או לחפש משהו אחר
-              </p>
-            </>
-          )}
+      <div className="stats-grid">
+        <div className="stat-card stat-card-accent">
+          <div className="stat-icon stat-icon-blue"><FileText size={20} /></div>
+          <div className="stat-value">{tenders.length}</div>
+          <div className="stat-label">מכרזים במערכת</div>
         </div>
-      ) : (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
-            gap: '1.25rem',
-          }}
-        >
-          {filteredTenders.map(tender => (
-            <TenderCard
-              key={tender.id}
-              tender={convertToTenderData(tender)}
-              onOpen={handleOpenTender}
-              onFavorite={handleFavorite}
-              onDelete={handleDeleteClick}
-            />
-          ))}
+        <div className="stat-card">
+          <div className="stat-icon stat-icon-yellow"><Clock size={20} /></div>
+          <div className="stat-value">{activeTenders.length}</div>
+          <div className="stat-label">מכרזים פעילים</div>
         </div>
-      )}
+        <div className="stat-card">
+          <div className="stat-icon stat-icon-green"><Shield size={20} /></div>
+          <div className="stat-value">{analyzedCount}</div>
+          <div className="stat-label">נותחו תנאי סף</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon stat-icon-green"><TrendingUp size={20} /></div>
+          <div className="stat-value">{goCount}</div>
+          <div className="stat-label">המלצת GO</div>
+        </div>
+      </div>
 
-      {/* Tender Detail Modal */}
-      <TenderDetailModal
-        tender={selectedTender}
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onFavorite={handleFavorite}
-        onDelete={handleDeleteClick}
-      />
+      <div className="card">
+        <div className="card-header">
+          <div className="card-title"><FileText size={18} /> מכרזים</div>
+        </div>
 
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={!!deleteTarget}
-        title="מחיקת מכרז"
-        message={`האם אתה בטוח שברצונך למחוק את המכרז "${deleteTarget?.title}"? פעולה זו אינה ניתנת לביטול.`}
-        confirmText={isDeleting ? 'מוחק...' : 'מחק'}
-        cancelText="ביטול"
-        variant="danger"
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setDeleteTarget(null)}
-      />
+        {tenders.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-icon"><FileText size={28} /></div>
+            <div className="empty-state-title">אין מכרזים עדיין</div>
+            <div className="empty-state-text">הוסף מכרז חדש כדי להתחיל</div>
+          </div>
+        ) : (
+          <div className="table-wrapper">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>שם המכרז</th>
+                  <th>גורם מזמין</th>
+                  <th>מועד הגשה</th>
+                  <th>אומדן</th>
+                  <th>תנאי סף</th>
+                  <th>סטטוס</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {tenders.map(tender => {
+                  const summary = summaries[tender.id];
+                  return (
+                    <tr key={tender.id} onClick={() => openTender(tender)} style={{ cursor: 'pointer' }}>
+                      <td>
+                        <div style={{ fontWeight: 600, color: 'var(--dark-800)' }}>{tender.tender_name}</div>
+                        {tender.tender_number && (
+                          <div style={{ fontSize: '0.75rem', color: 'var(--dark-400)' }}>{tender.tender_number}</div>
+                        )}
+                      </td>
+                      <td>{tender.issuing_body || '-'}</td>
+                      <td>
+                        {tender.submission_deadline ? (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <Clock size={13} style={{ color: 'var(--dark-400)' }} />
+                            {formatDate(tender.submission_deadline)}
+                          </span>
+                        ) : '-'}
+                      </td>
+                      <td>{formatCurrency(tender.estimated_value)}</td>
+                      <td>
+                        {summary ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            {summary.meets_count > 0 && (
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', color: 'var(--success)' }}>
+                                <CheckCircle size={13} /> {summary.meets_count}
+                              </span>
+                            )}
+                            {summary.partially_meets_count > 0 && (
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', color: 'var(--warning)' }}>
+                                <AlertTriangle size={13} /> {summary.partially_meets_count}
+                              </span>
+                            )}
+                            {summary.does_not_meet_count > 0 && (
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', color: 'var(--danger)' }}>
+                                <XCircle size={13} /> {summary.does_not_meet_count}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: '0.8rem', color: 'var(--dark-400)' }}>-</span>
+                        )}
+                      </td>
+                      <td>{getStatusBadge(summary)}</td>
+                      <td><ChevronLeft size={16} style={{ color: 'var(--dark-400)' }} /></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

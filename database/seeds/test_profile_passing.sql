@@ -1,0 +1,25 @@
+-- ============================================
+-- TENDERIX TEST PROFILE A - PASSING COMPANY
+-- "Dekel Security Systems" - matches ALL gate conditions for Holon camera tender
+-- This is the existing test org (a1b2c3d4-e5f6-7890-abcd-ef1234567890)
+-- Already seeded in test_organization.sql
+-- ============================================
+-- This file documents that the existing test_organization.sql
+-- already serves as Profile A (passing).
+--
+-- Summary of why it passes each condition:
+-- Condition 1 (Revenue >= 50M): avg 96.6M - PASSES
+-- Condition 2 (Single project >= 20M): has 62M project - PASSES
+-- Condition 3 (Municipal cameras >= 100): Tel Aviv 150 cameras - PASSES
+-- Condition 4 (VMS Milestone/Genetec): Milestone integration - PASSES
+-- Condition 5 (ISO 9001): Valid cert IL-9001-2024-1234 - PASSES
+-- Condition 6 (ISO 27001): Valid cert IL-27001-2024-5678 - PASSES
+-- Condition 7 (Contractor reg branch 200): Valid reg K-200-5432 - PASSES
+-- Condition 8 (PMP PM 10+ years): Moshe Katz, 15y, PMP - PASSES
+-- Condition 9 (VMS certified engineer): Yael Golan, Genetec Certified - PASSES
+-- Condition 10 (Tax certs): Valid tax certs - PASSES
+-- Condition 11 (Maintenance 500+ cameras): Education Ministry 600 cameras - PASSES
+-- Condition 12 (Security clearance - bonus): Has clearance - PASSES
+-- Condition 13 (3 gov projects in 5y): Has 4+ gov projects - PASSES
+-- Condition 14 (Insurance 10M): Verifiable - PASSES
+-- Condition 15 (Bank guarantee 500K): Verifiable at submission - PASSES
