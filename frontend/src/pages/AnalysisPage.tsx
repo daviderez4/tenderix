@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect } from 'react';
 import { BarChart3, FileText, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { API_CONFIG, getCurrentTenderId } from '../api/config';

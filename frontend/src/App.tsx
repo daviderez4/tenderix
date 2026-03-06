@@ -1,87 +1,68 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { Login } from './components/Login';
-import { HomePage } from './pages/HomePage';
 import { Dashboard } from './pages/Dashboard';
-import { NewTenderPage } from './pages/NewTenderPage';
 import { GatesPage } from './pages/GatesPage';
-import { AnalysisPage } from './pages/AnalysisPage';
-import { CompetitorsPage } from './pages/CompetitorsPage';
-import { DecisionPage } from './pages/DecisionPage';
 import { CompanyProfilePage } from './pages/CompanyProfilePage';
-import { TenderIntakePage } from './pages/TenderIntakePage';
-import { SimpleIntakePage } from './pages/SimpleIntakePage';
-import { FeedbackWidget } from './components/FeedbackWidget';
-import { FeedbackAdminPage } from './pages/FeedbackAdminPage';
-import ProfileTestPage from './pages/ProfileTestPage';
 import './index.css';
 
-// Check for OAuth token in URL hash and handle it immediately
-function handleOAuthHash(): boolean {
-  const hash = window.location.hash;
-  if (hash && hash.includes('access_token=')) {
-    try {
-      const params = new URLSearchParams(hash.substring(1));
-      const accessToken = params.get('access_token');
-      if (accessToken) {
-        const payload = JSON.parse(atob(accessToken.split('.')[1]));
-        const email = payload.email || payload.user_metadata?.email || 'google_user';
-        console.log('App: OAuth callback detected, user:', email);
-        localStorage.setItem('tenderix_auth', 'true');
-        localStorage.setItem('tenderix_user', email);
-        window.history.replaceState(null, '', window.location.pathname);
-        return true;
-      }
-    } catch (e) {
-      console.error('App: Error parsing OAuth token:', e);
-    }
-  }
-  return false;
-}
-
-// Layout wrapper - hide sidebar on home page for clean flow
 function AppLayout() {
   const location = useLocation();
-  const isHomePage = location.pathname === '/';
+  const isLoginPage = location.pathname === '/login';
+
+  if (isLoginPage) return null;
 
   return (
     <div className="app">
-      {!isHomePage && <Sidebar />}
-      <main className={isHomePage ? 'main-content-full' : 'main-content'}>
+      <Sidebar />
+      <main className="main-content">
         <Routes>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/new" element={<NewTenderPage />} />
-          <Route path="/intake" element={<TenderIntakePage />} />
-          <Route path="/simple" element={<SimpleIntakePage />} />
           <Route path="/gates" element={<GatesPage />} />
-          <Route path="/analysis" element={<AnalysisPage />} />
-          <Route path="/competitors" element={<CompetitorsPage />} />
-          <Route path="/decision" element={<DecisionPage />} />
           <Route path="/company" element={<CompanyProfilePage />} />
-          <Route path="/profile-test/:tenderId" element={<ProfileTestPage />} />
-          <Route path="/profile-test" element={<ProfileTestPage />} />
-          <Route path="/feedback-admin" element={<FeedbackAdminPage />} />
+          {/* Placeholder routes for future modules */}
+          <Route path="/sow" element={<PlaceholderPage title="SOW & Hidden Work" subtitle="ניתוח תכולות ועבודות נסתרות - בפיתוח" />} />
+          <Route path="/boq" element={<PlaceholderPage title="BOQ Pricing Heatmap" subtitle="מפת חום תמחור - בפיתוח" />} />
+          <Route path="/contract" element={<PlaceholderPage title="Contract Advantage" subtitle="ניתוח חוזה - בפיתוח" />} />
+          <Route path="/competitors" element={<PlaceholderPage title="Competitive Intelligence" subtitle="מודיעין תחרותי - בפיתוח" />} />
         </Routes>
       </main>
-      <FeedbackWidget />
+    </div>
+  );
+}
+
+function PlaceholderPage({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <div>
+      <div className="page-header">
+        <div className="page-header-right">
+          <h1 className="page-title">{title}</h1>
+          <p className="page-subtitle">{subtitle}</p>
+        </div>
+      </div>
+      <div className="card">
+        <div className="empty-state">
+          <div className="empty-state-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+            </svg>
+          </div>
+          <div className="empty-state-title">מודול בפיתוח</div>
+          <div className="empty-state-text">{subtitle}</div>
+        </div>
+      </div>
     </div>
   );
 }
 
 function App() {
-  // DEV MODE: Skip authentication for local development
   const isDev = import.meta.env.DEV;
-
-  // Check OAuth hash synchronously before first render
-  const hasOAuthToken = handleOAuthHash();
-  const initialAuth = isDev || hasOAuthToken || localStorage.getItem('tenderix_auth') === 'true';
-
+  const initialAuth = isDev || localStorage.getItem('tenderix_auth') === 'true';
   const [isAuthenticated, setIsAuthenticated] = useState(initialAuth);
 
   useEffect(() => {
-    // Re-check in case localStorage was updated
     if (!isAuthenticated && localStorage.getItem('tenderix_auth') === 'true') {
       setIsAuthenticated(true);
     }
