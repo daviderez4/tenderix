@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FileText,
@@ -13,12 +13,15 @@ import {
   Loader,
   Sparkles,
   CheckCircle,
+  Building2,
+  XCircle,
+  Users,
 } from 'lucide-react';
 import { supabase } from '../api/supabaseClient';
 import { setCurrentTender, getCurrentOrgId, getEdgeFunctionUrl, API_CONFIG } from '../api/config';
 
 interface GateConditionInput {
-  id: number; // sequential ID for tracking
+  id: number;
   condition_number: string;
   condition_text: string;
   condition_type: 'GATE' | 'ADVANTAGE';
@@ -42,9 +45,13 @@ function createCondition(overrides?: Partial<Omit<GateConditionInput, 'id'>>): G
   };
 }
 
-type Step = 'upload' | 'review' | 'saved';
+interface Org {
+  id: string;
+  name: string;
+}
 
-/** Extract text from a PDF file using pdfjs-dist */
+type Step = 'upload' | 'review' | 'choose-company' | 'saved';
+
 async function extractPdfText(file: File): Promise<string> {
   const pdfjsLib = await import('pdfjs-dist');
   pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -82,6 +89,13 @@ export function TenderCreatePage() {
   const [pastedText, setPastedText] = useState('');
   const [fileLoading, setFileLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
+  const [savedTenderId, setSavedTenderId] = useState('');
+
+  // Company selection state
+  const [orgs, setOrgs] = useState<Org[]>([]);
+  const [selectedOrgId, setSelectedOrgId] = useState('');
+  const [generating, setGenerating] = useState('');
+  const [genMessage, setGenMessage] = useState('');
 
   const [form, setForm] = useState({
     tender_name: '',
@@ -95,6 +109,26 @@ export function TenderCreatePage() {
   });
 
   const [conditions, setConditions] = useState<GateConditionInput[]>([]);
+
+  // Load orgs when reaching choose-company step
+  useEffect(() => {
+    if (step === 'choose-company') {
+      loadOrgs();
+    }
+  }, [step]);
+
+  async function loadOrgs() {
+    const { data } = await supabase
+      .from('organizations')
+      .select('id, name')
+      .order('name');
+    if (data) {
+      setOrgs(data);
+      if (data.length > 0 && !selectedOrgId) {
+        setSelectedOrgId(data[0].id);
+      }
+    }
+  }
 
   function updateForm(key: string, value: string) {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -151,10 +185,7 @@ export function TenderCreatePage() {
         if (fileInputRef.current) fileInputRef.current.value = '';
         return;
       } else {
-        // Plain text file
         text = await file.text();
-
-        // Detect binary/garbled content
         const sample = text.slice(0, 500);
         const binaryCount = sample.split('').filter(c => {
           const code = c.charCodeAt(0);
@@ -191,7 +222,6 @@ export function TenderCreatePage() {
       return;
     }
 
-    // Limit text
     const MAX_CHARS = 50000;
     let textToSend = pastedText.trim();
     if (textToSend.length > MAX_CHARS) {
@@ -226,7 +256,6 @@ export function TenderCreatePage() {
 
       const { tender, conditions: extractedConditions } = result.extracted;
 
-      // Fill form
       setForm({
         tender_name: tender.tender_name || '',
         tender_number: tender.tender_number || '',
@@ -238,7 +267,6 @@ export function TenderCreatePage() {
         guarantee_amount: tender.guarantee_amount ? String(tender.guarantee_amount) : '',
       });
 
-      // Fill conditions with sequential IDs
       if (extractedConditions?.length > 0) {
         const mapped = extractedConditions.map((c: Record<string, unknown>, i: number) =>
           createCondition({
@@ -335,14 +363,63 @@ export function TenderCreatePage() {
       });
 
       setCurrentTender(tender.id, form.tender_name);
-      setStep('saved');
+      setSavedTenderId(tender.id);
 
-      setTimeout(() => navigate('/gates'), 1500);
+      // Go to company selection step instead of directly to gates
+      setStep('choose-company');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'שגיאה בשמירה');
     }
 
     setSaving(false);
+  }
+
+  async function generateCompany(profileType: 'passing' | 'failing') {
+    if (!savedTenderId) return;
+
+    const label = profileType === 'passing' ? 'עומדת בתנאים' : 'לא עומדת';
+    setGenerating(profileType);
+    setGenMessage('');
+    setError('');
+
+    try {
+      const response = await fetch(getEdgeFunctionUrl('generate-company'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${API_CONFIG.SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ tender_id: savedTenderId, profile_type: profileType }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          throw new Error('שרת ה-AI עמוס כרגע. נא לנסות שוב בעוד דקה.');
+        }
+        throw new Error(`שגיאה בשרת (${response.status}). נא לנסות שוב.`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        setGenMessage(`נוצרה חברה "${result.org_name}" (${label})`);
+        await loadOrgs();
+        setSelectedOrgId(result.org_id);
+      } else {
+        setError(result.error || 'שגיאה ביצירת חברה');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'שגיאה ביצירת חברה');
+    }
+
+    setGenerating('');
+  }
+
+  function proceedToGates() {
+    if (selectedOrgId) {
+      localStorage.setItem('tenderix_selected_org_id', selectedOrgId);
+    }
+    navigate('/gates');
   }
 
   // ─── STEP 1: Upload / Paste ───────────────────────
@@ -372,7 +449,6 @@ export function TenderCreatePage() {
           </div>
         )}
 
-        {/* Upload Area */}
         <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
           <div
             style={{
@@ -391,9 +467,7 @@ export function TenderCreatePage() {
                 <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.25rem' }}>
                   {loadingMessage || 'טוען...'}
                 </div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--dark-500)' }}>
-                  נא להמתין...
-                </div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--dark-500)' }}>נא להמתין...</div>
               </>
             ) : (
               <>
@@ -401,9 +475,7 @@ export function TenderCreatePage() {
                 <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--dark-800)', marginBottom: '0.25rem' }}>
                   העלה קובץ מכרז
                 </div>
-                <div style={{ fontSize: '0.9rem', color: 'var(--dark-500)' }}>
-                  PDF, TXT - לחץ לבחירת קובץ
-                </div>
+                <div style={{ fontSize: '0.9rem', color: 'var(--dark-500)' }}>PDF, TXT - לחץ לבחירת קובץ</div>
               </>
             )}
             <input
@@ -458,7 +530,6 @@ export function TenderCreatePage() {
           )}
         </div>
 
-        {/* Extraction loading */}
         {extracting && (
           <div className="card" style={{ background: 'var(--blue-50)', borderColor: 'var(--blue-200)', marginTop: '1rem', textAlign: 'center', padding: '2rem' }}>
             <Loader size={36} style={{ color: 'var(--primary)', animation: 'spin 1s linear infinite', marginBottom: '0.75rem' }} />
@@ -474,7 +545,6 @@ export function TenderCreatePage() {
           </div>
         )}
 
-        {/* Action buttons */}
         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '1.25rem' }}>
           <button
             className="btn btn-primary btn-lg"
@@ -501,7 +571,172 @@ export function TenderCreatePage() {
     );
   }
 
-  // ─── STEP 3: Saved ───────────────────────
+  // ─── STEP 3: Choose Company ───────────────────────
+  if (step === 'choose-company') {
+    return (
+      <div className="animate-fadeIn">
+        <div className="page-header">
+          <div className="page-header-right">
+            <h1 className="page-title">
+              <Building2 size={24} style={{ color: 'var(--primary)' }} />
+              בחירת חברה לניתוח
+            </h1>
+            <p className="page-subtitle">
+              המכרז "{form.tender_name}" נשמר עם {conditions.length} תנאי סף. בחר חברה לבדיקת התאמה.
+            </p>
+          </div>
+        </div>
+
+        {error && (
+          <div className="card" style={{ background: 'var(--danger-bg)', borderColor: 'var(--danger-border)', marginBottom: '1rem' }}>
+            <span style={{ color: 'var(--danger)', fontWeight: 600 }}>
+              <AlertTriangle size={14} style={{ display: 'inline', verticalAlign: 'middle' }} /> {error}
+            </span>
+          </div>
+        )}
+
+        {genMessage && (
+          <div className="card" style={{ background: 'var(--success-bg)', borderColor: 'var(--success-border)', marginBottom: '1rem' }}>
+            <span style={{ color: '#065f46', fontWeight: 600 }}>
+              <CheckCircle size={14} style={{ display: 'inline', verticalAlign: 'middle' }} /> {genMessage}
+            </span>
+          </div>
+        )}
+
+        {/* Option 1: Existing company */}
+        {orgs.length > 0 && (
+          <div className="card" style={{ marginBottom: '1rem' }}>
+            <div className="card-header">
+              <div className="card-title"><Building2 size={16} /> בחר חברה קיימת מהמאגר</div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <select
+                value={selectedOrgId}
+                onChange={e => setSelectedOrgId(e.target.value)}
+                style={{ minWidth: '250px', flex: 1 }}
+              >
+                {orgs.map(org => (
+                  <option key={org.id} value={org.id}>{org.name}</option>
+                ))}
+              </select>
+              <button
+                className="btn btn-primary btn-lg"
+                onClick={proceedToGates}
+                disabled={!selectedOrgId}
+                style={{ minWidth: '180px' }}
+              >
+                <Shield size={16} /> נתח תנאי סף
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Option 2: Generate fictitious companies */}
+        <div className="card" style={{ marginBottom: '1rem' }}>
+          <div className="card-header">
+            <div className="card-title"><Sparkles size={16} /> צור חברה פיקטיבית עם AI</div>
+          </div>
+          <p style={{ fontSize: '0.9rem', color: 'var(--dark-600)', marginBottom: '1rem' }}>
+            AI ייצור חברה מלאה עם כל הנתונים (פיננסים, הסמכות, כ"א, פרויקטים) על בסיס תנאי הסף של המכרז.
+            זה מאפשר לבדוק מה החברה שלך צריכה כדי לעמוד בדרישות.
+          </p>
+
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            {/* Passing company */}
+            <div
+              style={{
+                flex: 1,
+                minWidth: '280px',
+                border: '2px solid var(--success-border)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '1.25rem',
+                background: 'var(--success-bg)',
+                textAlign: 'center',
+              }}
+            >
+              <CheckCircle size={32} style={{ color: 'var(--success)', marginBottom: '0.5rem' }} />
+              <div style={{ fontWeight: 700, fontSize: '1rem', color: '#065f46', marginBottom: '0.25rem' }}>
+                חברה שעומדת בכל התנאים
+              </div>
+              <div style={{ fontSize: '0.82rem', color: 'var(--dark-500)', marginBottom: '1rem' }}>
+                דוגמה לחברה שעומדת ב-100% מתנאי הסף - בדוק מה נדרש
+              </div>
+              <button
+                className="btn btn-success"
+                onClick={() => generateCompany('passing')}
+                disabled={!!generating}
+                style={{ width: '100%' }}
+              >
+                {generating === 'passing' ? (
+                  <><Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> יוצר חברה...</>
+                ) : (
+                  <><Sparkles size={14} /> צור חברה עומדת</>
+                )}
+              </button>
+            </div>
+
+            {/* Failing company */}
+            <div
+              style={{
+                flex: 1,
+                minWidth: '280px',
+                border: '2px solid var(--danger-border)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '1.25rem',
+                background: 'var(--danger-bg)',
+                textAlign: 'center',
+              }}
+            >
+              <XCircle size={32} style={{ color: 'var(--danger)', marginBottom: '0.5rem' }} />
+              <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--danger)', marginBottom: '0.25rem' }}>
+                חברה שלא עומדת בתנאים
+              </div>
+              <div style={{ fontSize: '0.82rem', color: 'var(--dark-500)', marginBottom: '1rem' }}>
+                דוגמה לחברה עם פערים - בדוק מה חסר, מה אפשר להשלים ואיך לזכות
+              </div>
+              <button
+                className="btn btn-danger"
+                onClick={() => generateCompany('failing')}
+                disabled={!!generating}
+                style={{ width: '100%' }}
+              >
+                {generating === 'failing' ? (
+                  <><Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> יוצר חברה...</>
+                ) : (
+                  <><Sparkles size={14} /> צור חברה לא עומדת</>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {generating && (
+            <div style={{ textAlign: 'center', padding: '1rem', marginTop: '0.75rem' }}>
+              <Loader size={24} style={{ color: 'var(--primary)', animation: 'spin 1s linear infinite', marginBottom: '0.5rem' }} />
+              <div style={{ color: 'var(--primary)', fontWeight: 600, fontSize: '0.9rem' }}>
+                AI יוצר פרופיל חברה מלא על בסיס {conditions.length} תנאי סף...
+              </div>
+              <div style={{ color: 'var(--dark-400)', fontSize: '0.8rem', marginTop: '0.25rem' }}>
+                כולל נתונים פיננסיים, הסמכות, כ"א ופרויקטים - עשוי לקחת 20-40 שניות
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* No company option - skip */}
+        <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+          <button
+            className="btn btn-ghost"
+            onClick={() => navigate('/gates')}
+            style={{ fontSize: '0.85rem' }}
+          >
+            <Users size={14} /> המשך ללא בחירת חברה - אבחר אח"כ
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── STEP 4: Saved ───────────────────────
   if (step === 'saved') {
     return (
       <div className="animate-fadeIn" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
@@ -541,7 +776,7 @@ export function TenderCreatePage() {
             {saving ? (
               <><Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> שומר...</>
             ) : (
-              <><Save size={16} /> שמור והמשך לניתוח</>
+              <><Save size={16} /> שמור ובחר חברה</>
             )}
           </button>
         </div>
