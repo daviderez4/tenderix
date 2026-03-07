@@ -18,7 +18,7 @@ import {
   Users,
 } from 'lucide-react';
 import { supabase } from '../api/supabaseClient';
-import { setCurrentTender, getCurrentOrgId, getEdgeFunctionUrl, API_CONFIG } from '../api/config';
+import { setCurrentTender, getEdgeFunctionUrl, API_CONFIG } from '../api/config';
 
 interface GateConditionInput {
   id: number;
@@ -308,8 +308,6 @@ export function TenderCreatePage() {
     setError('');
 
     try {
-      const orgId = getCurrentOrgId();
-
       const { data: tender, error: tenderErr } = await supabase
         .from('tenders')
         .insert({
@@ -321,7 +319,6 @@ export function TenderCreatePage() {
           category: form.category,
           contract_duration_months: form.contract_duration_months ? Number(form.contract_duration_months) : null,
           guarantee_amount: form.guarantee_amount ? Number(form.guarantee_amount) : null,
-          org_id: orgId || null,
           status: 'ACTIVE',
           current_step: 'GATES',
           go_nogo_decision: 'PENDING',
