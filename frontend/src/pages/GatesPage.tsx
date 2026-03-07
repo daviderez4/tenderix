@@ -157,9 +157,15 @@ export function GatesPage() {
       },
       body: JSON.stringify({ tender_id: tenderId, org_id: orgId }),
     });
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error('שרת ה-AI עמוס כרגע. נא לנסות שוב בעוד דקה.');
+      }
+      throw new Error(`שגיאה בשרת (${response.status}). נא לנסות שוב.`);
+    }
     const result = await response.json();
     if (result.success) return result;
-    throw new Error(result.error || 'Analysis failed');
+    throw new Error(result.error || 'שגיאה בניתוח');
   }
 
   async function runAnalysis() {
@@ -234,19 +240,24 @@ export function GatesPage() {
         body: JSON.stringify({ tender_id: tenderId, profile_type: profileType }),
       });
 
+      if (!response.ok) {
+        if (response.status === 429) {
+          throw new Error('שרת ה-AI עמוס כרגע. נא לנסות שוב בעוד דקה.');
+        }
+        throw new Error(`שגיאה בשרת (${response.status}). נא לנסות שוב.`);
+      }
+
       const result = await response.json();
 
       if (result.success) {
         setGenMessage(`נוצרה חברה "${result.org_name}" (${labels[profileType]})`);
-        // Reload orgs to include new company
         await loadOrgs();
-        // Auto-select new company
         setSelectedOrgId(result.org_id);
       } else {
-        setErrorMsg(result.error || 'Generation failed');
+        setErrorMsg(result.error || 'שגיאה ביצירת חברה');
       }
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Generation error');
+      setErrorMsg(err instanceof Error ? err.message : 'שגיאה ביצירת חברה');
     }
 
     setGenerating('');
@@ -588,6 +599,19 @@ export function GatesPage() {
           <span style={{ fontSize: '0.78rem', color: 'var(--dark-400)' }}>AI ייצור חברה ויוסיף למאגר</span>
         </div>
       </div>
+
+      {/* Analysis Loading */}
+      {(analyzing || analyzingCompare) && (
+        <div className="card" style={{ background: 'var(--blue-50)', borderColor: 'var(--blue-200)', marginBottom: '1rem', textAlign: 'center', padding: '1.5rem' }}>
+          <Loader size={28} style={{ color: 'var(--primary)', animation: 'spin 1s linear infinite', marginBottom: '0.5rem' }} />
+          <div style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '1rem', marginBottom: '0.25rem' }}>
+            {compareMode ? 'מנתח שתי חברות...' : `מנתח ${totalCount} תנאי סף עבור ${selectedOrgName}...`}
+          </div>
+          <div style={{ color: 'var(--dark-500)', fontSize: '0.85rem' }}>
+            AI בודק כל תנאי מול נתוני החברה - עשוי לקחת עד 30 שניות
+          </div>
+        </div>
+      )}
 
       {/* Error */}
       {errorMsg && (
