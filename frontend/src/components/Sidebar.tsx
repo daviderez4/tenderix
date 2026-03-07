@@ -55,6 +55,14 @@ export function Sidebar() {
 
   useEffect(() => {
     loadOrgs();
+    // Reload orgs when storage changes (e.g. new company generated)
+    function onStorageChange() {
+      loadOrgs();
+      const newId = localStorage.getItem('tenderix_selected_org_id') || '';
+      if (newId) setSelectedOrgId(newId);
+    }
+    window.addEventListener('storage', onStorageChange);
+    return () => window.removeEventListener('storage', onStorageChange);
   }, []);
 
   async function loadOrgs() {

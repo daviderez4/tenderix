@@ -78,7 +78,33 @@ export function CompanyProfilePage() {
   const [personnel, setPersonnel] = useState<PersonnelRecord[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const orgId = getCurrentOrgId();
+  const [orgId, setOrgId] = useState(getCurrentOrgId());
+
+  // Listen for org changes from sidebar
+  useEffect(() => {
+    function onStorageChange() {
+      const newId = getCurrentOrgId();
+      if (newId && newId !== orgId) setOrgId(newId);
+    }
+    window.addEventListener('storage', onStorageChange);
+    return () => window.removeEventListener('storage', onStorageChange);
+  }, [orgId]);
+
+  // Auto-select first org if none selected
+  useEffect(() => {
+    if (!orgId) {
+      supabase.from('organizations').select('id, name').order('name').limit(1).then(({ data }) => {
+        if (data && data.length > 0) {
+          localStorage.setItem('tenderix_selected_org_id', data[0].id);
+          localStorage.setItem('tenderix_selected_org_name', data[0].name);
+          setOrgId(data[0].id);
+          window.dispatchEvent(new Event('storage'));
+        } else {
+          setLoading(false);
+        }
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (orgId) loadAll();
