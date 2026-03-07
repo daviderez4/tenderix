@@ -286,29 +286,38 @@ async function analyzeAllConditions(
 - פרויקט כבישים/רכבת קלה הוא לא פרויקט מצלמות אבטחה!
 - הסמכת PMP בבנייה ≠ ניסיון בניהול פרויקטי אבטחה
 
-ענה ב-JSON בלבד, בפורמט הבא (מערך של אובייקטים, אחד לכל תנאי):
+ענה ב-JSON בלבד. החזר מערך עם אובייקט אחד **לכל תנאי בדיוק באותו סדר**:
 [
   {
     "condition_number": "1",
-    "status": "MEETS" | "PARTIALLY_MEETS" | "DOES_NOT_MEET",
-    "evidence": "טקסט בעברית - ראיות ספציפיות מהפרופיל. ציין שמות פרויקטים, מספרים מדויקים",
-    "gap_description": "טקסט בעברית - תיאור הפער אם לא עומד, או null אם עומד",
-    "closure_options": ["אפשרות סגירה 1", "אפשרות סגירה 2"],
-    "ai_summary": "משפט אחד בעברית - סיכום הניתוח",
-    "confidence": 0.0-1.0
+    "status": "MEETS",
+    "evidence": "ראיות ספציפיות מנתוני החברה",
+    "gap_description": null,
+    "closure_options": [],
+    "ai_summary": "משפט סיכום אחד",
+    "confidence": 0.9
+  },
+  {
+    "condition_number": "2",
+    "status": "DOES_NOT_MEET",
+    "evidence": "לא נמצא ניסיון מתאים",
+    "gap_description": "תיאור הפער",
+    "closure_options": ["קבלן משנה", "שותפות"],
+    "ai_summary": "משפט סיכום",
+    "confidence": 0.85
   }
 ]
 
-ענה אך ורק ב-JSON תקין. ללא markdown, ללא הסברים מחוץ ל-JSON.`;
+status חייב להיות: MEETS / PARTIALLY_MEETS / DOES_NOT_MEET
+ענה אך ורק ב-JSON תקין. ללא markdown, ללא backticks, ללא טקסט נוסף.`;
 
-  const conditionsList = conditions.map((c) =>
-    `תנאי #${c.condition_number}: ${c.condition_text}
+  const conditionsList = conditions.map((c, idx) =>
+    `תנאי ${idx + 1} (מזהה: IDX_${idx + 1}): ${c.condition_text}
     סוג: ${c.condition_type} | חובה: ${c.is_mandatory ? "כן" : "לא (יתרון)"}
     סוג דרישה: ${c.requirement_type || "לא צוין"}
     סכום נדרש: ${c.required_amount ? `${(c.required_amount as number / 1000000).toFixed(1)}M ₪` : "N/A"}
     כמות נדרשת: ${c.required_count || "N/A"}
-    שנים נדרשות: ${c.required_years || "N/A"}
-    מקור: סעיף ${c.source_section || "N/A"}`
+    שנים נדרשות: ${c.required_years || "N/A"}`
   ).join("\n\n");
 
   const userMessage = `## מכרז
@@ -330,11 +339,17 @@ ${profile.summary_text}
 
     const parsed = parseJsonFromAI(response);
 
-    return conditions.map((condition) => {
+    return conditions.map((condition, idx) => {
       const condNum = condition.condition_number as string;
-      const analysis = parsed.find((a: Record<string, unknown>) =>
-        String(a.condition_number) === condNum
-      );
+
+      // Match by: 1) index position, 2) IDX_ marker, 3) condition_number, 4) source_section
+      const analysis =
+        parsed[idx] ||
+        parsed.find((a: Record<string, unknown>) =>
+          String(a.condition_number) === `IDX_${idx + 1}` ||
+          String(a.condition_number) === String(idx + 1) ||
+          String(a.condition_number) === condNum
+        );
 
       if (!analysis) {
         return {
