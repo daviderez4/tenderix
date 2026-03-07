@@ -10,10 +10,13 @@ Deno.serve(async (req: Request) => {
     const { text, org_id } = await req.json();
     if (!text || !text.trim()) {
       return new Response(
-        JSON.stringify({ error: "text is required - paste tender document content" }),
+        JSON.stringify({ success: false, error: "נא להדביק טקסט של מכרז" }),
         { status: 400, headers: { ...corsHeaders(), "Content-Type": "application/json" } }
       );
     }
+
+    // Truncate to prevent rate limits
+    const trimmedText = text.trim().slice(0, 50000);
 
     // Call Claude to extract tender details and gate conditions
     const systemPrompt = `אתה מומחה בכיר לניתוח מכרזים ציבוריים בישראל.
@@ -74,7 +77,7 @@ Deno.serve(async (req: Request) => {
 
     const response = await callClaude(
       systemPrompt,
-      [{ role: "user", content: `חלץ פרטי מכרז ותנאי סף מהטקסט הבא:\n\n${text}` }],
+      [{ role: "user", content: `חלץ פרטי מכרז ותנאי סף מהטקסט הבא:\n\n${trimmedText}` }],
       { maxTokens: 8192 }
     );
 

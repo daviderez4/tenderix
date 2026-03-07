@@ -18,6 +18,7 @@ import { supabase } from '../api/supabaseClient';
 import { setCurrentTender, getCurrentOrgId, getEdgeFunctionUrl, API_CONFIG } from '../api/config';
 
 interface GateConditionInput {
+  id: number; // sequential ID for tracking
   condition_number: string;
   condition_text: string;
   condition_type: 'GATE' | 'ADVANTAGE';
@@ -26,16 +27,49 @@ interface GateConditionInput {
   source_section: string;
 }
 
-const emptyCondition = (): GateConditionInput => ({
-  condition_number: '',
-  condition_text: '',
-  condition_type: 'GATE',
-  is_mandatory: true,
-  requirement_type: 'CAPABILITY',
-  source_section: '',
-});
+let nextConditionId = 1;
+
+function createCondition(overrides?: Partial<Omit<GateConditionInput, 'id'>>): GateConditionInput {
+  return {
+    id: nextConditionId++,
+    condition_number: '',
+    condition_text: '',
+    condition_type: 'GATE',
+    is_mandatory: true,
+    requirement_type: 'CAPABILITY',
+    source_section: '',
+    ...overrides,
+  };
+}
 
 type Step = 'upload' | 'review' | 'saved';
+
+/** Extract text from a PDF file using pdfjs-dist */
+async function extractPdfText(file: File): Promise<string> {
+  const pdfjsLib = await import('pdfjs-dist');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.min.mjs',
+    import.meta.url
+  ).toString();
+
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const pages: string[] = [];
+
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const text = content.items
+      .map((item: any) => item.str || '')
+      .join(' ');
+    if (text.trim()) {
+      pages.push(text);
+    }
+  }
+
+  return pages.join('\n\n');
+}
 
 export function TenderCreatePage() {
   const navigate = useNavigate();
@@ -46,6 +80,8 @@ export function TenderCreatePage() {
   const [extracting, setExtracting] = useState(false);
   const [error, setError] = useState('');
   const [pastedText, setPastedText] = useState('');
+  const [fileLoading, setFileLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
 
   const [form, setForm] = useState({
     tender_name: '',
@@ -53,7 +89,7 @@ export function TenderCreatePage() {
     issuing_body: '',
     submission_deadline: '',
     estimated_value: '',
-    category: 'VIDEO' as string,
+    category: 'COMBINED' as string,
     contract_duration_months: '',
     guarantee_amount: '',
   });
@@ -65,10 +101,12 @@ export function TenderCreatePage() {
   }
 
   function addCondition() {
-    setConditions(prev => [...prev, {
-      ...emptyCondition(),
-      condition_number: String(prev.length + 1),
-    }]);
+    setConditions(prev => {
+      const newCond = createCondition({
+        condition_number: String(prev.length + 1),
+      });
+      return [...prev, newCond];
+    });
   }
 
   function removeCondition(index: number) {
@@ -78,11 +116,9 @@ export function TenderCreatePage() {
     })));
   }
 
-  function updateCondition(index: number, key: keyof GateConditionInput, value: string | boolean) {
+  function updateCondition(index: number, key: keyof Omit<GateConditionInput, 'id'>, value: string | boolean) {
     setConditions(prev => prev.map((c, i) => i === index ? { ...c, [key]: value } : c));
   }
-
-  const [fileLoading, setFileLoading] = useState(false);
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -90,37 +126,59 @@ export function TenderCreatePage() {
 
     const ext = file.name.split('.').pop()?.toLowerCase();
 
-    // Reject non-text files
-    if (ext === 'pdf' || ext === 'doc' || ext === 'docx') {
-      setError('קובצי PDF/Word לא נתמכים כרגע. נא להעתיק את הטקסט מהמסמך ולהדביק אותו בשדה למטה.');
-      // Reset file input
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      return;
-    }
-
     setFileLoading(true);
     setError('');
+    setLoadingMessage(`טוען "${file.name}"...`);
 
     try {
-      const text = await file.text();
-      // Check for binary/garbled content
-      const binaryChars = text.slice(0, 500).split('').filter(c => {
-        const code = c.charCodeAt(0);
-        return code < 9 || (code > 13 && code < 32 && code !== 27);
-      }).length;
+      let text = '';
 
-      if (binaryChars > 10) {
-        setError('הקובץ מכיל תוכן בינארי שלא ניתן לקרוא. נא להדביק את הטקסט ישירות.');
-        if (fileInputRef.current) fileInputRef.current.value = '';
+      if (ext === 'pdf') {
+        setLoadingMessage(`מחלץ טקסט מ-PDF: "${file.name}"...`);
+        text = await extractPdfText(file);
+
+        if (!text.trim()) {
+          setError('לא נמצא טקסט ב-PDF. ייתכן שמדובר ב-PDF סרוק (תמונה). נא להעתיק את הטקסט ידנית ולהדביק.');
+          setFileLoading(false);
+          setLoadingMessage('');
+          if (fileInputRef.current) fileInputRef.current.value = '';
+          return;
+        }
+      } else if (ext === 'doc' || ext === 'docx') {
+        setError('קובצי Word לא נתמכים כרגע. נא לשמור כ-PDF או להדביק את הטקסט ישירות.');
         setFileLoading(false);
+        setLoadingMessage('');
+        if (fileInputRef.current) fileInputRef.current.value = '';
         return;
+      } else {
+        // Plain text file
+        text = await file.text();
+
+        // Detect binary/garbled content
+        const sample = text.slice(0, 500);
+        const binaryCount = sample.split('').filter(c => {
+          const code = c.charCodeAt(0);
+          return code < 9 || (code > 13 && code < 32 && code !== 27);
+        }).length;
+
+        if (binaryCount > 10) {
+          setError('הקובץ מכיל תוכן בינארי שלא ניתן לקרוא. נא להדביק את הטקסט ישירות.');
+          setFileLoading(false);
+          setLoadingMessage('');
+          if (fileInputRef.current) fileInputRef.current.value = '';
+          return;
+        }
       }
 
       if (text.trim()) {
         setPastedText(text.trim());
+        setLoadingMessage(`נטען בהצלחה! ${text.trim().length.toLocaleString()} תווים`);
+        setTimeout(() => setLoadingMessage(''), 2000);
       }
-    } catch {
+    } catch (err) {
+      console.error('File read error:', err);
       setError('שגיאה בקריאת הקובץ. נא לנסות שוב או להדביק את הטקסט ישירות.');
+      setLoadingMessage('');
     }
 
     setFileLoading(false);
@@ -133,7 +191,7 @@ export function TenderCreatePage() {
       return;
     }
 
-    // Limit text size to avoid rate limits
+    // Limit text
     const MAX_CHARS = 50000;
     let textToSend = pastedText.trim();
     if (textToSend.length > MAX_CHARS) {
@@ -168,7 +226,7 @@ export function TenderCreatePage() {
 
       const { tender, conditions: extractedConditions } = result.extracted;
 
-      // Fill form with extracted data
+      // Fill form
       setForm({
         tender_name: tender.tender_name || '',
         tender_number: tender.tender_number || '',
@@ -180,16 +238,19 @@ export function TenderCreatePage() {
         guarantee_amount: tender.guarantee_amount ? String(tender.guarantee_amount) : '',
       });
 
-      // Fill conditions
+      // Fill conditions with sequential IDs
       if (extractedConditions?.length > 0) {
-        setConditions(extractedConditions.map((c: Record<string, unknown>, i: number) => ({
-          condition_number: String(c.condition_number || i + 1),
-          condition_text: (c.condition_text as string) || '',
-          condition_type: (c.condition_type as 'GATE' | 'ADVANTAGE') || 'GATE',
-          is_mandatory: c.is_mandatory !== false,
-          requirement_type: (c.requirement_type as 'CAPABILITY' | 'EXECUTION') || 'CAPABILITY',
-          source_section: (c.source_section as string) || '',
-        })));
+        const mapped = extractedConditions.map((c: Record<string, unknown>, i: number) =>
+          createCondition({
+            condition_number: String(c.condition_number || i + 1),
+            condition_text: (c.condition_text as string) || '',
+            condition_type: (c.condition_type as 'GATE' | 'ADVANTAGE') || 'GATE',
+            is_mandatory: c.is_mandatory !== false,
+            requirement_type: (c.requirement_type as 'CAPABILITY' | 'EXECUTION') || 'CAPABILITY',
+            source_section: (c.source_section as string) || '',
+          })
+        );
+        setConditions(mapped);
       }
 
       setStep('review');
@@ -201,7 +262,7 @@ export function TenderCreatePage() {
   }
 
   function handleManualEntry() {
-    setConditions([emptyCondition()]);
+    setConditions([createCondition({ condition_number: '1' })]);
     setStep('review');
   }
 
@@ -276,7 +337,6 @@ export function TenderCreatePage() {
       setCurrentTender(tender.id, form.tender_name);
       setStep('saved');
 
-      // Navigate after short delay
       setTimeout(() => navigate('/gates'), 1500);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'שגיאה בשמירה');
@@ -295,7 +355,7 @@ export function TenderCreatePage() {
               <FileText size={24} style={{ color: 'var(--primary)' }} />
               הטענת מכרז חדש
             </h1>
-            <p className="page-subtitle">העלה קובץ מכרז או הדבק את הטקסט - AI יחלץ את הפרטים ותנאי הסף</p>
+            <p className="page-subtitle">העלה קובץ PDF/טקסט או הדבק את תוכן המכרז</p>
           </div>
           <div className="page-header-actions">
             <button className="btn btn-secondary" onClick={() => navigate('/dashboard')}>
@@ -306,7 +366,9 @@ export function TenderCreatePage() {
 
         {error && (
           <div className="card" style={{ background: 'var(--danger-bg)', borderColor: 'var(--danger-border)', marginBottom: '1rem' }}>
-            <span style={{ color: 'var(--danger)', fontWeight: 600 }}><AlertTriangle size={14} style={{ display: 'inline', verticalAlign: 'middle' }} /> {error}</span>
+            <span style={{ color: 'var(--danger)', fontWeight: 600 }}>
+              <AlertTriangle size={14} style={{ display: 'inline', verticalAlign: 'middle' }} /> {error}
+            </span>
           </div>
         )}
 
@@ -317,100 +379,122 @@ export function TenderCreatePage() {
               border: '2px dashed var(--blue-300)',
               borderRadius: 'var(--radius-xl)',
               padding: '2.5rem',
-              background: 'var(--blue-50)',
-              cursor: 'pointer',
+              background: fileLoading ? 'var(--blue-100)' : 'var(--blue-50)',
+              cursor: fileLoading ? 'wait' : 'pointer',
               transition: 'all 0.2s',
             }}
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => !fileLoading && fileInputRef.current?.click()}
           >
             {fileLoading ? (
               <>
-                <Loader size={40} style={{ color: 'var(--primary)', marginBottom: '0.75rem', animation: 'spin 1s linear infinite' }} />
-                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--dark-800)', marginBottom: '0.25rem' }}>
-                  קורא את הקובץ...
+                <Loader size={48} style={{ color: 'var(--primary)', marginBottom: '0.75rem', animation: 'spin 1s linear infinite' }} />
+                <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.25rem' }}>
+                  {loadingMessage || 'טוען...'}
+                </div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--dark-500)' }}>
+                  נא להמתין...
                 </div>
               </>
             ) : (
               <>
-                <Upload size={40} style={{ color: 'var(--primary)', marginBottom: '0.75rem' }} />
-                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--dark-800)', marginBottom: '0.25rem' }}>
-                  העלה קובץ טקסט (.txt)
+                <Upload size={48} style={{ color: 'var(--primary)', marginBottom: '0.75rem' }} />
+                <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--dark-800)', marginBottom: '0.25rem' }}>
+                  העלה קובץ מכרז
                 </div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--dark-500)' }}>
-                  לקובצי PDF/Word - העתק את הטקסט והדבק בשדה למטה
+                <div style={{ fontSize: '0.9rem', color: 'var(--dark-500)' }}>
+                  PDF, TXT - לחץ לבחירת קובץ
                 </div>
               </>
             )}
             <input
               ref={fileInputRef}
               type="file"
-              accept=".txt"
+              accept=".txt,.pdf"
               onChange={handleFileUpload}
               style={{ display: 'none' }}
             />
           </div>
 
+          {loadingMessage && !fileLoading && (
+            <div style={{ marginTop: '0.75rem', color: 'var(--success)', fontWeight: 600, fontSize: '0.9rem' }}>
+              <CheckCircle size={14} style={{ display: 'inline', verticalAlign: 'middle' }} /> {loadingMessage}
+            </div>
+          )}
+
           <div style={{ margin: '1.5rem 0', display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
-            <span style={{ color: 'var(--dark-400)', fontSize: '0.85rem', fontWeight: 600 }}>או</span>
+            <span style={{ color: 'var(--dark-400)', fontSize: '0.85rem', fontWeight: 600 }}>או הדבק טקסט</span>
             <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
           </div>
 
           <div style={{ textAlign: 'right' }}>
-            <label className="form-label" style={{ marginBottom: '0.5rem' }}>הדבק טקסט מכרז</label>
             <textarea
               value={pastedText}
               onChange={e => setPastedText(e.target.value)}
-              rows={15}
-              style={{ width: '100%', fontFamily: 'inherit', fontSize: '0.87rem', lineHeight: 1.7 }}
-              placeholder={`הדבק כאן את הטקסט של מסמך המכרז...
+              rows={12}
+              dir="rtl"
+              style={{ width: '100%', fontFamily: 'inherit', fontSize: '0.9rem', lineHeight: 1.8 }}
+              placeholder={`הדבק כאן את טקסט המכרז...
 
 לדוגמה:
 מכרז 2025/001 - הקמת מערכת מצלמות אבטחה עירונית
-עיריית חולון
-מועד הגשה: 15.2.2025
+גורם מזמין: עיריית חולון
+מועד אחרון להגשה: 15.2.2025
 
 תנאי סף:
-1. מחזור הכנסות שנתי ממוצע של 50 מיליון ש"ח לפחות בשלוש השנים האחרונות
-2. ביצוע פרויקט בודד בהיקף של 20 מיליון ש"ח לפחות
-3. תעודת ISO 9001 בתוקף
-...`}
+1. מחזור הכנסות שנתי ממוצע של 50 מיליון ש"ח בשלוש השנים האחרונות
+2. ביצוע לפחות 3 פרויקטים דומים בהיקף של 10 מיליון ש"ח כל אחד
+3. תעודת ISO 9001 בתוקף`}
             />
           </div>
+
+          {pastedText.trim() && (
+            <div style={{ textAlign: 'left', marginTop: '0.5rem' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--dark-400)' }}>
+                {pastedText.length.toLocaleString()} תווים
+                {pastedText.length > 50000 && ' (יחתך ל-50,000 לפני שליחה)'}
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Action buttons */}
+        {/* Extraction loading */}
         {extracting && (
-          <div className="card" style={{ background: 'var(--blue-50)', borderColor: 'var(--blue-200)', marginTop: '1rem', textAlign: 'center', padding: '1.5rem' }}>
-            <Loader size={28} style={{ color: 'var(--primary)', animation: 'spin 1s linear infinite', marginBottom: '0.5rem' }} />
-            <div style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '1rem', marginBottom: '0.25rem' }}>
-              AI מנתח את המכרז...
+          <div className="card" style={{ background: 'var(--blue-50)', borderColor: 'var(--blue-200)', marginTop: '1rem', textAlign: 'center', padding: '2rem' }}>
+            <Loader size={36} style={{ color: 'var(--primary)', animation: 'spin 1s linear infinite', marginBottom: '0.75rem' }} />
+            <div style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '1.1rem', marginBottom: '0.25rem' }}>
+              AI מנתח את טקסט המכרז...
             </div>
-            <div style={{ color: 'var(--dark-500)', fontSize: '0.85rem' }}>
-              מחלץ פרטי מכרז ותנאי סף - עשוי לקחת עד 30 שניות
+            <div style={{ color: 'var(--dark-500)', fontSize: '0.9rem' }}>
+              מחלץ שם מכרז, גורם מזמין, תאריכים, סכומים ותנאי סף
+            </div>
+            <div style={{ color: 'var(--dark-400)', fontSize: '0.8rem', marginTop: '0.5rem' }}>
+              תהליך זה עשוי לקחת 15-30 שניות
             </div>
           </div>
         )}
 
-        {pastedText.trim() && (
-          <div style={{ textAlign: 'left', marginTop: '0.5rem' }}>
-            <span style={{ fontSize: '0.8rem', color: 'var(--dark-400)' }}>
-              {pastedText.length.toLocaleString()} תווים
-              {pastedText.length > 50000 && ' (יחתך ל-50,000)'}
-            </span>
-          </div>
-        )}
-
-        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '1rem' }}>
-          <button className="btn btn-primary btn-lg" onClick={handleExtract} disabled={extracting || !pastedText.trim()}>
+        {/* Action buttons */}
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '1.25rem' }}>
+          <button
+            className="btn btn-primary btn-lg"
+            onClick={handleExtract}
+            disabled={extracting || !pastedText.trim()}
+            style={{ minWidth: '220px', padding: '0.75rem 1.5rem', fontSize: '1rem' }}
+          >
             {extracting ? (
-              <><Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> מנתח...</>
+              <><Loader size={18} style={{ animation: 'spin 1s linear infinite' }} /> מנתח...</>
             ) : (
-              <><Sparkles size={16} /> חלץ פרטים ותנאי סף עם AI</>
+              <><Sparkles size={18} /> חלץ פרטים ותנאי סף</>
             )}
           </button>
-          <button className="btn btn-secondary btn-lg" onClick={handleManualEntry} disabled={extracting}>
-            <FileText size={16} /> הזנה ידנית
+          <button
+            className="btn btn-secondary btn-lg"
+            onClick={handleManualEntry}
+            disabled={extracting}
+            style={{ padding: '0.75rem 1.5rem', fontSize: '1rem' }}
+          >
+            <FileText size={18} /> הזנה ידנית
           </button>
         </div>
       </div>
@@ -445,8 +529,8 @@ export function TenderCreatePage() {
             סקירה ועריכה
           </h1>
           <p className="page-subtitle">
-            בדוק את הפרטים שחולצו ותקן במידת הצורך
-            {conditions.length > 0 && ` - ${conditions.length} תנאי סף`}
+            AI חילץ את הנתונים - בדוק ותקן לפי הצורך
+            {conditions.length > 0 && ` | ${conditions.length} תנאי סף זוהו`}
           </p>
         </div>
         <div className="page-header-actions">
@@ -455,7 +539,7 @@ export function TenderCreatePage() {
           </button>
           <button className="btn btn-primary btn-lg" onClick={handleSave} disabled={saving}>
             {saving ? (
-              <><span className="spinner" style={{ width: 16, height: 16 }} /> שומר...</>
+              <><Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> שומר...</>
             ) : (
               <><Save size={16} /> שמור והמשך לניתוח</>
             )}
@@ -465,7 +549,9 @@ export function TenderCreatePage() {
 
       {error && (
         <div className="card" style={{ background: 'var(--danger-bg)', borderColor: 'var(--danger-border)', marginBottom: '1rem' }}>
-          <span style={{ color: 'var(--danger)', fontWeight: 600 }}><AlertTriangle size={14} style={{ display: 'inline', verticalAlign: 'middle' }} /> {error}</span>
+          <span style={{ color: 'var(--danger)', fontWeight: 600 }}>
+            <AlertTriangle size={14} style={{ display: 'inline', verticalAlign: 'middle' }} /> {error}
+          </span>
         </div>
       )}
 
@@ -479,7 +565,7 @@ export function TenderCreatePage() {
           <div className="form-group">
             <label className="form-label">שם המכרז *</label>
             <input type="text" value={form.tender_name} onChange={e => updateForm('tender_name', e.target.value)}
-              placeholder="הקמת מערכת מצלמות אבטחה - עיריית חולון" />
+              placeholder="הקמת מערכת מצלמות אבטחה - עיריית חולון" dir="rtl" />
           </div>
           <div className="form-group">
             <label className="form-label">מספר מכרז</label>
@@ -492,7 +578,7 @@ export function TenderCreatePage() {
           <div className="form-group">
             <label className="form-label">גורם מזמין</label>
             <input type="text" value={form.issuing_body} onChange={e => updateForm('issuing_body', e.target.value)}
-              placeholder="עיריית חולון" />
+              placeholder="עיריית חולון" dir="rtl" />
           </div>
           <div className="form-group">
             <label className="form-label">מועד הגשה</label>
@@ -540,7 +626,14 @@ export function TenderCreatePage() {
 
         <div className="gate-list">
           {conditions.map((cond, index) => (
-            <div key={index} className="gate-item" style={{ cursor: 'default', borderRight: `3px solid ${cond.condition_type === 'ADVANTAGE' ? 'var(--warning)' : 'var(--primary)'}` }}>
+            <div
+              key={cond.id}
+              className="gate-item"
+              style={{
+                cursor: 'default',
+                borderRight: `3px solid ${cond.condition_type === 'ADVANTAGE' ? 'var(--warning)' : 'var(--primary)'}`,
+              }}
+            >
               <div className="gate-number">{index + 1}</div>
               <div className="gate-content" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <textarea
@@ -548,6 +641,7 @@ export function TenderCreatePage() {
                   onChange={e => updateCondition(index, 'condition_text', e.target.value)}
                   placeholder="תיאור תנאי הסף..."
                   rows={2}
+                  dir="rtl"
                   style={{ width: '100%', fontFamily: 'inherit', fontSize: '0.87rem', resize: 'vertical' }}
                 />
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -596,6 +690,7 @@ export function TenderCreatePage() {
                       <Star size={10} /> יתרון
                     </span>
                   )}
+                  <span style={{ fontSize: '0.65rem', color: 'var(--dark-400)' }}>#{cond.id}</span>
                 </div>
               </div>
             </div>
