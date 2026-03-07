@@ -86,15 +86,21 @@ Deno.serve(async (req: Request) => {
     // 7. Generate summary
     const summary = generateSummary(tender_id, org_id, conditions, results);
 
-    // Upsert summary
+    // Save summary - delete old one first, then insert new
     await supabase
       .from("gate_conditions_summary")
-      .upsert({
+      .delete()
+      .eq("tender_id", tender_id)
+      .eq("org_id", org_id);
+
+    await supabase
+      .from("gate_conditions_summary")
+      .insert({
         tender_id,
         org_id,
         ...summary,
         updated_at: new Date().toISOString(),
-      }, { onConflict: "tender_id,org_id" });
+      });
 
     return new Response(
       JSON.stringify({
@@ -322,11 +328,7 @@ ${profile.summary_text}
   try {
     const response = await callClaude(systemPrompt, [{ role: "user", content: userMessage }], { maxTokens: 8192 });
 
-    // Parse JSON array from response
-    const jsonMatch = response.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) throw new Error("No JSON array in AI response");
-
-    const parsed = JSON.parse(jsonMatch[0]);
+    const parsed = parseJsonFromAI(response);
 
     return conditions.map((condition) => {
       const condNum = condition.condition_number as string;
@@ -340,10 +342,10 @@ ${profile.summary_text}
           condition_number: condNum,
           condition_text: condition.condition_text as string,
           status: "DOES_NOT_MEET" as const,
-          evidence: "לא נותח - שגיאה בניתוח",
+          evidence: "לא נותח - התנאי לא נכלל בתשובת ה-AI",
           gap_description: "נדרשת בדיקה ידנית",
           closure_options: ["בדיקה ידנית"],
-          ai_summary: "שגיאה בניתוח",
+          ai_summary: "לא נותח",
           ai_confidence: 0,
         };
       }
@@ -360,21 +362,137 @@ ${profile.summary_text}
         ai_confidence: analysis.confidence || 0.5,
       };
     });
-  } catch (err) {
-    console.error("AI analysis failed:", err);
-    // Fallback: return error results for all conditions
-    return conditions.map((condition) => ({
-      condition_id: condition.id as string,
-      condition_number: condition.condition_number as string,
-      condition_text: condition.condition_text as string,
-      status: "DOES_NOT_MEET" as const,
-      evidence: `שגיאה בניתוח: ${err.message}`,
-      gap_description: "לא ניתן היה לנתח. נדרשת בדיקה ידנית.",
-      closure_options: ["בדיקה ידנית של התנאי"],
-      ai_summary: "שגיאה בניתוח AI",
-      ai_confidence: 0,
-    }));
+  } catch (batchErr) {
+    console.error("Batch analysis failed, falling back to per-condition analysis:", batchErr);
+    // Fallback: analyze each condition individually
+    return await analyzeConditionsOneByOne(conditions, profile, tender);
   }
+}
+
+// ─── Robust JSON Parser ─────────────────────────────
+
+function parseJsonFromAI(raw: string): Record<string, unknown>[] {
+  // 1. Strip markdown code fences
+  let cleaned = raw.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "").trim();
+
+  // 2. Try to extract JSON array
+  const arrayMatch = cleaned.match(/\[[\s\S]*\]/);
+  if (arrayMatch) cleaned = arrayMatch[0];
+
+  // 3. Fix common AI JSON mistakes
+  // Remove trailing commas before ] or }
+  cleaned = cleaned.replace(/,\s*([}\]])/g, "$1");
+  // Fix unescaped newlines inside strings (replace actual newlines between quotes)
+  cleaned = cleaned.replace(/(?<=:\s*"[^"]*)\n(?=[^"]*")/g, "\\n");
+  // Remove control characters
+  cleaned = cleaned.replace(/[\x00-\x1F\x7F]/g, (ch) => ch === "\n" || ch === "\r" || ch === "\t" ? ch : "");
+
+  try {
+    const parsed = JSON.parse(cleaned);
+    if (Array.isArray(parsed)) return parsed;
+    throw new Error("Parsed result is not an array");
+  } catch (e1) {
+    // 4. Last resort: try to extract individual JSON objects
+    console.error("JSON parse attempt failed:", e1);
+    const objects: Record<string, unknown>[] = [];
+    const objRegex = /\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g;
+    let match;
+    while ((match = objRegex.exec(cleaned)) !== null) {
+      try {
+        const obj = JSON.parse(match[0]);
+        if (obj.condition_number) objects.push(obj);
+      } catch {
+        // skip malformed object
+      }
+    }
+    if (objects.length > 0) return objects;
+    throw new Error(`Failed to parse AI JSON response: ${e1.message}. Raw (first 300 chars): ${raw.substring(0, 300)}`);
+  }
+}
+
+// ─── Per-Condition Fallback Analyzer ─────────────────────────────
+
+async function analyzeConditionsOneByOne(
+  conditions: Record<string, unknown>[],
+  profile: CompanyProfile,
+  tender: Record<string, unknown> | null
+): Promise<AnalysisResult[]> {
+  const results: AnalysisResult[] = [];
+
+  for (const condition of conditions) {
+    try {
+      const singleResult = await analyzeSingleCondition(condition, profile, tender);
+      results.push(singleResult);
+    } catch (err) {
+      console.error(`Failed to analyze condition ${condition.condition_number}:`, err);
+      results.push({
+        condition_id: condition.id as string,
+        condition_number: condition.condition_number as string,
+        condition_text: condition.condition_text as string,
+        status: "DOES_NOT_MEET" as const,
+        evidence: `שגיאה בניתוח תנאי זה: ${err.message}`,
+        gap_description: "לא ניתן היה לנתח. נדרשת בדיקה ידנית.",
+        closure_options: ["בדיקה ידנית של התנאי"],
+        ai_summary: "שגיאה בניתוח",
+        ai_confidence: 0,
+      });
+    }
+  }
+
+  return results;
+}
+
+async function analyzeSingleCondition(
+  condition: Record<string, unknown>,
+  profile: CompanyProfile,
+  tender: Record<string, unknown> | null
+): Promise<AnalysisResult> {
+  const systemPrompt = `אתה מומחה לניתוח מכרזים. נתח האם חברה עומדת בתנאי סף אחד.
+
+ענה אך ורק ב-JSON תקין (ללא markdown, ללא backticks). הפורמט:
+{
+  "status": "MEETS" | "PARTIALLY_MEETS" | "DOES_NOT_MEET",
+  "evidence": "ראיות ספציפיות מנתוני החברה",
+  "gap_description": "תיאור הפער (או null אם עומד)",
+  "closure_options": ["אפשרות סגירה 1"],
+  "ai_summary": "משפט סיכום אחד",
+  "confidence": 0.85
+}`;
+
+  const userMessage = `## תנאי סף
+${condition.condition_text}
+סוג: ${condition.condition_type} | חובה: ${condition.is_mandatory ? "כן" : "לא"}
+סכום נדרש: ${condition.required_amount ? `${(condition.required_amount as number / 1000000).toFixed(1)}M ₪` : "N/A"}
+כמות נדרשת: ${condition.required_count || "N/A"}
+שנים נדרשות: ${condition.required_years || "N/A"}
+
+## מכרז
+${tender?.tender_name || "Unknown"} | ${tender?.issuing_body || "Unknown"}
+
+## פרופיל חברה
+${profile.summary_text}`;
+
+  const response = await callClaude(systemPrompt, [{ role: "user", content: userMessage }], { maxTokens: 2048 });
+
+  // Parse single object
+  let cleaned = response.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "").trim();
+  const objMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (objMatch) cleaned = objMatch[0];
+  cleaned = cleaned.replace(/,\s*([}\]])/g, "$1");
+
+  const analysis = JSON.parse(cleaned);
+
+  return {
+    condition_id: condition.id as string,
+    condition_number: condition.condition_number as string,
+    condition_text: condition.condition_text as string,
+    status: analysis.status || "DOES_NOT_MEET",
+    evidence: analysis.evidence || "",
+    gap_description: analysis.gap_description || null,
+    closure_options: analysis.closure_options || [],
+    ai_summary: analysis.ai_summary || "",
+    ai_confidence: analysis.confidence || 0.5,
+  };
 }
 
 // ─── Summary Generator ─────────────────────────────
